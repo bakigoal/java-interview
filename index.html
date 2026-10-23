@@ -26,13 +26,13 @@
   --radius: 14px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   /* светлая тема — палитра Atom One Light */
   --bg: #eaeaeb; --surface: #fafafa; --fg: #383a42; --muted: #5d6069; --line: #e0e0e2; --chip: #e5e5e6;
-  --chip-pressed: #d4d4d6; --accent: #4078f2; --accent-soft: rgba(64, 120, 242, .09); --code-bg: #f0f0f1;
+  --chip-pressed: #d4d4d6; --accent: #2c62cf; --accent-soft: rgba(64, 120, 242, .09); --code-bg: #f0f0f1;
   --head-bg: rgba(234, 234, 235, .88); --shadow: 0 1px 2px rgba(56, 58, 66, .06); --tag-fg: #855a00;
   --edge: rgba(0, 0, 0, .22); --tag-bg: rgba(193, 132, 1, .13); --mark: rgba(193, 132, 1, .24); --code-fg: #c43a2e;
   /* цвета Atom One Light, затемнённые до контраста 4.5:1 на фоне кода */
   --hl-k: #a626a4; --hl-s: #387a37; --hl-c: #696c77; --hl-n: #a0490c; --hl-a: #2f68d8; --hl-t: #8a5f00;
   /* тренажёр: статусы различаются и яркостью, и формой значка — не только цветом */
-  --known: #2c62cf; --partial: #e0a33a; --unknown: #b5481c; --unmarked: #d4d4d6; --unmarked-line: #9a9ca3;
+  --known: #2c62cf; --partial: #e0a33a; --partial-ico: #986801; --unknown: #b5481c; --unmarked: #d4d4d6; --unmarked-line: #9a9ca3;
   --primary: #2c62cf; --primary-press: #234fa8; --on-primary: #fff; --link: #2c62cf; --seg: #fafafa;
   color-scheme: light;
 }
@@ -44,7 +44,7 @@
     --code-bg: #21252b; --head-bg: rgba(33, 37, 43, .88); --shadow: none; --tag-fg: #e5c07b; --tag-bg: rgba(229, 192, 123, .16); --edge: rgba(0, 0, 0, .6);
     --mark: rgba(229, 192, 123, .35); --code-fg: #e06c75;
     --hl-k: #c678dd; --hl-s: #98c379; --hl-c: #9198a4; --hl-n: #d19a66; --hl-a: #61afef; --hl-t: #e5c07b;
-    --known: #61afef; --partial: #e5c07b; --unknown: #c8643c; --unmarked: #3e4452; --unmarked-line: #6b7280;
+    --known: #61afef; --partial: #e5c07b; --partial-ico: #e5c07b; --unknown: #c8643c; --unmarked: #3e4452; --unmarked-line: #6b7280;
     --primary: #2f6ad0; --primary-press: #2559b5; --on-primary: #fff; --link: #61afef; --seg: #3e4452;
     color-scheme: dark;
   }
@@ -55,7 +55,7 @@
   --code-bg: #21252b; --head-bg: rgba(33, 37, 43, .88); --shadow: none; --tag-fg: #e5c07b; --tag-bg: rgba(229, 192, 123, .16); --edge: rgba(0, 0, 0, .6);
   --mark: rgba(229, 192, 123, .35); --code-fg: #e06c75;
   --hl-k: #c678dd; --hl-s: #98c379; --hl-c: #9198a4; --hl-n: #d19a66; --hl-a: #61afef; --hl-t: #e5c07b;
-  --known: #61afef; --partial: #e5c07b; --unknown: #c8643c; --unmarked: #3e4452; --unmarked-line: #6b7280;
+  --known: #61afef; --partial: #e5c07b; --partial-ico: #e5c07b; --unknown: #c8643c; --unmarked: #3e4452; --unmarked-line: #6b7280;
   --primary: #2f6ad0; --primary-press: #2559b5; --on-primary: #fff; --link: #61afef; --seg: #3e4452;
   color-scheme: dark;
 }
@@ -274,10 +274,13 @@ kbd { min-width: 20px; height: 20px; box-sizing: border-box; display: inline-fle
 .tip { margin-top: 28px; padding: 14px 16px 6px; border-radius: 12px; background: var(--code-bg); }
 .tip-kicker { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .tip p { margin: 6px 0 2px; font-size: 15px; line-height: 1.5; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.short:focus { outline: none; }
 .link { min-height: 44px; padding: 0 4px; border: 0; background: none; color: var(--link); font-weight: 600; cursor: pointer; }
 
 /* итог главы */
 .sum-kicker { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.sum-marked { margin: -12px 0 16px; color: var(--muted); }
 .summary h2 { margin: 2px 0 18px; font-size: 28px; line-height: 1.2; letter-spacing: -.02em; outline: none; }
 .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .tile { display: flex; flex-direction: column; gap: 2px; padding: 12px; border-radius: 12px; background: var(--code-bg); }
@@ -366,7 +369,7 @@ kbd { min-width: 20px; height: 20px; box-sizing: border-box; display: inline-fle
   article { break-inside: avoid-page; margin-bottom: 28px; }
 }
 .ico.known { --ic: var(--known); --m: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2018%2018%27%3E%3Cmask%20id%3D%27m%27%3E%3Crect%20width%3D%2718%27%20height%3D%2718%27%20fill%3D%27white%27/%3E%3Cpath%20d%3D%27M5.2%209.3l2.4%202.4%205-5%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%271.9%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27/%3E%3C/mask%3E%3Ccircle%20cx%3D%279%27%20cy%3D%279%27%20r%3D%278%27%20mask%3D%27url%28%23m%29%27/%3E%3C/svg%3E"); }
-.ico.partial { --ic: var(--partial); --m: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2018%2018%27%3E%3Cpath%20d%3D%27M9%201.8A7.2%207.2%200%200%200%209%2016.2Z%27/%3E%3Ccircle%20cx%3D%279%27%20cy%3D%279%27%20r%3D%277.2%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%271.6%27/%3E%3C/svg%3E"); }
+.ico.partial { --ic: var(--partial-ico); --m: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2018%2018%27%3E%3Cpath%20d%3D%27M9%201.8A7.2%207.2%200%200%200%209%2016.2Z%27/%3E%3Ccircle%20cx%3D%279%27%20cy%3D%279%27%20r%3D%277.2%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%271.6%27/%3E%3C/svg%3E"); }
 .ico.unknown { --ic: var(--unknown); --m: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2018%2018%27%3E%3Ccircle%20cx%3D%279%27%20cy%3D%279%27%20r%3D%277.2%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%271.6%27/%3E%3Cpath%20d%3D%27M6.4%206.4l5.2%205.2M11.6%206.4l-5.2%205.2%27%20stroke%3D%27black%27%20stroke-width%3D%271.6%27%20stroke-linecap%3D%27round%27/%3E%3C/svg%3E"); }
 .ico.none { --ic: var(--unmarked-line); --m: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2018%2018%27%3E%3Ccircle%20cx%3D%279%27%20cy%3D%279%27%20r%3D%277.2%27%20fill%3D%27none%27%20stroke%3D%27black%27%20stroke-width%3D%271.4%27/%3E%3C/svg%3E"); }
 </style>
@@ -391,370 +394,370 @@ kbd { min-width: 20px; height: 20px; box-sizing: border-box; display: inline-fle
 <a class="cont" id="cont" href="#" hidden><span class="cont-text"><span class="cont-pos"></span><span class="cont-q"></span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></a>
 <div id="empty" class="empty" hidden>Ничего не найдено</div>
 <details class="chap"><summary><span class="ct">Java Core</span><span class="count">36</span><span class="mini" role="img"></span></summary>
-<a href="#q1" data-k="ad14a7ee8f" data-ci="0"><span class="num">1</span><span class="q">Как передаются параметры в Java?</span><i class="st ico none"></i></a>
-<a href="#q2" data-k="bf172bc818" data-ci="0"><span class="num">2</span><span class="q">Чем == отличается от equals? Integer cache</span><i class="st ico none"></i></a>
-<a href="#q3" data-k="9fc169b8a2" data-ci="0" data-top><span class="num">3</span><span class="q">Контракт equals/hashCode. Что будет, если hashCode всегда возвращает 42?</span><i class="st ico none"></i></a>
-<a href="#q4" data-k="9985c2445a" data-ci="0"><span class="num">4</span><span class="q">Принципы ООП: инкапсуляция, наследование, полиморфизм, абстракция</span><i class="st ico none"></i></a>
-<a href="#q5" data-k="84b9fe1b51" data-ci="0"><span class="num">5</span><span class="q">final, static и модификаторы доступа</span><i class="st ico none"></i></a>
-<a href="#q6" data-k="3cba364763" data-ci="0"><span class="num">6</span><span class="q">Перегрузка и переопределение: правила</span><i class="st ico none"></i></a>
-<a href="#q7" data-k="168aa24331" data-ci="0"><span class="num">7</span><span class="q">Абстрактный класс или интерфейс?</span><i class="st ico none"></i></a>
-<a href="#q8" data-k="c19009c0ec" data-ci="0"><span class="num">8</span><span class="q">Порядок инициализации при наследовании</span><i class="st ico none"></i></a>
-<a href="#q9" data-k="2c1eea8f57" data-ci="0"><span class="num">9</span><span class="q">Что выведет код: вызов метода из конструктора</span><i class="st ico none"></i></a>
-<a href="#q10" data-k="8f9982be41" data-ci="0"><span class="num">10</span><span class="q">Вложенные классы: static nested, inner, анонимные и лямбды</span><i class="st ico none"></i></a>
-<a href="#q11" data-k="5309bbe565" data-ci="0"><span class="num">11</span><span class="q">Методы Object: clone, toString, getClass</span><i class="st ico none"></i></a>
-<a href="#q12" data-k="77cb73700b" data-ci="0"><span class="num">12</span><span class="q">Почему String неизменяемый и final?</span><i class="st ico none"></i></a>
-<a href="#q13" data-k="c0f4ccfb7f" data-ci="0"><span class="num">13</span><span class="q">Что выведет код: строки и String Pool</span><i class="st ico none"></i></a>
-<a href="#q14" data-k="1f7b6589e3" data-ci="0"><span class="num">14</span><span class="q">Конкатенация строк: +, StringBuilder, StringBuffer</span><i class="st ico none"></i></a>
-<a href="#q15" data-k="ef2ef52df0" data-ci="0"><span class="num">15</span><span class="q">Что выведет код: автоупаковка и перегрузка</span><i class="st ico none"></i></a>
-<a href="#q16" data-k="979ad94dc6" data-ci="0"><span class="num">16</span><span class="q">Как сделать иммутабельный класс и зачем?</span><i class="st ico none"></i></a>
-<a href="#q17" data-k="226a86a3c1" data-ci="0"><span class="num">17</span><span class="q">Records: что генерируется и какие ограничения</span><i class="st ico none"></i></a>
-<a href="#q18" data-k="c32a2de396" data-ci="0"><span class="num">18</span><span class="q">Enum: что умеет и где применить</span><i class="st ico none"></i></a>
-<a href="#q19" data-k="00cc2f68e1" data-ci="0"><span class="num">19</span><span class="q">Исключения: checked и unchecked, finally, стоимость</span><i class="st ico none"></i></a>
-<a href="#q20" data-k="1f4e00bdc7" data-ci="0"><span class="num">20</span><span class="q">try-with-resources и подавленные исключения</span><i class="st ico none"></i></a>
-<a href="#q21" data-k="8761b86442" data-ci="0"><span class="num">21</span><span class="q">Что выведет код: return и finally</span><i class="st ico none"></i></a>
-<a href="#q22" data-k="5ae8fb2bbf" data-ci="0"><span class="num">22</span><span class="q">Generics: type erasure, PECS, heap pollution</span><i class="st ico none"></i></a>
-<a href="#q23" data-k="dd7fadb029" data-ci="0"><span class="num">23</span><span class="q">Лямбды и функциональные интерфейсы: effectively final, ссылки на методы</span><i class="st ico none"></i></a>
-<a href="#q24" data-k="bcd309598e" data-ci="0"><span class="num">24</span><span class="q">Stream API: ленивость, peek, allMatch на пустом стриме, parallel</span><i class="st ico none"></i></a>
-<a href="#q25" data-k="210b6d9494" data-ci="0"><span class="num">25</span><span class="q">Optional: как использовать правильно</span><i class="st ico none"></i></a>
-<a href="#q26" data-k="f597bee350" data-ci="0"><span class="num">26</span><span class="q">Аннотации и рефлексия: кто и когда их читает</span><i class="st ico none"></i></a>
-<a href="#q27" data-k="a8b1cb1142" data-ci="0"><span class="num">27</span><span class="q">Lombok и MapStruct: что генерируют и где ловушки</span><i class="st ico none"></i></a>
-<a href="#q28" data-k="abda7071f2" data-ci="0"><span class="num">28</span><span class="q">I/O и NIO: потоки, каналы, неблокирующий ввод-вывод</span><i class="st ico none"></i></a>
-<a href="#q29" data-k="46759d2244" data-ci="0"><span class="num">29</span><span class="q">Почему встроенная Java-сериализация опасна?</span><i class="st ico none"></i></a>
-<a href="#q30" data-k="c935f53c9d" data-ci="0"><span class="num">30</span><span class="q">Деньги в Java: BigDecimal, округление, валюты</span><i class="st ico none"></i></a>
-<a href="#q31" data-k="e5e21d968e" data-ci="0"><span class="num">31</span><span class="q">Время в Java и БД: Instant, LocalDateTime, ZonedDateTime</span><i class="st ico none"></i></a>
-<a href="#q32" data-k="ae57c2eece" data-ci="0"><span class="num">32</span><span class="q">Сколько памяти занимает объект? Заголовок и compressed oops</span><i class="st ico none"></i></a>
-<a href="#q33" data-k="b4e54af271" data-ci="0"><span class="num">33</span><span class="q">Что нового в Java 17–25 и что вы используете?</span><i class="st ico none"></i></a>
-<a href="#q34" data-k="7970946002" data-ci="0"><span class="num">34</span><span class="q">SOLID: каждая буква на примере</span><i class="st ico none"></i></a>
-<a href="#q35" data-k="e5a7395987" data-ci="0"><span class="num">35</span><span class="q">Какие паттерны вы используете и где они в Spring?</span><i class="st ico none"></i></a>
-<a href="#q36" data-k="b926fc589f" data-ci="0"><span class="num">36</span><span class="q">Паттерны подробнее: Decorator или Proxy, проблемы Singleton, Builder</span><i class="st ico none"></i></a>
+<a href="#q1" data-k="ad14a7ee8f" data-ci="0"><span class="num">1</span><span class="q">Как передаются параметры в Java?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q2" data-k="bf172bc818" data-ci="0"><span class="num">2</span><span class="q">Чем == отличается от equals? Integer cache</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q3" data-k="9fc169b8a2" data-ci="0" data-top><span class="num">3</span><span class="q">Контракт equals/hashCode. Что будет, если hashCode всегда возвращает 42?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q4" data-k="9985c2445a" data-ci="0"><span class="num">4</span><span class="q">Принципы ООП: инкапсуляция, наследование, полиморфизм, абстракция</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q5" data-k="84b9fe1b51" data-ci="0"><span class="num">5</span><span class="q">final, static и модификаторы доступа</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q6" data-k="3cba364763" data-ci="0"><span class="num">6</span><span class="q">Перегрузка и переопределение: правила</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q7" data-k="168aa24331" data-ci="0"><span class="num">7</span><span class="q">Абстрактный класс или интерфейс?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q8" data-k="c19009c0ec" data-ci="0"><span class="num">8</span><span class="q">Порядок инициализации при наследовании</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q9" data-k="2c1eea8f57" data-ci="0"><span class="num">9</span><span class="q">Что выведет код: вызов метода из конструктора</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q10" data-k="8f9982be41" data-ci="0"><span class="num">10</span><span class="q">Вложенные классы: static nested, inner, анонимные и лямбды</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q11" data-k="5309bbe565" data-ci="0"><span class="num">11</span><span class="q">Методы Object: clone, toString, getClass</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q12" data-k="77cb73700b" data-ci="0"><span class="num">12</span><span class="q">Почему String неизменяемый и final?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q13" data-k="c0f4ccfb7f" data-ci="0"><span class="num">13</span><span class="q">Что выведет код: строки и String Pool</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q14" data-k="1f7b6589e3" data-ci="0"><span class="num">14</span><span class="q">Конкатенация строк: +, StringBuilder, StringBuffer</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q15" data-k="ef2ef52df0" data-ci="0"><span class="num">15</span><span class="q">Что выведет код: автоупаковка и перегрузка</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q16" data-k="979ad94dc6" data-ci="0"><span class="num">16</span><span class="q">Как сделать иммутабельный класс и зачем?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q17" data-k="226a86a3c1" data-ci="0"><span class="num">17</span><span class="q">Records: что генерируется и какие ограничения</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q18" data-k="c32a2de396" data-ci="0"><span class="num">18</span><span class="q">Enum: что умеет и где применить</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q19" data-k="00cc2f68e1" data-ci="0"><span class="num">19</span><span class="q">Исключения: checked и unchecked, finally, стоимость</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q20" data-k="1f4e00bdc7" data-ci="0"><span class="num">20</span><span class="q">try-with-resources и подавленные исключения</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q21" data-k="8761b86442" data-ci="0"><span class="num">21</span><span class="q">Что выведет код: return и finally</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q22" data-k="5ae8fb2bbf" data-ci="0"><span class="num">22</span><span class="q">Generics: type erasure, PECS, heap pollution</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q23" data-k="dd7fadb029" data-ci="0"><span class="num">23</span><span class="q">Лямбды и функциональные интерфейсы: effectively final, ссылки на методы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q24" data-k="bcd309598e" data-ci="0"><span class="num">24</span><span class="q">Stream API: ленивость, peek, allMatch на пустом стриме, parallel</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q25" data-k="210b6d9494" data-ci="0"><span class="num">25</span><span class="q">Optional: как использовать правильно</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q26" data-k="f597bee350" data-ci="0"><span class="num">26</span><span class="q">Аннотации и рефлексия: кто и когда их читает</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q27" data-k="a8b1cb1142" data-ci="0"><span class="num">27</span><span class="q">Lombok и MapStruct: что генерируют и где ловушки</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q28" data-k="abda7071f2" data-ci="0"><span class="num">28</span><span class="q">I/O и NIO: потоки, каналы, неблокирующий ввод-вывод</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q29" data-k="46759d2244" data-ci="0"><span class="num">29</span><span class="q">Почему встроенная Java-сериализация опасна?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q30" data-k="c935f53c9d" data-ci="0"><span class="num">30</span><span class="q">Деньги в Java: BigDecimal, округление, валюты</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q31" data-k="e5e21d968e" data-ci="0"><span class="num">31</span><span class="q">Время в Java и БД: Instant, LocalDateTime, ZonedDateTime</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q32" data-k="ae57c2eece" data-ci="0"><span class="num">32</span><span class="q">Сколько памяти занимает объект? Заголовок и compressed oops</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q33" data-k="b4e54af271" data-ci="0"><span class="num">33</span><span class="q">Что нового в Java 17–25 и что вы используете?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q34" data-k="7970946002" data-ci="0"><span class="num">34</span><span class="q">SOLID: каждая буква на примере</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q35" data-k="e5a7395987" data-ci="0"><span class="num">35</span><span class="q">Какие паттерны вы используете и где они в Spring?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q36" data-k="b926fc589f" data-ci="0"><span class="num">36</span><span class="q">Паттерны подробнее: Decorator или Proxy, проблемы Singleton, Builder</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Коллекции</span><span class="count">24</span><span class="mini" role="img"></span></summary>
-<a href="#q37" data-k="f635ba3e55" data-ci="1"><span class="num">37</span><span class="q">Почему Map не наследует Collection? keySet, values, entrySet</span><i class="st ico none"></i></a>
-<a href="#q38" data-k="5fee08b26c" data-ci="1"><span class="num">38</span><span class="q">Сложность операций основных коллекций</span><i class="st ico none"></i></a>
-<a href="#q39" data-k="e9fb1f1436" data-ci="1"><span class="num">39</span><span class="q">ArrayList или LinkedList?</span><i class="st ico none"></i></a>
-<a href="#q40" data-k="a8f0c7ffcd" data-ci="1"><span class="num">40</span><span class="q">Как увеличивается ArrayList и HashMap</span><i class="st ico none"></i></a>
-<a href="#q41" data-k="14398e4c70" data-ci="1"><span class="num">41</span><span class="q">Итератор: как обход работает внутри</span><i class="st ico none"></i></a>
-<a href="#q42" data-k="8be339356d" data-ci="1"><span class="num">42</span><span class="q">ConcurrentModificationException: fail-fast и слабо согласованные итераторы</span><i class="st ico none"></i></a>
-<a href="#q43" data-k="f71aba876d" data-ci="1"><span class="num">43</span><span class="q">Как удалить элементы при обходе коллекции</span><i class="st ico none"></i></a>
-<a href="#q44" data-k="1691e4fc7b" data-ci="1"><span class="num">44</span><span class="q">List.of, Collections.unmodifiableList и Arrays.asList — в чём разница?</span><i class="st ico none"></i></a>
-<a href="#q45" data-k="44a0787328" data-ci="1"><span class="num">45</span><span class="q">ArrayDeque вместо Stack и LinkedList</span><i class="st ico none"></i></a>
-<a href="#q46" data-k="76600f7650" data-ci="1" data-top><span class="num">46</span><span class="q">Как устроен HashMap?</span><i class="st ico none"></i></a>
-<a href="#q47" data-k="b6b620bdc9" data-ci="1"><span class="num">47</span><span class="q">Изменяемый ключ в HashMap</span><i class="st ico none"></i></a>
-<a href="#q48" data-k="ae182e739d" data-ci="1"><span class="num">48</span><span class="q">HashSet, LinkedHashSet, TreeSet — когда что</span><i class="st ico none"></i></a>
-<a href="#q49" data-k="98ced6655b" data-ci="1"><span class="num">49</span><span class="q">Убрать дубликаты из списка с сохранением порядка</span><i class="st ico none"></i></a>
-<a href="#q50" data-k="e5fba35eb2" data-ci="1"><span class="num">50</span><span class="q">Comparable или Comparator</span><i class="st ico none"></i></a>
-<a href="#q51" data-k="fc3091c882" data-ci="1"><span class="num">51</span><span class="q">TreeMap, LinkedHashMap и LRU-кеш</span><i class="st ico none"></i></a>
-<a href="#q52" data-k="6d808a48c6" data-ci="1"><span class="num">52</span><span class="q">NavigableMap и NavigableSet: поиск ближайшего</span><i class="st ico none"></i></a>
-<a href="#q53" data-k="b0ad3ca7ba" data-ci="1"><span class="num">53</span><span class="q">PriorityQueue: как устроена и где применить</span><i class="st ico none"></i></a>
-<a href="#q54" data-k="3f17cc0700" data-ci="1"><span class="num">54</span><span class="q">WeakHashMap, IdentityHashMap, EnumMap — когда нужны</span><i class="st ico none"></i></a>
-<a href="#q55" data-k="a917f6afac" data-ci="1"><span class="num">55</span><span class="q">Sequenced Collections (Java 21)</span><i class="st ico none"></i></a>
-<a href="#q56" data-k="0218d8bab2" data-ci="1"><span class="num">56</span><span class="q">Arrays.sort и Collections.sort: какие алгоритмы</span><i class="st ico none"></i></a>
-<a href="#q57" data-k="29e7fa330a" data-ci="1"><span class="num">57</span><span class="q">Collectors: groupingBy, toMap и дубликаты ключей</span><i class="st ico none"></i></a>
-<a href="#q58" data-k="e7236cfeb4" data-ci="1"><span class="num">58</span><span class="q">synchronizedList, CopyOnWriteArrayList или конкурентная очередь?</span><i class="st ico none"></i></a>
-<a href="#q59" data-k="51851e9813" data-ci="1"><span class="num">59</span><span class="q">Как устроен ConcurrentHashMap?</span><i class="st ico none"></i></a>
-<a href="#q60" data-k="c15fbaa7d3" data-ci="1"><span class="num">60</span><span class="q">BlockingQueue: ArrayBlockingQueue, LinkedBlockingQueue, SynchronousQueue</span><i class="st ico none"></i></a>
+<a href="#q37" data-k="f635ba3e55" data-ci="1"><span class="num">37</span><span class="q">Почему Map не наследует Collection? keySet, values, entrySet</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q38" data-k="5fee08b26c" data-ci="1"><span class="num">38</span><span class="q">Сложность операций основных коллекций</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q39" data-k="e9fb1f1436" data-ci="1"><span class="num">39</span><span class="q">ArrayList или LinkedList?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q40" data-k="a8f0c7ffcd" data-ci="1"><span class="num">40</span><span class="q">Как увеличивается ArrayList и HashMap</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q41" data-k="14398e4c70" data-ci="1"><span class="num">41</span><span class="q">Итератор: как обход работает внутри</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q42" data-k="8be339356d" data-ci="1"><span class="num">42</span><span class="q">ConcurrentModificationException: fail-fast и слабо согласованные итераторы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q43" data-k="f71aba876d" data-ci="1"><span class="num">43</span><span class="q">Как удалить элементы при обходе коллекции</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q44" data-k="1691e4fc7b" data-ci="1"><span class="num">44</span><span class="q">List.of, Collections.unmodifiableList и Arrays.asList — в чём разница?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q45" data-k="44a0787328" data-ci="1"><span class="num">45</span><span class="q">ArrayDeque вместо Stack и LinkedList</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q46" data-k="76600f7650" data-ci="1" data-top><span class="num">46</span><span class="q">Как устроен HashMap?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q47" data-k="b6b620bdc9" data-ci="1"><span class="num">47</span><span class="q">Изменяемый ключ в HashMap</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q48" data-k="ae182e739d" data-ci="1"><span class="num">48</span><span class="q">HashSet, LinkedHashSet, TreeSet — когда что</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q49" data-k="98ced6655b" data-ci="1"><span class="num">49</span><span class="q">Убрать дубликаты из списка с сохранением порядка</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q50" data-k="e5fba35eb2" data-ci="1"><span class="num">50</span><span class="q">Comparable или Comparator</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q51" data-k="fc3091c882" data-ci="1"><span class="num">51</span><span class="q">TreeMap, LinkedHashMap и LRU-кеш</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q52" data-k="6d808a48c6" data-ci="1"><span class="num">52</span><span class="q">NavigableMap и NavigableSet: поиск ближайшего</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q53" data-k="b0ad3ca7ba" data-ci="1"><span class="num">53</span><span class="q">PriorityQueue: как устроена и где применить</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q54" data-k="3f17cc0700" data-ci="1"><span class="num">54</span><span class="q">WeakHashMap, IdentityHashMap, EnumMap — когда нужны</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q55" data-k="a917f6afac" data-ci="1"><span class="num">55</span><span class="q">Sequenced Collections (Java 21)</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q56" data-k="0218d8bab2" data-ci="1"><span class="num">56</span><span class="q">Arrays.sort и Collections.sort: какие алгоритмы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q57" data-k="29e7fa330a" data-ci="1"><span class="num">57</span><span class="q">Collectors: groupingBy, toMap и дубликаты ключей</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q58" data-k="e7236cfeb4" data-ci="1"><span class="num">58</span><span class="q">synchronizedList, CopyOnWriteArrayList или конкурентная очередь?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q59" data-k="51851e9813" data-ci="1"><span class="num">59</span><span class="q">Как устроен ConcurrentHashMap?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q60" data-k="c15fbaa7d3" data-ci="1"><span class="num">60</span><span class="q">BlockingQueue: ArrayBlockingQueue, LinkedBlockingQueue, SynchronousQueue</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Многопоточность и JMM</span><span class="count">22</span><span class="mini" role="img"></span></summary>
-<a href="#q61" data-k="a292ba5eb8" data-ci="2"><span class="num">61</span><span class="q">Thread, Runnable, Callable и Future. Race condition, livelock, starvation</span><i class="st ico none"></i></a>
-<a href="#q62" data-k="9e49e2b606" data-ci="2"><span class="num">62</span><span class="q">Состояния потока: BLOCKED, WAITING, TIMED_WAITING</span><i class="st ico none"></i></a>
-<a href="#q63" data-k="254b4c936b" data-ci="2"><span class="num">63</span><span class="q">Почему count++ не потокобезопасен</span><i class="st ico none"></i></a>
-<a href="#q64" data-k="976f5ce934" data-ci="2"><span class="num">64</span><span class="q">volatile, happens-before и безопасная публикация. Почему DCL без volatile сломан?</span><i class="st ico none"></i></a>
-<a href="#q65" data-k="dec5e460fd" data-ci="2"><span class="num">65</span><span class="q">synchronized и ReentrantLock: на чём монитор, чем отличаются, как устроены</span><i class="st ico none"></i></a>
-<a href="#q66" data-k="2e8c7237fb" data-ci="2"><span class="num">66</span><span class="q">wait/notify: зачем цикл и чем notify отличается от notifyAll</span><i class="st ico none"></i></a>
-<a href="#q67" data-k="54baf09fbc" data-ci="2"><span class="num">67</span><span class="q">Лайв-кодинг: два потока печатают числа по очереди</span><i class="st ico none"></i></a>
-<a href="#q68" data-k="f79d2eb2fc" data-ci="2"><span class="num">68</span><span class="q">Deadlock: условия, как найти и предотвратить</span><i class="st ico none"></i></a>
-<a href="#q69" data-k="3a1ab598cf" data-ci="2"><span class="num">69</span><span class="q">Как корректно остановить поток: interrupt</span><i class="st ico none"></i></a>
-<a href="#q70" data-k="8baafe7387" data-ci="2"><span class="num">70</span><span class="q">CAS, атомики, LongAdder и false sharing</span><i class="st ico none"></i></a>
-<a href="#q71" data-k="3b150c63ac" data-ci="2"><span class="num">71</span><span class="q">AQS: на чём построены ReentrantLock, Semaphore, CountDownLatch</span><i class="st ico none"></i></a>
-<a href="#q72" data-k="853f020ca6" data-ci="2"><span class="num">72</span><span class="q">CountDownLatch, CyclicBarrier, Semaphore, Phaser — когда что</span><i class="st ico none"></i></a>
-<a href="#q73" data-k="14ef5d4478" data-ci="2"><span class="num">73</span><span class="q">ReadWriteLock и StampedLock</span><i class="st ico none"></i></a>
-<a href="#q74" data-k="09064c5f95" data-ci="2"><span class="num">74</span><span class="q">Как сделать класс потокобезопасным</span><i class="st ico none"></i></a>
-<a href="#q75" data-k="7a3bb6f0b7" data-ci="2"><span class="num">75</span><span class="q">ThreadPoolExecutor: параметры и почему Executors.newFixedThreadPool опасен</span><i class="st ico none"></i></a>
-<a href="#q76" data-k="878c4f726a" data-ci="2"><span class="num">76</span><span class="q">CompletableFuture: thenApply и thenCompose, ошибки, пулы</span><i class="st ico none"></i></a>
-<a href="#q77" data-k="3fcb4ebebe" data-ci="2"><span class="num">77</span><span class="q">ForkJoinPool и parallel streams: когда вредят</span><i class="st ico none"></i></a>
-<a href="#q78" data-k="033468be88" data-ci="2"><span class="num">78</span><span class="q">ThreadLocal: где используется и чем опасен</span><i class="st ico none"></i></a>
-<a href="#q79" data-k="d05df96d9a" data-ci="2"><span class="num">79</span><span class="q">Потокобезопасный кеш без двойной загрузки</span><i class="st ico none"></i></a>
-<a href="#q80" data-k="ae7be49aa0" data-ci="2"><span class="num">80</span><span class="q">Виртуальные потоки: как работают, pinning, ограничения</span><i class="st ico none"></i></a>
-<a href="#q81" data-k="f150b66013" data-ci="2"><span class="num">81</span><span class="q">Structured concurrency и ScopedValue</span><i class="st ico none"></i></a>
-<a href="#q82" data-k="463dfbf48a" data-ci="2"><span class="num">82</span><span class="q">Как диагностировать проблемы многопоточности в проде</span><i class="st ico none"></i></a>
+<a href="#q61" data-k="a292ba5eb8" data-ci="2"><span class="num">61</span><span class="q">Thread, Runnable, Callable и Future. Race condition, livelock, starvation</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q62" data-k="9e49e2b606" data-ci="2"><span class="num">62</span><span class="q">Состояния потока: BLOCKED, WAITING, TIMED_WAITING</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q63" data-k="254b4c936b" data-ci="2"><span class="num">63</span><span class="q">Почему count++ не потокобезопасен</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q64" data-k="976f5ce934" data-ci="2"><span class="num">64</span><span class="q">volatile, happens-before и безопасная публикация. Почему DCL без volatile сломан?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q65" data-k="dec5e460fd" data-ci="2"><span class="num">65</span><span class="q">synchronized и ReentrantLock: на чём монитор, чем отличаются, как устроены</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q66" data-k="2e8c7237fb" data-ci="2"><span class="num">66</span><span class="q">wait/notify: зачем цикл и чем notify отличается от notifyAll</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q67" data-k="54baf09fbc" data-ci="2"><span class="num">67</span><span class="q">Лайв-кодинг: два потока печатают числа по очереди</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q68" data-k="f79d2eb2fc" data-ci="2"><span class="num">68</span><span class="q">Deadlock: условия, как найти и предотвратить</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q69" data-k="3a1ab598cf" data-ci="2"><span class="num">69</span><span class="q">Как корректно остановить поток: interrupt</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q70" data-k="8baafe7387" data-ci="2"><span class="num">70</span><span class="q">CAS, атомики, LongAdder и false sharing</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q71" data-k="3b150c63ac" data-ci="2"><span class="num">71</span><span class="q">AQS: на чём построены ReentrantLock, Semaphore, CountDownLatch</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q72" data-k="853f020ca6" data-ci="2"><span class="num">72</span><span class="q">CountDownLatch, CyclicBarrier, Semaphore, Phaser — когда что</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q73" data-k="14ef5d4478" data-ci="2"><span class="num">73</span><span class="q">ReadWriteLock и StampedLock</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q74" data-k="09064c5f95" data-ci="2"><span class="num">74</span><span class="q">Как сделать класс потокобезопасным</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q75" data-k="7a3bb6f0b7" data-ci="2"><span class="num">75</span><span class="q">ThreadPoolExecutor: параметры и почему Executors.newFixedThreadPool опасен</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q76" data-k="878c4f726a" data-ci="2"><span class="num">76</span><span class="q">CompletableFuture: thenApply и thenCompose, ошибки, пулы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q77" data-k="3fcb4ebebe" data-ci="2"><span class="num">77</span><span class="q">ForkJoinPool и parallel streams: когда вредят</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q78" data-k="033468be88" data-ci="2"><span class="num">78</span><span class="q">ThreadLocal: где используется и чем опасен</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q79" data-k="d05df96d9a" data-ci="2"><span class="num">79</span><span class="q">Потокобезопасный кеш без двойной загрузки</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q80" data-k="ae7be49aa0" data-ci="2"><span class="num">80</span><span class="q">Виртуальные потоки: как работают, pinning, ограничения</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q81" data-k="f150b66013" data-ci="2"><span class="num">81</span><span class="q">Structured concurrency и ScopedValue</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q82" data-k="463dfbf48a" data-ci="2"><span class="num">82</span><span class="q">Как диагностировать проблемы многопоточности в проде</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">JVM и производительность</span><span class="count">24</span><span class="mini" role="img"></span></summary>
-<a href="#q83" data-k="bc7384415a" data-ci="3"><span class="num">83</span><span class="q">Байткод, JVM, JRE и JDK</span><i class="st ico none"></i></a>
-<a href="#q84" data-k="4b5dbebc8a" data-ci="3"><span class="num">84</span><span class="q">Загрузка класса: этапы и когда выполняется static-блок</span><i class="st ico none"></i></a>
-<a href="#q85" data-k="f2d6f657fd" data-ci="3"><span class="num">85</span><span class="q">Загрузчики классов и делегирование</span><i class="st ico none"></i></a>
-<a href="#q86" data-k="d2a09f2882" data-ci="3"><span class="num">86</span><span class="q">Стек и куча: что где хранится</span><i class="st ico none"></i></a>
-<a href="#q87" data-k="4f81c4354c" data-ci="3"><span class="num">87</span><span class="q">Память JVM: из чего состоит и почему RSS больше Xmx</span><i class="st ico none"></i></a>
-<a href="#q88" data-k="52a8ebab06" data-ci="3"><span class="num">88</span><span class="q">Как выделяется память под объект: TLAB</span><i class="st ico none"></i></a>
-<a href="#q89" data-k="c59ff0a3eb" data-ci="3"><span class="num">89</span><span class="q">GC roots: от чего считается достижимость</span><i class="st ico none"></i></a>
-<a href="#q90" data-k="8618f89bf5" data-ci="3"><span class="num">90</span><span class="q">Strong, soft, weak и phantom ссылки</span><i class="st ico none"></i></a>
-<a href="#q91" data-k="12a5f64f22" data-ci="3"><span class="num">91</span><span class="q">Как работает GC и как устроен G1</span><i class="st ico none"></i></a>
-<a href="#q92" data-k="e205dbcecb" data-ci="3"><span class="num">92</span><span class="q">Какие бывают сборщики мусора и как выбрать</span><i class="st ico none"></i></a>
-<a href="#q93" data-k="d901d28fa5" data-ci="3"><span class="num">93</span><span class="q">ZGC и Shenandoah: как получаются паузы меньше миллисекунды</span><i class="st ico none"></i></a>
-<a href="#q94" data-k="f14061e181" data-ci="3"><span class="num">94</span><span class="q">Почему System.gc() и finalize — плохая идея</span><i class="st ico none"></i></a>
-<a href="#q95" data-k="e8d58449b6" data-ci="3"><span class="num">95</span><span class="q">Как читать GC-логи</span><i class="st ico none"></i></a>
-<a href="#q96" data-k="396af0232a" data-ci="3"><span class="num">96</span><span class="q">Утечка памяти: как найти</span><i class="st ico none"></i></a>
-<a href="#q97" data-k="bd27a2465e" data-ci="3"><span class="num">97</span><span class="q">OutOfMemoryError: Metaspace — откуда берётся</span><i class="st ico none"></i></a>
-<a href="#q98" data-k="74e630cd6f" data-ci="3"><span class="num">98</span><span class="q">Как JVM видит лимиты контейнера</span><i class="st ico none"></i></a>
-<a href="#q99" data-k="b30ed74d0a" data-ci="3"><span class="num">99</span><span class="q">Какие флаги JVM вы ставите в проде и почему</span><i class="st ico none"></i></a>
-<a href="#q100" data-k="4a55ce3a66" data-ci="3"><span class="num">100</span><span class="q">JIT-компиляция и почему микробенчмарк без JMH врёт</span><i class="st ico none"></i></a>
-<a href="#q101" data-k="b68a403a75" data-ci="3"><span class="num">101</span><span class="q">Escape analysis: что JIT делает с объектами, не покидающими метод</span><i class="st ico none"></i></a>
-<a href="#q102" data-k="480bf0bdc7" data-ci="3"><span class="num">102</span><span class="q">Safepoints и всплески латентности без длинных GC-пауз</span><i class="st ico none"></i></a>
-<a href="#q103" data-k="6d35f8b4f1" data-ci="3"><span class="num">103</span><span class="q">Почему первые запросы после старта медленные</span><i class="st ico none"></i></a>
-<a href="#q104" data-k="19f2906652" data-ci="3"><span class="num">104</span><span class="q">Как ускорить старт Java-сервиса</span><i class="st ico none"></i></a>
-<a href="#q105" data-k="1e6fe3a530" data-ci="3"><span class="num">105</span><span class="q">Thread dump: как снять и что искать</span><i class="st ico none"></i></a>
-<a href="#q106" data-k="a7a31f0e68" data-ci="3"><span class="num">106</span><span class="q">Профилирование в проде: JFR, async-profiler, flame graphs</span><i class="st ico none"></i></a>
+<a href="#q83" data-k="bc7384415a" data-ci="3"><span class="num">83</span><span class="q">Байткод, JVM, JRE и JDK</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q84" data-k="4b5dbebc8a" data-ci="3"><span class="num">84</span><span class="q">Загрузка класса: этапы и когда выполняется static-блок</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q85" data-k="f2d6f657fd" data-ci="3"><span class="num">85</span><span class="q">Загрузчики классов и делегирование</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q86" data-k="d2a09f2882" data-ci="3"><span class="num">86</span><span class="q">Стек и куча: что где хранится</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q87" data-k="4f81c4354c" data-ci="3"><span class="num">87</span><span class="q">Память JVM: из чего состоит и почему RSS больше Xmx</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q88" data-k="52a8ebab06" data-ci="3"><span class="num">88</span><span class="q">Как выделяется память под объект: TLAB</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q89" data-k="c59ff0a3eb" data-ci="3"><span class="num">89</span><span class="q">GC roots: от чего считается достижимость</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q90" data-k="8618f89bf5" data-ci="3"><span class="num">90</span><span class="q">Strong, soft, weak и phantom ссылки</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q91" data-k="12a5f64f22" data-ci="3"><span class="num">91</span><span class="q">Как работает GC и как устроен G1</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q92" data-k="e205dbcecb" data-ci="3"><span class="num">92</span><span class="q">Какие бывают сборщики мусора и как выбрать</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q93" data-k="d901d28fa5" data-ci="3"><span class="num">93</span><span class="q">ZGC и Shenandoah: как получаются паузы меньше миллисекунды</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q94" data-k="f14061e181" data-ci="3"><span class="num">94</span><span class="q">Почему System.gc() и finalize — плохая идея</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q95" data-k="e8d58449b6" data-ci="3"><span class="num">95</span><span class="q">Как читать GC-логи</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q96" data-k="396af0232a" data-ci="3"><span class="num">96</span><span class="q">Утечка памяти: как найти</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q97" data-k="bd27a2465e" data-ci="3"><span class="num">97</span><span class="q">OutOfMemoryError: Metaspace — откуда берётся</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q98" data-k="74e630cd6f" data-ci="3"><span class="num">98</span><span class="q">Как JVM видит лимиты контейнера</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q99" data-k="b30ed74d0a" data-ci="3"><span class="num">99</span><span class="q">Какие флаги JVM вы ставите в проде и почему</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q100" data-k="4a55ce3a66" data-ci="3"><span class="num">100</span><span class="q">JIT-компиляция и почему микробенчмарк без JMH врёт</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q101" data-k="b68a403a75" data-ci="3"><span class="num">101</span><span class="q">Escape analysis: что JIT делает с объектами, не покидающими метод</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q102" data-k="480bf0bdc7" data-ci="3"><span class="num">102</span><span class="q">Safepoints и всплески латентности без длинных GC-пауз</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q103" data-k="6d35f8b4f1" data-ci="3"><span class="num">103</span><span class="q">Почему первые запросы после старта медленные</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q104" data-k="19f2906652" data-ci="3"><span class="num">104</span><span class="q">Как ускорить старт Java-сервиса</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q105" data-k="1e6fe3a530" data-ci="3"><span class="num">105</span><span class="q">Thread dump: как снять и что искать</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q106" data-k="a7a31f0e68" data-ci="3"><span class="num">106</span><span class="q">Профилирование в проде: JFR, async-profiler, flame graphs</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Spring</span><span class="count">31</span><span class="mini" role="img"></span></summary>
-<a href="#q107" data-k="fbff05d149" data-ci="4"><span class="num">107</span><span class="q">IoC и DI: почему внедрение через конструктор лучше field injection</span><i class="st ico none"></i></a>
-<a href="#q108" data-k="480b3a1afc" data-ci="4"><span class="num">108</span><span class="q">@Component, @Service, @Repository, @Controller — в чём разница</span><i class="st ico none"></i></a>
-<a href="#q109" data-k="eab7fd3c5a" data-ci="4"><span class="num">109</span><span class="q">Несколько бинов одного типа: как выбрать нужный</span><i class="st ico none"></i></a>
-<a href="#q110" data-k="8c7c7ae1a8" data-ci="4"><span class="num">110</span><span class="q">Жизненный цикл бина</span><i class="st ico none"></i></a>
-<a href="#q111" data-k="42bab8a223" data-ci="4"><span class="num">111</span><span class="q">Скоупы бинов и prototype внутри singleton</span><i class="st ico none"></i></a>
-<a href="#q112" data-k="d81e9fe0de" data-ci="4"><span class="num">112</span><span class="q">Циклические зависимости: как Spring их разрешает</span><i class="st ico none"></i></a>
-<a href="#q113" data-k="6546d244d8" data-ci="4"><span class="num">113</span><span class="q">BeanPostProcessor и BeanFactoryPostProcessor</span><i class="st ico none"></i></a>
-<a href="#q114" data-k="0ddf14aa2b" data-ci="4"><span class="num">114</span><span class="q">@Configuration: full и lite режим, proxyBeanMethods</span><i class="st ico none"></i></a>
-<a href="#q115" data-k="f6a5254e9b" data-ci="4"><span class="num">115</span><span class="q">JDK Dynamic Proxy или CGLIB</span><i class="st ico none"></i></a>
-<a href="#q116" data-k="c6eae3c13f" data-ci="4"><span class="num">116</span><span class="q">Spring AOP: аспекты, pointcut, advice и ограничения прокси</span><i class="st ico none"></i></a>
-<a href="#q117" data-k="80b50ba05f" data-ci="4"><span class="num">117</span><span class="q">Конфигурация Spring Boot: профили, порядок источников, @ConfigurationProperties</span><i class="st ico none"></i></a>
-<a href="#q118" data-k="fbe7f8ba2f" data-ci="4"><span class="num">118</span><span class="q">Как работает автоконфигурация Spring Boot</span><i class="st ico none"></i></a>
-<a href="#q119" data-k="a8e35f265e" data-ci="4"><span class="num">119</span><span class="q">Как написать свой Spring Boot starter</span><i class="st ico none"></i></a>
-<a href="#q120" data-k="0198701ad1" data-ci="4"><span class="num">120</span><span class="q">Как @Transactional работает изнутри и почему транзакция не переходит в другой поток</span><i class="st ico none"></i></a>
-<a href="#q121" data-k="a9439ec58a" data-ci="4" data-top><span class="num">121</span><span class="q">Метод A вызывает @Transactional-метод B того же класса. Какая транзакция откроется?</span><i class="st ico none"></i></a>
-<a href="#q122" data-k="92923dad57" data-ci="4" data-top><span class="num">122</span><span class="q">@Transactional: propagation, NESTED и UnexpectedRollbackException</span><i class="st ico none"></i></a>
-<a href="#q123" data-k="5712b89f4d" data-ci="4"><span class="num">123</span><span class="q">Несколько DataSource в Spring Boot и транзакции через две базы</span><i class="st ico none"></i></a>
-<a href="#q124" data-k="60a6df9bab" data-ci="4"><span class="num">124</span><span class="q">@Async: как работает и ловушки</span><i class="st ico none"></i></a>
-<a href="#q125" data-k="299239886f" data-ci="4"><span class="num">125</span><span class="q">События Spring и @TransactionalEventListener</span><i class="st ico none"></i></a>
-<a href="#q126" data-k="a02c3991da" data-ci="4"><span class="num">126</span><span class="q">@Cacheable: как работает и ловушки</span><i class="st ico none"></i></a>
-<a href="#q127" data-k="cd4180f032" data-ci="4"><span class="num">127</span><span class="q">Путь HTTP-запроса в Spring MVC. Filter или Interceptor?</span><i class="st ico none"></i></a>
-<a href="#q128" data-k="8220480a73" data-ci="4"><span class="num">128</span><span class="q">Обработка ошибок и валидация в REST</span><i class="st ico none"></i></a>
-<a href="#q129" data-k="ca5b67b939" data-ci="4"><span class="num">129</span><span class="q">Jackson: неизвестные поля, даты, BigDecimal, полиморфная десериализация</span><i class="st ico none"></i></a>
-<a href="#q130" data-k="e8fee57b95" data-ci="4"><span class="num">130</span><span class="q">HTTP-клиенты в Spring: RestTemplate, RestClient, WebClient, Feign</span><i class="st ico none"></i></a>
-<a href="#q131" data-k="57b396fcbd" data-ci="4"><span class="num">131</span><span class="q">Spring Security: аутентификация и авторизация, SecurityContext, @PreAuthorize</span><i class="st ico none"></i></a>
-<a href="#q132" data-k="60517e5cea" data-ci="4"><span class="num">132</span><span class="q">Spring Security и stateless JWT</span><i class="st ico none"></i></a>
-<a href="#q133" data-k="09da30fd46" data-ci="4"><span class="num">133</span><span class="q">@Scheduled при нескольких инстансах</span><i class="st ico none"></i></a>
-<a href="#q134" data-k="0f5ade7ba7" data-ci="4"><span class="num">134</span><span class="q">Пакетная обработка: Spring Batch или свой код</span><i class="st ico none"></i></a>
-<a href="#q135" data-k="decc6d1050" data-ci="4"><span class="num">135</span><span class="q">Spring Boot Actuator: что включить в проде</span><i class="st ico none"></i></a>
-<a href="#q136" data-k="53411a96ed" data-ci="4"><span class="num">136</span><span class="q">Project Reactor: subscribeOn, publishOn, flatMap и concatMap</span><i class="st ico none"></i></a>
-<a href="#q137" data-k="f86fc02780" data-ci="4"><span class="num">137</span><span class="q">Spring MVC на виртуальных потоках или WebFlux?</span><i class="st ico none"></i></a>
+<a href="#q107" data-k="fbff05d149" data-ci="4"><span class="num">107</span><span class="q">IoC и DI: почему внедрение через конструктор лучше field injection</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q108" data-k="480b3a1afc" data-ci="4"><span class="num">108</span><span class="q">@Component, @Service, @Repository, @Controller — в чём разница</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q109" data-k="eab7fd3c5a" data-ci="4"><span class="num">109</span><span class="q">Несколько бинов одного типа: как выбрать нужный</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q110" data-k="8c7c7ae1a8" data-ci="4"><span class="num">110</span><span class="q">Жизненный цикл бина</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q111" data-k="42bab8a223" data-ci="4"><span class="num">111</span><span class="q">Скоупы бинов и prototype внутри singleton</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q112" data-k="d81e9fe0de" data-ci="4"><span class="num">112</span><span class="q">Циклические зависимости: как Spring их разрешает</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q113" data-k="6546d244d8" data-ci="4"><span class="num">113</span><span class="q">BeanPostProcessor и BeanFactoryPostProcessor</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q114" data-k="0ddf14aa2b" data-ci="4"><span class="num">114</span><span class="q">@Configuration: full и lite режим, proxyBeanMethods</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q115" data-k="f6a5254e9b" data-ci="4"><span class="num">115</span><span class="q">JDK Dynamic Proxy или CGLIB</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q116" data-k="c6eae3c13f" data-ci="4"><span class="num">116</span><span class="q">Spring AOP: аспекты, pointcut, advice и ограничения прокси</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q117" data-k="80b50ba05f" data-ci="4"><span class="num">117</span><span class="q">Конфигурация Spring Boot: профили, порядок источников, @ConfigurationProperties</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q118" data-k="fbe7f8ba2f" data-ci="4"><span class="num">118</span><span class="q">Как работает автоконфигурация Spring Boot</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q119" data-k="a8e35f265e" data-ci="4"><span class="num">119</span><span class="q">Как написать свой Spring Boot starter</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q120" data-k="0198701ad1" data-ci="4"><span class="num">120</span><span class="q">Как @Transactional работает изнутри и почему транзакция не переходит в другой поток</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q121" data-k="a9439ec58a" data-ci="4" data-top><span class="num">121</span><span class="q">Метод A вызывает @Transactional-метод B того же класса. Какая транзакция откроется?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q122" data-k="92923dad57" data-ci="4" data-top><span class="num">122</span><span class="q">@Transactional: propagation, NESTED и UnexpectedRollbackException</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q123" data-k="5712b89f4d" data-ci="4"><span class="num">123</span><span class="q">Несколько DataSource в Spring Boot и транзакции через две базы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q124" data-k="60a6df9bab" data-ci="4"><span class="num">124</span><span class="q">@Async: как работает и ловушки</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q125" data-k="299239886f" data-ci="4"><span class="num">125</span><span class="q">События Spring и @TransactionalEventListener</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q126" data-k="a02c3991da" data-ci="4"><span class="num">126</span><span class="q">@Cacheable: как работает и ловушки</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q127" data-k="cd4180f032" data-ci="4"><span class="num">127</span><span class="q">Путь HTTP-запроса в Spring MVC. Filter или Interceptor?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q128" data-k="8220480a73" data-ci="4"><span class="num">128</span><span class="q">Обработка ошибок и валидация в REST</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q129" data-k="ca5b67b939" data-ci="4"><span class="num">129</span><span class="q">Jackson: неизвестные поля, даты, BigDecimal, полиморфная десериализация</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q130" data-k="e8fee57b95" data-ci="4"><span class="num">130</span><span class="q">HTTP-клиенты в Spring: RestTemplate, RestClient, WebClient, Feign</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q131" data-k="57b396fcbd" data-ci="4"><span class="num">131</span><span class="q">Spring Security: аутентификация и авторизация, SecurityContext, @PreAuthorize</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q132" data-k="60517e5cea" data-ci="4"><span class="num">132</span><span class="q">Spring Security и stateless JWT</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q133" data-k="09da30fd46" data-ci="4"><span class="num">133</span><span class="q">@Scheduled при нескольких инстансах</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q134" data-k="0f5ade7ba7" data-ci="4"><span class="num">134</span><span class="q">Пакетная обработка: Spring Batch или свой код</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q135" data-k="decc6d1050" data-ci="4"><span class="num">135</span><span class="q">Spring Boot Actuator: что включить в проде</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q136" data-k="53411a96ed" data-ci="4"><span class="num">136</span><span class="q">Project Reactor: subscribeOn, publishOn, flatMap и concatMap</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q137" data-k="f86fc02780" data-ci="4"><span class="num">137</span><span class="q">Spring MVC на виртуальных потоках или WebFlux?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">JPA и Hibernate</span><span class="count">26</span><span class="mini" role="img"></span></summary>
-<a href="#q138" data-k="b1339b649e" data-ci="5"><span class="num">138</span><span class="q">Требования к Entity. Почему final-класс мешает Hibernate</span><i class="st ico none"></i></a>
-<a href="#q139" data-k="191dc4643b" data-ci="5"><span class="num">139</span><span class="q">Генерация ID в JPA: IDENTITY, SEQUENCE, UUID</span><i class="st ico none"></i></a>
-<a href="#q140" data-k="11948938b6" data-ci="5"><span class="num">140</span><span class="q">Жизненный цикл сущности, persistence context и dirty checking</span><i class="st ico none"></i></a>
-<a href="#q141" data-k="c04737cc4c" data-ci="5"><span class="num">141</span><span class="q">Когда flush выполняется сам</span><i class="st ico none"></i></a>
-<a href="#q142" data-k="e9084a0c18" data-ci="5"><span class="num">142</span><span class="q">Spring Data save(): persist или merge?</span><i class="st ico none"></i></a>
-<a href="#q143" data-k="c2aa689257" data-ci="5"><span class="num">143</span><span class="q">findById или getReferenceById</span><i class="st ico none"></i></a>
-<a href="#q144" data-k="07f6eb0a1d" data-ci="5"><span class="num">144</span><span class="q">equals и hashCode у JPA-сущности</span><i class="st ico none"></i></a>
-<a href="#q145" data-k="3f882d3602" data-ci="5"><span class="num">145</span><span class="q">Владеющая сторона связи и mappedBy</span><i class="st ico none"></i></a>
-<a href="#q146" data-k="424cebc33b" data-ci="5"><span class="num">146</span><span class="q">Каскады и orphanRemoval: в чём разница</span><i class="st ico none"></i></a>
-<a href="#q147" data-k="d019db77bb" data-ci="5"><span class="num">147</span><span class="q">FetchType по умолчанию и почему всё делают LAZY</span><i class="st ico none"></i></a>
-<a href="#q148" data-k="547889dfe9" data-ci="5"><span class="num">148</span><span class="q">LazyInitializationException и open-in-view</span><i class="st ico none"></i></a>
-<a href="#q149" data-k="2782081e21" data-ci="5" data-top><span class="num">149</span><span class="q">Проблема N+1: что это, как лечить и помогут ли индексы на FK?</span><i class="st ico none"></i></a>
-<a href="#q150" data-k="45caf33145" data-ci="5"><span class="num">150</span><span class="q">@ManyToMany и MultipleBagFetchException</span><i class="st ico none"></i></a>
-<a href="#q151" data-k="cc58bfc306" data-ci="5"><span class="num">151</span><span class="q">Наследование в JPA: SINGLE_TABLE, JOINED, TABLE_PER_CLASS</span><i class="st ico none"></i></a>
-<a href="#q152" data-k="adea95443a" data-ci="5"><span class="num">152</span><span class="q">Value objects: @Embeddable и конвертеры</span><i class="st ico none"></i></a>
-<a href="#q153" data-k="af8f4cd6c4" data-ci="5"><span class="num">153</span><span class="q">Spring Data JPA: проекции, @Query и @Modifying</span><i class="st ico none"></i></a>
-<a href="#q154" data-k="0a50f86872" data-ci="5"><span class="num">154</span><span class="q">DTO-проекции вместо сущностей для чтения</span><i class="st ico none"></i></a>
-<a href="#q155" data-k="af5694945e" data-ci="5"><span class="num">155</span><span class="q">Динамические запросы: Criteria API, Specification, QueryDSL</span><i class="st ico none"></i></a>
-<a href="#q156" data-k="eb2b366373" data-ci="5"><span class="num">156</span><span class="q">@Transactional(readOnly = true): что даёт</span><i class="st ico none"></i></a>
-<a href="#q157" data-k="9e39f0ded6" data-ci="5"><span class="num">157</span><span class="q">@Version: оптимистическая блокировка в JPA</span><i class="st ico none"></i></a>
-<a href="#q158" data-k="25644c4842" data-ci="5"><span class="num">158</span><span class="q">Пессимистическая блокировка в JPA</span><i class="st ico none"></i></a>
-<a href="#q159" data-k="201fe42757" data-ci="5"><span class="num">159</span><span class="q">Массовый UPDATE через JPQL и persistence context</span><i class="st ico none"></i></a>
-<a href="#q160" data-k="1490f9c352" data-ci="5"><span class="num">160</span><span class="q">Кеш первого и второго уровня</span><i class="st ico none"></i></a>
-<a href="#q161" data-k="12c999f54b" data-ci="5"><span class="num">161</span><span class="q">Hibernate на больших объёмах: batch insert и чтение миллионов строк</span><i class="st ico none"></i></a>
-<a href="#q162" data-k="811bf26d44" data-ci="5"><span class="num">162</span><span class="q">Аудит сущностей: кто и когда изменил</span><i class="st ico none"></i></a>
-<a href="#q163" data-k="5695e0ef77" data-ci="5"><span class="num">163</span><span class="q">Soft delete в JPA</span><i class="st ico none"></i></a>
+<a href="#q138" data-k="b1339b649e" data-ci="5"><span class="num">138</span><span class="q">Требования к Entity. Почему final-класс мешает Hibernate</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q139" data-k="191dc4643b" data-ci="5"><span class="num">139</span><span class="q">Генерация ID в JPA: IDENTITY, SEQUENCE, UUID</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q140" data-k="11948938b6" data-ci="5"><span class="num">140</span><span class="q">Жизненный цикл сущности, persistence context и dirty checking</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q141" data-k="c04737cc4c" data-ci="5"><span class="num">141</span><span class="q">Когда flush выполняется сам</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q142" data-k="e9084a0c18" data-ci="5"><span class="num">142</span><span class="q">Spring Data save(): persist или merge?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q143" data-k="c2aa689257" data-ci="5"><span class="num">143</span><span class="q">findById или getReferenceById</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q144" data-k="07f6eb0a1d" data-ci="5"><span class="num">144</span><span class="q">equals и hashCode у JPA-сущности</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q145" data-k="3f882d3602" data-ci="5"><span class="num">145</span><span class="q">Владеющая сторона связи и mappedBy</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q146" data-k="424cebc33b" data-ci="5"><span class="num">146</span><span class="q">Каскады и orphanRemoval: в чём разница</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q147" data-k="d019db77bb" data-ci="5"><span class="num">147</span><span class="q">FetchType по умолчанию и почему всё делают LAZY</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q148" data-k="547889dfe9" data-ci="5"><span class="num">148</span><span class="q">LazyInitializationException и open-in-view</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q149" data-k="2782081e21" data-ci="5" data-top><span class="num">149</span><span class="q">Проблема N+1: что это, как лечить и помогут ли индексы на FK?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q150" data-k="45caf33145" data-ci="5"><span class="num">150</span><span class="q">@ManyToMany и MultipleBagFetchException</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q151" data-k="cc58bfc306" data-ci="5"><span class="num">151</span><span class="q">Наследование в JPA: SINGLE_TABLE, JOINED, TABLE_PER_CLASS</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q152" data-k="adea95443a" data-ci="5"><span class="num">152</span><span class="q">Value objects: @Embeddable и конвертеры</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q153" data-k="af8f4cd6c4" data-ci="5"><span class="num">153</span><span class="q">Spring Data JPA: проекции, @Query и @Modifying</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q154" data-k="0a50f86872" data-ci="5"><span class="num">154</span><span class="q">DTO-проекции вместо сущностей для чтения</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q155" data-k="af5694945e" data-ci="5"><span class="num">155</span><span class="q">Динамические запросы: Criteria API, Specification, QueryDSL</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q156" data-k="eb2b366373" data-ci="5"><span class="num">156</span><span class="q">@Transactional(readOnly = true): что даёт</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q157" data-k="9e39f0ded6" data-ci="5"><span class="num">157</span><span class="q">@Version: оптимистическая блокировка в JPA</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q158" data-k="25644c4842" data-ci="5"><span class="num">158</span><span class="q">Пессимистическая блокировка в JPA</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q159" data-k="201fe42757" data-ci="5"><span class="num">159</span><span class="q">Массовый UPDATE через JPQL и persistence context</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q160" data-k="1490f9c352" data-ci="5"><span class="num">160</span><span class="q">Кеш первого и второго уровня</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q161" data-k="12c999f54b" data-ci="5"><span class="num">161</span><span class="q">Hibernate на больших объёмах: batch insert и чтение миллионов строк</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q162" data-k="811bf26d44" data-ci="5"><span class="num">162</span><span class="q">Аудит сущностей: кто и когда изменил</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q163" data-k="5695e0ef77" data-ci="5"><span class="num">163</span><span class="q">Soft delete в JPA</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">PostgreSQL и SQL</span><span class="count">27</span><span class="mini" role="img"></span></summary>
-<a href="#q164" data-k="689ac665d5" data-ci="6"><span class="num">164</span><span class="q">ACID: что гарантирует каждая буква</span><i class="st ico none"></i></a>
-<a href="#q165" data-k="f25d3ef427" data-ci="6"><span class="num">165</span><span class="q">Нормализация и когда денормализовать</span><i class="st ico none"></i></a>
-<a href="#q166" data-k="a660edab09" data-ci="6"><span class="num">166</span><span class="q">Порядок выполнения SELECT. WHERE или HAVING, UNION или UNION ALL, DELETE, TRUNCATE или DROP</span><i class="st ico none"></i></a>
-<a href="#q167" data-k="58f09552ce" data-ci="6"><span class="num">167</span><span class="q">JOIN и ловушки с NULL</span><i class="st ico none"></i></a>
-<a href="#q168" data-k="6de5dd119b" data-ci="6"><span class="num">168</span><span class="q">Оконные функции: топ-3 зарплаты в каждом отделе</span><i class="st ico none"></i></a>
-<a href="#q169" data-k="72416b0354" data-ci="6"><span class="num">169</span><span class="q">Рекурсивный CTE: обойти дерево подразделений</span><i class="st ico none"></i></a>
-<a href="#q170" data-k="9610ec6680" data-ci="6"><span class="num">170</span><span class="q">SQL-задача: найти и удалить дубликаты</span><i class="st ico none"></i></a>
-<a href="#q171" data-k="0d265ec696" data-ci="6"><span class="num">171</span><span class="q">SQL-задача: последний платёж каждого клиента</span><i class="st ico none"></i></a>
-<a href="#q172" data-k="26f57fccc6" data-ci="6"><span class="num">172</span><span class="q">SQL-задача: нарастающий итог и баланс на дату</span><i class="st ico none"></i></a>
-<a href="#q173" data-k="aca921f3f1" data-ci="6"><span class="num">173</span><span class="q">SQL-задача: условная агрегация и отчёт по дням</span><i class="st ico none"></i></a>
-<a href="#q174" data-k="a894c6f16a" data-ci="6"><span class="num">174</span><span class="q">SQL-задача: отделы без сотрудников и сотрудники богаче руководителя</span><i class="st ico none"></i></a>
-<a href="#q175" data-k="c91a35bbe9" data-ci="6"><span class="num">175</span><span class="q">Индексы: составные, когда не используются, HOT-апдейты</span><i class="st ico none"></i></a>
-<a href="#q176" data-k="87ee83773a" data-ci="6"><span class="num">176</span><span class="q">Типы индексов PostgreSQL: B-tree, Hash, GIN, GiST, BRIN</span><i class="st ico none"></i></a>
-<a href="#q177" data-k="229e228ab8" data-ci="6"><span class="num">177</span><span class="q">Медленный запрос: как найти и разобрать</span><i class="st ico none"></i></a>
-<a href="#q178" data-k="b40d4a653e" data-ci="6"><span class="num">178</span><span class="q">Почему COUNT(*) в PostgreSQL медленный на большой таблице</span><i class="st ico none"></i></a>
-<a href="#q179" data-k="1258b46268" data-ci="6"><span class="num">179</span><span class="q">Пагинация: OFFSET или keyset</span><i class="st ico none"></i></a>
-<a href="#q180" data-k="2ae2d9c28d" data-ci="6" data-top><span class="num">180</span><span class="q">Уровни изоляции и MVCC. Чем PostgreSQL отличается от стандарта?</span><i class="st ico none"></i></a>
-<a href="#q181" data-k="85faefeb9e" data-ci="6"><span class="num">181</span><span class="q">VACUUM и autovacuum: зачем и что настраивать</span><i class="st ico none"></i></a>
-<a href="#q182" data-k="fb9dc170f9" data-ci="6" data-top><span class="num">182</span><span class="q">Lost update: @Version или SELECT FOR UPDATE? Что выбрать для 500 параллельных оплат?</span><i class="st ico none"></i></a>
-<a href="#q183" data-k="8a36c580e5" data-ci="6"><span class="num">183</span><span class="q">Запрос завис на блокировке: как найти виновника</span><i class="st ico none"></i></a>
-<a href="#q184" data-k="b18179fd68" data-ci="6"><span class="num">184</span><span class="q">Дедлоки в БД и advisory locks</span><i class="st ico none"></i></a>
-<a href="#q185" data-k="6decc9f3ec" data-ci="6"><span class="num">185</span><span class="q">Пул соединений: размер, исчерпание, PgBouncer</span><i class="st ico none"></i></a>
-<a href="#q186" data-k="f2b95a4a52" data-ci="6"><span class="num">186</span><span class="q">JSONB или отдельные таблицы</span><i class="st ico none"></i></a>
-<a href="#q187" data-k="acd8de771f" data-ci="6"><span class="num">187</span><span class="q">Миграции схемы: Liquibase или Flyway</span><i class="st ico none"></i></a>
-<a href="#q188" data-k="9affcae4f4" data-ci="6"><span class="num">188</span><span class="q">Миграции схемы без простоя</span><i class="st ico none"></i></a>
-<a href="#q189" data-k="8041c3bbc5" data-ci="6"><span class="num">189</span><span class="q">Репликация и чтение с реплик</span><i class="st ico none"></i></a>
-<a href="#q190" data-k="870e8e7107" data-ci="6"><span class="num">190</span><span class="q">Партиционирование и шардирование</span><i class="st ico none"></i></a>
+<a href="#q164" data-k="689ac665d5" data-ci="6"><span class="num">164</span><span class="q">ACID: что гарантирует каждая буква</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q165" data-k="f25d3ef427" data-ci="6"><span class="num">165</span><span class="q">Нормализация и когда денормализовать</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q166" data-k="a660edab09" data-ci="6"><span class="num">166</span><span class="q">Порядок выполнения SELECT. WHERE или HAVING, UNION или UNION ALL, DELETE, TRUNCATE или DROP</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q167" data-k="58f09552ce" data-ci="6"><span class="num">167</span><span class="q">JOIN и ловушки с NULL</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q168" data-k="6de5dd119b" data-ci="6"><span class="num">168</span><span class="q">Оконные функции: топ-3 зарплаты в каждом отделе</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q169" data-k="72416b0354" data-ci="6"><span class="num">169</span><span class="q">Рекурсивный CTE: обойти дерево подразделений</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q170" data-k="9610ec6680" data-ci="6"><span class="num">170</span><span class="q">SQL-задача: найти и удалить дубликаты</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q171" data-k="0d265ec696" data-ci="6"><span class="num">171</span><span class="q">SQL-задача: последний платёж каждого клиента</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q172" data-k="26f57fccc6" data-ci="6"><span class="num">172</span><span class="q">SQL-задача: нарастающий итог и баланс на дату</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q173" data-k="aca921f3f1" data-ci="6"><span class="num">173</span><span class="q">SQL-задача: условная агрегация и отчёт по дням</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q174" data-k="a894c6f16a" data-ci="6"><span class="num">174</span><span class="q">SQL-задача: отделы без сотрудников и сотрудники богаче руководителя</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q175" data-k="c91a35bbe9" data-ci="6"><span class="num">175</span><span class="q">Индексы: составные, когда не используются, HOT-апдейты</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q176" data-k="87ee83773a" data-ci="6"><span class="num">176</span><span class="q">Типы индексов PostgreSQL: B-tree, Hash, GIN, GiST, BRIN</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q177" data-k="229e228ab8" data-ci="6"><span class="num">177</span><span class="q">Медленный запрос: как найти и разобрать</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q178" data-k="b40d4a653e" data-ci="6"><span class="num">178</span><span class="q">Почему COUNT(*) в PostgreSQL медленный на большой таблице</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q179" data-k="1258b46268" data-ci="6"><span class="num">179</span><span class="q">Пагинация: OFFSET или keyset</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q180" data-k="2ae2d9c28d" data-ci="6" data-top><span class="num">180</span><span class="q">Уровни изоляции и MVCC. Чем PostgreSQL отличается от стандарта?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q181" data-k="85faefeb9e" data-ci="6"><span class="num">181</span><span class="q">VACUUM и autovacuum: зачем и что настраивать</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q182" data-k="fb9dc170f9" data-ci="6" data-top><span class="num">182</span><span class="q">Lost update: @Version или SELECT FOR UPDATE? Что выбрать для 500 параллельных оплат?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q183" data-k="8a36c580e5" data-ci="6"><span class="num">183</span><span class="q">Запрос завис на блокировке: как найти виновника</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q184" data-k="b18179fd68" data-ci="6"><span class="num">184</span><span class="q">Дедлоки в БД и advisory locks</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q185" data-k="6decc9f3ec" data-ci="6"><span class="num">185</span><span class="q">Пул соединений: размер, исчерпание, PgBouncer</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q186" data-k="f2b95a4a52" data-ci="6"><span class="num">186</span><span class="q">JSONB или отдельные таблицы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q187" data-k="acd8de771f" data-ci="6"><span class="num">187</span><span class="q">Миграции схемы: Liquibase или Flyway</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q188" data-k="9affcae4f4" data-ci="6"><span class="num">188</span><span class="q">Миграции схемы без простоя</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q189" data-k="8041c3bbc5" data-ci="6"><span class="num">189</span><span class="q">Репликация и чтение с реплик</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q190" data-k="870e8e7107" data-ci="6"><span class="num">190</span><span class="q">Партиционирование и шардирование</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Kafka</span><span class="count">24</span><span class="mini" role="img"></span></summary>
-<a href="#q191" data-k="2e266dd642" data-ci="7"><span class="num">191</span><span class="q">Kafka или RabbitMQ</span><i class="st ico none"></i></a>
-<a href="#q192" data-k="ece84438f4" data-ci="7"><span class="num">192</span><span class="q">Как Kafka хранит данные и почему она быстрая</span><i class="st ico none"></i></a>
-<a href="#q193" data-k="4e53800144" data-ci="7" data-top><span class="num">193</span><span class="q">Kafka: partition key и порядок. 3 партиции и 4 консюмера — что будет?</span><i class="st ico none"></i></a>
-<a href="#q194" data-k="5bd338680d" data-ci="7"><span class="num">194</span><span class="q">Как назначаются партиции консьюмерам группы</span><i class="st ico none"></i></a>
-<a href="#q195" data-k="74dc808869" data-ci="7"><span class="num">195</span><span class="q">Как выбрать число партиций</span><i class="st ico none"></i></a>
-<a href="#q196" data-k="378d1625bb" data-ci="7"><span class="num">196</span><span class="q">Настройки продюсера: acks, retries, linger.ms, batch.size</span><i class="st ico none"></i></a>
-<a href="#q197" data-k="e36b9f02c3" data-ci="7"><span class="num">197</span><span class="q">Порядок при ретраях продюсера</span><i class="st ico none"></i></a>
-<a href="#q198" data-k="10dc9bf801" data-ci="7"><span class="num">198</span><span class="q">Kafka изнутри: ISR, high watermark, потеря данных</span><i class="st ico none"></i></a>
-<a href="#q199" data-k="db81369caf" data-ci="7"><span class="num">199</span><span class="q">min.insync.replicas и unclean leader election</span><i class="st ico none"></i></a>
-<a href="#q200" data-k="8f39f02bf0" data-ci="7"><span class="num">200</span><span class="q">Коммит offset: auto, sync, async и AckMode в Spring Kafka</span><i class="st ico none"></i></a>
-<a href="#q201" data-k="9c93cf492f" data-ci="7"><span class="num">201</span><span class="q">Гарантии доставки и exactly-once</span><i class="st ico none"></i></a>
-<a href="#q202" data-k="b1ef5e6cc6" data-ci="7"><span class="num">202</span><span class="q">Ребалансировка консьюмеров: почему больно и как уменьшить</span><i class="st ico none"></i></a>
-<a href="#q203" data-k="dda07a6707" data-ci="7"><span class="num">203</span><span class="q">max.poll.interval.ms и выпадение из группы</span><i class="st ico none"></i></a>
-<a href="#q204" data-k="a2e39c1fbc" data-ci="7"><span class="num">204</span><span class="q">Ошибки в консюмере: retry, Dead Letter Topic, poison pill</span><i class="st ico none"></i></a>
-<a href="#q205" data-k="b01befd3f3" data-ci="7"><span class="num">205</span><span class="q">Consumer lag растёт: что делать</span><i class="st ico none"></i></a>
-<a href="#q206" data-k="ad2162ede6" data-ci="7"><span class="num">206</span><span class="q">Заголовки сообщений и трассировка</span><i class="st ico none"></i></a>
-<a href="#q207" data-k="1c2eafbd2d" data-ci="7"><span class="num">207</span><span class="q">Размер сообщения и большие payload</span><i class="st ico none"></i></a>
-<a href="#q208" data-k="387d33fda9" data-ci="7"><span class="num">208</span><span class="q">Log compaction: когда использовать</span><i class="st ico none"></i></a>
-<a href="#q209" data-k="d25b9274ca" data-ci="7"><span class="num">209</span><span class="q">Эволюция схем событий</span><i class="st ico none"></i></a>
-<a href="#q210" data-k="f297df735b" data-ci="7"><span class="num">210</span><span class="q">Transactional Outbox</span><i class="st ico none"></i></a>
-<a href="#q211" data-k="a3b7c95646" data-ci="7"><span class="num">211</span><span class="q">Kafka Connect и CDC</span><i class="st ico none"></i></a>
-<a href="#q212" data-k="2198aca33b" data-ci="7"><span class="num">212</span><span class="q">Kafka Streams или обычный консюмер</span><i class="st ico none"></i></a>
-<a href="#q213" data-k="bd418f7308" data-ci="7"><span class="num">213</span><span class="q">Event Sourcing и CQRS: когда оправданы</span><i class="st ico none"></i></a>
-<a href="#q214" data-k="e18a7998c1" data-ci="7"><span class="num">214</span><span class="q">RabbitMQ: exchange, подтверждения и DLX</span><i class="st ico none"></i></a>
+<a href="#q191" data-k="2e266dd642" data-ci="7"><span class="num">191</span><span class="q">Kafka или RabbitMQ</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q192" data-k="ece84438f4" data-ci="7"><span class="num">192</span><span class="q">Как Kafka хранит данные и почему она быстрая</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q193" data-k="4e53800144" data-ci="7" data-top><span class="num">193</span><span class="q">Kafka: partition key и порядок. 3 партиции и 4 консюмера — что будет?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q194" data-k="5bd338680d" data-ci="7"><span class="num">194</span><span class="q">Как назначаются партиции консьюмерам группы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q195" data-k="74dc808869" data-ci="7"><span class="num">195</span><span class="q">Как выбрать число партиций</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q196" data-k="378d1625bb" data-ci="7"><span class="num">196</span><span class="q">Настройки продюсера: acks, retries, linger.ms, batch.size</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q197" data-k="e36b9f02c3" data-ci="7"><span class="num">197</span><span class="q">Порядок при ретраях продюсера</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q198" data-k="10dc9bf801" data-ci="7"><span class="num">198</span><span class="q">Kafka изнутри: ISR, high watermark, потеря данных</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q199" data-k="db81369caf" data-ci="7"><span class="num">199</span><span class="q">min.insync.replicas и unclean leader election</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q200" data-k="8f39f02bf0" data-ci="7"><span class="num">200</span><span class="q">Коммит offset: auto, sync, async и AckMode в Spring Kafka</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q201" data-k="9c93cf492f" data-ci="7"><span class="num">201</span><span class="q">Гарантии доставки и exactly-once</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q202" data-k="b1ef5e6cc6" data-ci="7"><span class="num">202</span><span class="q">Ребалансировка консьюмеров: почему больно и как уменьшить</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q203" data-k="dda07a6707" data-ci="7"><span class="num">203</span><span class="q">max.poll.interval.ms и выпадение из группы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q204" data-k="a2e39c1fbc" data-ci="7"><span class="num">204</span><span class="q">Ошибки в консюмере: retry, Dead Letter Topic, poison pill</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q205" data-k="b01befd3f3" data-ci="7"><span class="num">205</span><span class="q">Consumer lag растёт: что делать</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q206" data-k="ad2162ede6" data-ci="7"><span class="num">206</span><span class="q">Заголовки сообщений и трассировка</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q207" data-k="1c2eafbd2d" data-ci="7"><span class="num">207</span><span class="q">Размер сообщения и большие payload</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q208" data-k="387d33fda9" data-ci="7"><span class="num">208</span><span class="q">Log compaction: когда использовать</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q209" data-k="d25b9274ca" data-ci="7"><span class="num">209</span><span class="q">Эволюция схем событий</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q210" data-k="f297df735b" data-ci="7"><span class="num">210</span><span class="q">Transactional Outbox</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q211" data-k="a3b7c95646" data-ci="7"><span class="num">211</span><span class="q">Kafka Connect и CDC</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q212" data-k="2198aca33b" data-ci="7"><span class="num">212</span><span class="q">Kafka Streams или обычный консюмер</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q213" data-k="bd418f7308" data-ci="7"><span class="num">213</span><span class="q">Event Sourcing и CQRS: когда оправданы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q214" data-k="e18a7998c1" data-ci="7"><span class="num">214</span><span class="q">RabbitMQ: exchange, подтверждения и DLX</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Архитектура и микросервисы</span><span class="count">19</span><span class="mini" role="img"></span></summary>
-<a href="#q215" data-k="67e6ef3136" data-ci="8"><span class="num">215</span><span class="q">Монолит или микросервисы? Как резать на сервисы</span><i class="st ico none"></i></a>
-<a href="#q216" data-k="b162414fad" data-ci="8"><span class="num">216</span><span class="q">DDD: bounded context, агрегат, доменные события</span><i class="st ico none"></i></a>
-<a href="#q217" data-k="cea7fa2451" data-ci="8"><span class="num">217</span><span class="q">Гексагональная архитектура (порты и адаптеры)</span><i class="st ico none"></i></a>
-<a href="#q218" data-k="6ee52e8cbd" data-ci="8"><span class="num">218</span><span class="q">Синхронное или асинхронное взаимодействие сервисов</span><i class="st ico none"></i></a>
-<a href="#q219" data-k="9f75b9bc7a" data-ci="8"><span class="num">219</span><span class="q">Service discovery и конфигурация</span><i class="st ico none"></i></a>
-<a href="#q220" data-k="974e6c0015" data-ci="8"><span class="num">220</span><span class="q">12-factor app: принципы и как они ложатся на Spring Boot и Kubernetes</span><i class="st ico none"></i></a>
-<a href="#q221" data-k="bcd5568732" data-ci="8"><span class="num">221</span><span class="q">API: совместимость, версионирование, REST или gRPC</span><i class="st ico none"></i></a>
-<a href="#q222" data-k="c6795166f6" data-ci="8"><span class="num">222</span><span class="q">CAP и PACELC</span><i class="st ico none"></i></a>
-<a href="#q223" data-k="aa96a8ea7e" data-ci="8"><span class="num">223</span><span class="q">Идемпотентность API и Idempotency-Key</span><i class="st ico none"></i></a>
-<a href="#q224" data-k="c547811ee2" data-ci="8"><span class="num">224</span><span class="q">Распределённые транзакции: 2PC или Saga</span><i class="st ico none"></i></a>
-<a href="#q225" data-k="015378d420" data-ci="8"><span class="num">225</span><span class="q">Устойчивость: таймауты, ретраи, circuit breaker, каскадные отказы</span><i class="st ico none"></i></a>
-<a href="#q226" data-k="30177c623c" data-ci="8"><span class="num">226</span><span class="q">Кеширование: стратегии и проблемы</span><i class="st ico none"></i></a>
-<a href="#q227" data-k="e498ef3e4a" data-ci="8"><span class="num">227</span><span class="q">Redis: структуры данных, персистентность, блокировки</span><i class="st ico none"></i></a>
-<a href="#q228" data-k="7eda5cfedb" data-ci="8"><span class="num">228</span><span class="q">Наблюдаемость: метрики, трейсы, логи, SLO</span><i class="st ico none"></i></a>
-<a href="#q229" data-k="2e5e83494b" data-ci="8"><span class="num">229</span><span class="q">Фича-флаги и dark launch: релиз отдельно от деплоя</span><i class="st ico none"></i></a>
-<a href="#q230" data-k="179a15451a" data-ci="8"><span class="num">230</span><span class="q">Логирование: уровни, структурные логи, что нельзя логировать</span><i class="st ico none"></i></a>
-<a href="#q231" data-k="1d33f6096c" data-ci="8"><span class="num">231</span><span class="q">Безопасность сервисов</span><i class="st ico none"></i></a>
-<a href="#q232" data-k="87b6a5e57c" data-ci="8"><span class="num">232</span><span class="q">Service mesh (Istio, Linkerd) и mTLS между сервисами</span><i class="st ico none"></i></a>
-<a href="#q233" data-k="66d0af6dc6" data-ci="8"><span class="num">233</span><span class="q">Как распилить монолит: strangler fig</span><i class="st ico none"></i></a>
+<a href="#q215" data-k="67e6ef3136" data-ci="8"><span class="num">215</span><span class="q">Монолит или микросервисы? Как резать на сервисы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q216" data-k="b162414fad" data-ci="8"><span class="num">216</span><span class="q">DDD: bounded context, агрегат, доменные события</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q217" data-k="cea7fa2451" data-ci="8"><span class="num">217</span><span class="q">Гексагональная архитектура (порты и адаптеры)</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q218" data-k="6ee52e8cbd" data-ci="8"><span class="num">218</span><span class="q">Синхронное или асинхронное взаимодействие сервисов</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q219" data-k="9f75b9bc7a" data-ci="8"><span class="num">219</span><span class="q">Service discovery и конфигурация</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q220" data-k="974e6c0015" data-ci="8"><span class="num">220</span><span class="q">12-factor app: принципы и как они ложатся на Spring Boot и Kubernetes</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q221" data-k="bcd5568732" data-ci="8"><span class="num">221</span><span class="q">API: совместимость, версионирование, REST или gRPC</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q222" data-k="c6795166f6" data-ci="8"><span class="num">222</span><span class="q">CAP и PACELC</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q223" data-k="aa96a8ea7e" data-ci="8"><span class="num">223</span><span class="q">Идемпотентность API и Idempotency-Key</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q224" data-k="c547811ee2" data-ci="8"><span class="num">224</span><span class="q">Распределённые транзакции: 2PC или Saga</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q225" data-k="015378d420" data-ci="8"><span class="num">225</span><span class="q">Устойчивость: таймауты, ретраи, circuit breaker, каскадные отказы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q226" data-k="30177c623c" data-ci="8"><span class="num">226</span><span class="q">Кеширование: стратегии и проблемы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q227" data-k="e498ef3e4a" data-ci="8"><span class="num">227</span><span class="q">Redis: структуры данных, персистентность, блокировки</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q228" data-k="7eda5cfedb" data-ci="8"><span class="num">228</span><span class="q">Наблюдаемость: метрики, трейсы, логи, SLO</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q229" data-k="2e5e83494b" data-ci="8"><span class="num">229</span><span class="q">Фича-флаги и dark launch: релиз отдельно от деплоя</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q230" data-k="179a15451a" data-ci="8"><span class="num">230</span><span class="q">Логирование: уровни, структурные логи, что нельзя логировать</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q231" data-k="1d33f6096c" data-ci="8"><span class="num">231</span><span class="q">Безопасность сервисов</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q232" data-k="87b6a5e57c" data-ci="8"><span class="num">232</span><span class="q">Service mesh (Istio, Linkerd) и mTLS между сервисами</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q233" data-k="66d0af6dc6" data-ci="8"><span class="num">233</span><span class="q">Как распилить монолит: strangler fig</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">System Design</span><span class="count">21</span><span class="mini" role="img"></span></summary>
-<a href="#q234" data-k="f2f3ca421c" data-ci="9"><span class="num">234</span><span class="q">Как проходить System Design интервью</span><i class="st ico none"></i></a>
-<a href="#q235" data-k="c3dde7c661" data-ci="9"><span class="num">235</span><span class="q">Оценка нагрузки на собеседовании (back-of-the-envelope)</span><i class="st ico none"></i></a>
-<a href="#q236" data-k="0d83db5753" data-ci="9"><span class="num">236</span><span class="q">Балансировка нагрузки: L4 и L7, алгоритмы</span><i class="st ico none"></i></a>
-<a href="#q237" data-k="3877bb00a6" data-ci="9"><span class="num">237</span><span class="q">CDN и кеширование на стороне клиента</span><i class="st ico none"></i></a>
-<a href="#q238" data-k="cc0de651e1" data-ci="9"><span class="num">238</span><span class="q">Консистентное хеширование</span><i class="st ico none"></i></a>
-<a href="#q239" data-k="20b65b005a" data-ci="9"><span class="num">239</span><span class="q">SQL или NoSQL: как выбрать</span><i class="st ico none"></i></a>
-<a href="#q240" data-k="032f2fc222" data-ci="9"><span class="num">240</span><span class="q">Генерация уникальных ID</span><i class="st ico none"></i></a>
-<a href="#q241" data-k="a68ae9fcf5" data-ci="9"><span class="num">241</span><span class="q">Backpressure: что делать, когда потребитель не успевает</span><i class="st ico none"></i></a>
-<a href="#q242" data-k="324e558c02" data-ci="9"><span class="num">242</span><span class="q">Распределённый rate limiter</span><i class="st ico none"></i></a>
-<a href="#q243" data-k="44db1da747" data-ci="9"><span class="num">243</span><span class="q">Распределённая блокировка и выбор лидера</span><i class="st ico none"></i></a>
-<a href="#q244" data-k="2c069c83ab" data-ci="9"><span class="num">244</span><span class="q">API Gateway и BFF</span><i class="st ico none"></i></a>
-<a href="#q245" data-k="4aaf4a6448" data-ci="9"><span class="num">245</span><span class="q">Полнотекстовый поиск рядом с основной БД</span><i class="st ico none"></i></a>
-<a href="#q246" data-k="e4d6b12c8b" data-ci="9"><span class="num">246</span><span class="q">Спроектируйте сокращатель ссылок</span><i class="st ico none"></i></a>
-<a href="#q247" data-k="932b8e5a06" data-ci="9"><span class="num">247</span><span class="q">Идемпотентная обработка платежа: двойное списание</span><i class="st ico none"></i></a>
-<a href="#q248" data-k="82b4b3927e" data-ci="9"><span class="num">248</span><span class="q">Спроектируйте переводы между счетами</span><i class="st ico none"></i></a>
-<a href="#q249" data-k="a4e1a93bc2" data-ci="9"><span class="num">249</span><span class="q">История операций клиента на миллиарды строк</span><i class="st ico none"></i></a>
-<a href="#q250" data-k="e5e4df6934" data-ci="9"><span class="num">250</span><span class="q">Планировщик отложенных задач (автоплатежи)</span><i class="st ico none"></i></a>
-<a href="#q251" data-k="84777d3397" data-ci="9"><span class="num">251</span><span class="q">Сервис уведомлений на десятки миллионов сообщений в сутки</span><i class="st ico none"></i></a>
-<a href="#q252" data-k="ba254459df" data-ci="9"><span class="num">252</span><span class="q">Спроектируйте сверку проводок: 100 млн в день</span><i class="st ico none"></i></a>
-<a href="#q253" data-k="87b67462fe" data-ci="9"><span class="num">253</span><span class="q">Как выдержать пик ×10: зарплатный день или распродажа</span><i class="st ico none"></i></a>
-<a href="#q254" data-k="1c63fbebe5" data-ci="9"><span class="num">254</span><span class="q">Несколько дата-центров: RPO, RTO, active-passive и active-active</span><i class="st ico none"></i></a>
+<a href="#q234" data-k="f2f3ca421c" data-ci="9"><span class="num">234</span><span class="q">Как проходить System Design интервью</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q235" data-k="c3dde7c661" data-ci="9"><span class="num">235</span><span class="q">Оценка нагрузки на собеседовании (back-of-the-envelope)</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q236" data-k="0d83db5753" data-ci="9"><span class="num">236</span><span class="q">Балансировка нагрузки: L4 и L7, алгоритмы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q237" data-k="3877bb00a6" data-ci="9"><span class="num">237</span><span class="q">CDN и кеширование на стороне клиента</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q238" data-k="cc0de651e1" data-ci="9"><span class="num">238</span><span class="q">Консистентное хеширование</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q239" data-k="20b65b005a" data-ci="9"><span class="num">239</span><span class="q">SQL или NoSQL: как выбрать</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q240" data-k="032f2fc222" data-ci="9"><span class="num">240</span><span class="q">Генерация уникальных ID</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q241" data-k="a68ae9fcf5" data-ci="9"><span class="num">241</span><span class="q">Backpressure: что делать, когда потребитель не успевает</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q242" data-k="324e558c02" data-ci="9"><span class="num">242</span><span class="q">Распределённый rate limiter</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q243" data-k="44db1da747" data-ci="9"><span class="num">243</span><span class="q">Распределённая блокировка и выбор лидера</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q244" data-k="2c069c83ab" data-ci="9"><span class="num">244</span><span class="q">API Gateway и BFF</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q245" data-k="4aaf4a6448" data-ci="9"><span class="num">245</span><span class="q">Полнотекстовый поиск рядом с основной БД</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q246" data-k="e4d6b12c8b" data-ci="9"><span class="num">246</span><span class="q">Спроектируйте сокращатель ссылок</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q247" data-k="932b8e5a06" data-ci="9"><span class="num">247</span><span class="q">Идемпотентная обработка платежа: двойное списание</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q248" data-k="82b4b3927e" data-ci="9"><span class="num">248</span><span class="q">Спроектируйте переводы между счетами</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q249" data-k="a4e1a93bc2" data-ci="9"><span class="num">249</span><span class="q">История операций клиента на миллиарды строк</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q250" data-k="e5e4df6934" data-ci="9"><span class="num">250</span><span class="q">Планировщик отложенных задач (автоплатежи)</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q251" data-k="84777d3397" data-ci="9"><span class="num">251</span><span class="q">Сервис уведомлений на десятки миллионов сообщений в сутки</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q252" data-k="ba254459df" data-ci="9"><span class="num">252</span><span class="q">Спроектируйте сверку проводок: 100 млн в день</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q253" data-k="87b67462fe" data-ci="9"><span class="num">253</span><span class="q">Как выдержать пик ×10: зарплатный день или распродажа</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q254" data-k="1c63fbebe5" data-ci="9"><span class="num">254</span><span class="q">Несколько дата-центров: RPO, RTO, active-passive и active-active</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Kubernetes и эксплуатация</span><span class="count">14</span><span class="mini" role="img"></span></summary>
-<a href="#q255" data-k="be1dcbd33a" data-ci="10"><span class="num">255</span><span class="q">Docker-образ для Java-сервиса</span><i class="st ico none"></i></a>
-<a href="#q256" data-k="54280a0944" data-ci="10"><span class="num">256</span><span class="q">Deployment, StatefulSet, DaemonSet, Job</span><i class="st ico none"></i></a>
-<a href="#q257" data-k="36dc4de193" data-ci="10"><span class="num">257</span><span class="q">Service, Ingress и как трафик доходит до пода</span><i class="st ico none"></i></a>
-<a href="#q258" data-k="62ef1f9f8b" data-ci="10"><span class="num">258</span><span class="q">ConfigMap и Secret: как передать конфигурацию</span><i class="st ico none"></i></a>
-<a href="#q259" data-k="c33a9cb227" data-ci="10"><span class="num">259</span><span class="q">Requests и limits: QoS-классы и что выбрать для Java</span><i class="st ico none"></i></a>
-<a href="#q260" data-k="67abe6c536" data-ci="10"><span class="num">260</span><span class="q">Liveness, readiness и startup probe</span><i class="st ico none"></i></a>
-<a href="#q261" data-k="6cc34e1303" data-ci="10"><span class="num">261</span><span class="q">Graceful shutdown без потери запросов</span><i class="st ico none"></i></a>
-<a href="#q262" data-k="1f8ffe7a21" data-ci="10"><span class="num">262</span><span class="q">PodDisruptionBudget и anti-affinity</span><i class="st ico none"></i></a>
-<a href="#q263" data-k="ba8c46e9db" data-ci="10"><span class="num">263</span><span class="q">Автоскейлинг Java-сервисов</span><i class="st ico none"></i></a>
-<a href="#q264" data-k="af87a0da4f" data-ci="10"><span class="num">264</span><span class="q">CI/CD: что должно быть в пайплайне Java-сервиса</span><i class="st ico none"></i></a>
-<a href="#q265" data-k="8137371e8f" data-ci="10"><span class="num">265</span><span class="q">Стратегии деплоя</span><i class="st ico none"></i></a>
-<a href="#q266" data-k="dc176eb486" data-ci="10"><span class="num">266</span><span class="q">Как откатить неудачный релиз</span><i class="st ico none"></i></a>
-<a href="#q267" data-k="45d12a2236" data-ci="10"><span class="num">267</span><span class="q">Под в CrashLoopBackOff: как разбираться</span><i class="st ico none"></i></a>
-<a href="#q268" data-k="5b05122ece" data-ci="10" data-top><span class="num">268</span><span class="q">Один из 16 подов раз в неделю падает: OOMKilled или CPU throttling. С чего начнёте?</span><i class="st ico none"></i></a>
+<a href="#q255" data-k="be1dcbd33a" data-ci="10"><span class="num">255</span><span class="q">Docker-образ для Java-сервиса</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q256" data-k="54280a0944" data-ci="10"><span class="num">256</span><span class="q">Deployment, StatefulSet, DaemonSet, Job</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q257" data-k="36dc4de193" data-ci="10"><span class="num">257</span><span class="q">Service, Ingress и как трафик доходит до пода</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q258" data-k="62ef1f9f8b" data-ci="10"><span class="num">258</span><span class="q">ConfigMap и Secret: как передать конфигурацию</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q259" data-k="c33a9cb227" data-ci="10"><span class="num">259</span><span class="q">Requests и limits: QoS-классы и что выбрать для Java</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q260" data-k="67abe6c536" data-ci="10"><span class="num">260</span><span class="q">Liveness, readiness и startup probe</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q261" data-k="6cc34e1303" data-ci="10"><span class="num">261</span><span class="q">Graceful shutdown без потери запросов</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q262" data-k="1f8ffe7a21" data-ci="10"><span class="num">262</span><span class="q">PodDisruptionBudget и anti-affinity</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q263" data-k="ba8c46e9db" data-ci="10"><span class="num">263</span><span class="q">Автоскейлинг Java-сервисов</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q264" data-k="af87a0da4f" data-ci="10"><span class="num">264</span><span class="q">CI/CD: что должно быть в пайплайне Java-сервиса</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q265" data-k="8137371e8f" data-ci="10"><span class="num">265</span><span class="q">Стратегии деплоя</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q266" data-k="dc176eb486" data-ci="10"><span class="num">266</span><span class="q">Как откатить неудачный релиз</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q267" data-k="45d12a2236" data-ci="10"><span class="num">267</span><span class="q">Под в CrashLoopBackOff: как разбираться</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q268" data-k="5b05122ece" data-ci="10" data-top><span class="num">268</span><span class="q">Один из 16 подов раз в неделю падает: OOMKilled или CPU throttling. С чего начнёте?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Практика: код и задачи</span><span class="count">24</span><span class="mini" role="img"></span></summary>
-<a href="#q269" data-k="e931f192fd" data-ci="11"><span class="num">269</span><span class="q">Тестирование: пирамида, слайсы, Testcontainers</span><i class="st ico none"></i></a>
-<a href="#q270" data-k="253f5f888d" data-ci="11"><span class="num">270</span><span class="q">Тест-слайсы, контрактные тесты и flaky-тесты</span><i class="st ico none"></i></a>
-<a href="#q271" data-k="bb0820c687" data-ci="11"><span class="num">271</span><span class="q">Mockito и асинхронный код: mock, spy, Kafka-консюмер</span><i class="st ico none"></i></a>
-<a href="#q272" data-k="f4cd16d91c" data-ci="11"><span class="num">272</span><span class="q">Нагрузочное тестирование: виды, перцентили, поиск узкого места</span><i class="st ico none"></i></a>
-<a href="#q273" data-k="a2337c3b68" data-ci="11"><span class="num">273</span><span class="q">Code review: DAO, строки, деньги и время</span><i class="st ico none"></i></a>
-<a href="#q274" data-k="1849a70269" data-ci="11"><span class="num">274</span><span class="q">Code review: SOLID — иерархия счетов</span><i class="st ico none"></i></a>
-<a href="#q275" data-k="1a93ad5dfc" data-ci="11"><span class="num">275</span><span class="q">Code review: SOLID — сервис проведения платежа</span><i class="st ico none"></i></a>
-<a href="#q276" data-k="cda96af096" data-ci="11"><span class="num">276</span><span class="q">Code review: REST-контроллер и JPA</span><i class="st ico none"></i></a>
-<a href="#q277" data-k="a748d3e6ac" data-ci="11"><span class="num">277</span><span class="q">Code review: сервис курсов валют с кешем</span><i class="st ico none"></i></a>
-<a href="#q278" data-k="1b24e02a21" data-ci="11" data-top><span class="num">278</span><span class="q">Code review: найдите проблемы</span><i class="st ico none"></i></a>
-<a href="#q279" data-k="7dfdd1a158" data-ci="11"><span class="num">279</span><span class="q">Code review: Kafka-консюмер платежей</span><i class="st ico none"></i></a>
-<a href="#q280" data-k="335ce6b520" data-ci="11"><span class="num">280</span><span class="q">Лайв-кодинг: Two Sum за O(n)</span><i class="st ico none"></i></a>
-<a href="#q281" data-k="3c94dcad0d" data-ci="11"><span class="num">281</span><span class="q">Лайв-кодинг: первый неповторяющийся символ</span><i class="st ico none"></i></a>
-<a href="#q282" data-k="59076dcba4" data-ci="11"><span class="num">282</span><span class="q">Лайв-кодинг: сгруппировать анаграммы</span><i class="st ico none"></i></a>
-<a href="#q283" data-k="bd8cc8f3c6" data-ci="11"><span class="num">283</span><span class="q">Лайв-кодинг: проверка сбалансированности скобок</span><i class="st ico none"></i></a>
-<a href="#q284" data-k="019bcce25b" data-ci="11"><span class="num">284</span><span class="q">Лайв-кодинг: бинарный поиск и lower bound</span><i class="st ico none"></i></a>
-<a href="#q285" data-k="75985041a3" data-ci="11"><span class="num">285</span><span class="q">Лайв-кодинг: сортировка слиянием</span><i class="st ico none"></i></a>
-<a href="#q286" data-k="7d03463d4d" data-ci="11"><span class="num">286</span><span class="q">Лайв-кодинг: быстрая сортировка</span><i class="st ico none"></i></a>
-<a href="#q287" data-k="1078abbc45" data-ci="11"><span class="num">287</span><span class="q">Лайв-кодинг: k-й по величине элемент (quickselect)</span><i class="st ico none"></i></a>
-<a href="#q288" data-k="67211300cf" data-ci="11"><span class="num">288</span><span class="q">Лайв-кодинг: развернуть связный список и найти цикл</span><i class="st ico none"></i></a>
-<a href="#q289" data-k="777ebe8b5c" data-ci="11"><span class="num">289</span><span class="q">Лайв-кодинг: обход дерева в глубину</span><i class="st ico none"></i></a>
-<a href="#q290" data-k="ec20f4c9d2" data-ci="11"><span class="num">290</span><span class="q">Лайв-кодинг: обход дерева в ширину по уровням</span><i class="st ico none"></i></a>
-<a href="#q291" data-k="b0f3531475" data-ci="11"><span class="num">291</span><span class="q">Лайв-кодинг: потокобезопасный rate limiter (token bucket)</span><i class="st ico none"></i></a>
-<a href="#q292" data-k="7e67540e0c" data-ci="11" data-top><span class="num">292</span><span class="q">Мост и фонарик: 1, 2, 5 и 10 минут</span><i class="st ico none"></i></a>
+<a href="#q269" data-k="e931f192fd" data-ci="11"><span class="num">269</span><span class="q">Тестирование: пирамида, слайсы, Testcontainers</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q270" data-k="253f5f888d" data-ci="11"><span class="num">270</span><span class="q">Тест-слайсы, контрактные тесты и flaky-тесты</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q271" data-k="bb0820c687" data-ci="11"><span class="num">271</span><span class="q">Mockito и асинхронный код: mock, spy, Kafka-консюмер</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q272" data-k="f4cd16d91c" data-ci="11"><span class="num">272</span><span class="q">Нагрузочное тестирование: виды, перцентили, поиск узкого места</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q273" data-k="a2337c3b68" data-ci="11"><span class="num">273</span><span class="q">Code review: DAO, строки, деньги и время</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q274" data-k="1849a70269" data-ci="11"><span class="num">274</span><span class="q">Code review: SOLID — иерархия счетов</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q275" data-k="1a93ad5dfc" data-ci="11"><span class="num">275</span><span class="q">Code review: SOLID — сервис проведения платежа</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q276" data-k="cda96af096" data-ci="11"><span class="num">276</span><span class="q">Code review: REST-контроллер и JPA</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q277" data-k="a748d3e6ac" data-ci="11"><span class="num">277</span><span class="q">Code review: сервис курсов валют с кешем</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q278" data-k="1b24e02a21" data-ci="11" data-top><span class="num">278</span><span class="q">Code review: найдите проблемы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q279" data-k="7dfdd1a158" data-ci="11"><span class="num">279</span><span class="q">Code review: Kafka-консюмер платежей</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q280" data-k="335ce6b520" data-ci="11"><span class="num">280</span><span class="q">Лайв-кодинг: Two Sum за O(n)</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q281" data-k="3c94dcad0d" data-ci="11"><span class="num">281</span><span class="q">Лайв-кодинг: первый неповторяющийся символ</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q282" data-k="59076dcba4" data-ci="11"><span class="num">282</span><span class="q">Лайв-кодинг: сгруппировать анаграммы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q283" data-k="bd8cc8f3c6" data-ci="11"><span class="num">283</span><span class="q">Лайв-кодинг: проверка сбалансированности скобок</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q284" data-k="019bcce25b" data-ci="11"><span class="num">284</span><span class="q">Лайв-кодинг: бинарный поиск и lower bound</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q285" data-k="75985041a3" data-ci="11"><span class="num">285</span><span class="q">Лайв-кодинг: сортировка слиянием</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q286" data-k="7d03463d4d" data-ci="11"><span class="num">286</span><span class="q">Лайв-кодинг: быстрая сортировка</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q287" data-k="1078abbc45" data-ci="11"><span class="num">287</span><span class="q">Лайв-кодинг: k-й по величине элемент (quickselect)</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q288" data-k="67211300cf" data-ci="11"><span class="num">288</span><span class="q">Лайв-кодинг: развернуть связный список и найти цикл</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q289" data-k="777ebe8b5c" data-ci="11"><span class="num">289</span><span class="q">Лайв-кодинг: обход дерева в глубину</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q290" data-k="ec20f4c9d2" data-ci="11"><span class="num">290</span><span class="q">Лайв-кодинг: обход дерева в ширину по уровням</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q291" data-k="b0f3531475" data-ci="11"><span class="num">291</span><span class="q">Лайв-кодинг: потокобезопасный rate limiter (token bucket)</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q292" data-k="7e67540e0c" data-ci="11" data-top><span class="num">292</span><span class="q">Мост и фонарик: 1, 2, 5 и 10 минут</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Сети, HTTP и REST</span><span class="count">5</span><span class="mini" role="img"></span></summary>
-<a href="#q293" data-k="bd13beaf7c" data-ci="12"><span class="num">293</span><span class="q">TCP, UDP и TLS: что нужно знать бэкендеру</span><i class="st ico none"></i></a>
-<a href="#q294" data-k="bc9a44979e" data-ci="12"><span class="num">294</span><span class="q">Что происходит, когда вводишь URL в браузере</span><i class="st ico none"></i></a>
-<a href="#q295" data-k="e399721c0e" data-ci="12"><span class="num">295</span><span class="q">HTTP/1.1, HTTP/2, HTTP/3 и keep-alive</span><i class="st ico none"></i></a>
-<a href="#q296" data-k="1d13fdca79" data-ci="12" data-top><span class="num">296</span><span class="q">REST: методы, идемпотентность, PUT или PATCH, коды ответов</span><i class="st ico none"></i></a>
-<a href="#q297" data-k="de6cac90d9" data-ci="12"><span class="num">297</span><span class="q">WebSocket, SSE и long polling: как сервер отправляет данные клиенту</span><i class="st ico none"></i></a>
+<a href="#q293" data-k="bd13beaf7c" data-ci="12"><span class="num">293</span><span class="q">TCP, UDP и TLS: что нужно знать бэкендеру</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q294" data-k="bc9a44979e" data-ci="12"><span class="num">294</span><span class="q">Что происходит, когда вводишь URL в браузере</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q295" data-k="e399721c0e" data-ci="12"><span class="num">295</span><span class="q">HTTP/1.1, HTTP/2, HTTP/3 и keep-alive</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q296" data-k="1d13fdca79" data-ci="12" data-top><span class="num">296</span><span class="q">REST: методы, идемпотентность, PUT или PATCH, коды ответов</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q297" data-k="de6cac90d9" data-ci="12"><span class="num">297</span><span class="q">WebSocket, SSE и long polling: как сервер отправляет данные клиенту</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Алгоритмы: паттерны</span><span class="count">7</span><span class="mini" role="img"></span></summary>
-<a href="#q298" data-k="d365cb7cd8" data-ci="13"><span class="num">298</span><span class="q">Big O: как оценить сложность решения</span><i class="st ico none"></i></a>
-<a href="#q299" data-k="c41a900ef3" data-ci="13"><span class="num">299</span><span class="q">Два указателя, префиксные суммы и монотонный стек</span><i class="st ico none"></i></a>
-<a href="#q300" data-k="fee86c7923" data-ci="13"><span class="num">300</span><span class="q">Скользящее окно: самая длинная подстрока без повторов</span><i class="st ico none"></i></a>
-<a href="#q301" data-k="f0135fa93f" data-ci="13"><span class="num">301</span><span class="q">Интервалы: слить пересекающиеся</span><i class="st ico none"></i></a>
-<a href="#q302" data-k="902c974e93" data-ci="13"><span class="num">302</span><span class="q">Backtracking: все подмножества, перестановки, комбинации</span><i class="st ico none"></i></a>
-<a href="#q303" data-k="e062b2c59d" data-ci="13"><span class="num">303</span><span class="q">Динамическое программирование: подход на примере размена монет</span><i class="st ico none"></i></a>
-<a href="#q304" data-k="b609820bcd" data-ci="13"><span class="num">304</span><span class="q">Графы: топологическая сортировка и порядок зависимостей</span><i class="st ico none"></i></a>
+<a href="#q298" data-k="d365cb7cd8" data-ci="13"><span class="num">298</span><span class="q">Big O: как оценить сложность решения</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q299" data-k="c41a900ef3" data-ci="13"><span class="num">299</span><span class="q">Два указателя, префиксные суммы и монотонный стек</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q300" data-k="fee86c7923" data-ci="13"><span class="num">300</span><span class="q">Скользящее окно: самая длинная подстрока без повторов</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q301" data-k="f0135fa93f" data-ci="13"><span class="num">301</span><span class="q">Интервалы: слить пересекающиеся</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q302" data-k="902c974e93" data-ci="13"><span class="num">302</span><span class="q">Backtracking: все подмножества, перестановки, комбинации</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q303" data-k="e062b2c59d" data-ci="13"><span class="num">303</span><span class="q">Динамическое программирование: подход на примере размена монет</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q304" data-k="b609820bcd" data-ci="13"><span class="num">304</span><span class="q">Графы: топологическая сортировка и порядок зависимостей</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Безопасность</span><span class="count">4</span><span class="mini" role="img"></span></summary>
-<a href="#q305" data-k="64ed4a521f" data-ci="14"><span class="num">305</span><span class="q">Хранение паролей: bcrypt, argon2, соль</span><i class="st ico none"></i></a>
-<a href="#q306" data-k="b136f5c826" data-ci="14"><span class="num">306</span><span class="q">OWASP Top 10 для бэкенда: инъекции, IDOR, SSRF, mass assignment</span><i class="st ico none"></i></a>
-<a href="#q307" data-k="35c6431ffa" data-ci="14"><span class="num">307</span><span class="q">CORS и CSRF: от чего защищают</span><i class="st ico none"></i></a>
-<a href="#q308" data-k="b40ff6bcd5" data-ci="14"><span class="num">308</span><span class="q">OAuth2 и OIDC: какие flow и когда</span><i class="st ico none"></i></a>
+<a href="#q305" data-k="64ed4a521f" data-ci="14"><span class="num">305</span><span class="q">Хранение паролей: bcrypt, argon2, соль</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q306" data-k="b136f5c826" data-ci="14"><span class="num">306</span><span class="q">OWASP Top 10 для бэкенда: инъекции, IDOR, SSRF, mass assignment</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q307" data-k="35c6431ffa" data-ci="14"><span class="num">307</span><span class="q">CORS и CSRF: от чего защищают</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q308" data-k="b40ff6bcd5" data-ci="14"><span class="num">308</span><span class="q">OAuth2 и OIDC: какие flow и когда</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Разное</span><span class="count">7</span><span class="mini" role="img"></span></summary>
-<a href="#q309" data-k="f0d22f08d7" data-ci="15"><span class="num">309</span><span class="q">Git: merge или rebase, cherry-pick, trunk-based или git flow</span><i class="st ico none"></i></a>
-<a href="#q310" data-k="aaf4b05e73" data-ci="15"><span class="num">310</span><span class="q">Maven и Gradle: жизненный цикл, конфликты версий, BOM</span><i class="st ico none"></i></a>
-<a href="#q311" data-k="a6d4b70845" data-ci="15"><span class="num">311</span><span class="q">Диагностика сервиса на Linux: CPU, память, диск, сеть</span><i class="st ico none"></i></a>
-<a href="#q312" data-k="48eec34667" data-ci="15"><span class="num">312</span><span class="q">Too many open files, TIME_WAIT и исчерпание портов</span><i class="st ico none"></i></a>
-<a href="#q313" data-k="5a2012db2d" data-ci="15"><span class="num">313</span><span class="q">MongoDB: документы, индексы, транзакции, шардирование</span><i class="st ico none"></i></a>
-<a href="#q314" data-k="5e16ed7532" data-ci="15"><span class="num">314</span><span class="q">Cassandra: «таблица под запрос», partition key, консистентность</span><i class="st ico none"></i></a>
-<a href="#q315" data-k="abead55c8f" data-ci="15"><span class="num">315</span><span class="q">Оркестрация бизнес-процессов: Camunda, Temporal или свой движок</span><i class="st ico none"></i></a>
+<a href="#q309" data-k="f0d22f08d7" data-ci="15"><span class="num">309</span><span class="q">Git: merge или rebase, cherry-pick, trunk-based или git flow</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q310" data-k="aaf4b05e73" data-ci="15"><span class="num">310</span><span class="q">Maven и Gradle: жизненный цикл, конфликты версий, BOM</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q311" data-k="a6d4b70845" data-ci="15"><span class="num">311</span><span class="q">Диагностика сервиса на Linux: CPU, память, диск, сеть</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q312" data-k="48eec34667" data-ci="15"><span class="num">312</span><span class="q">Too many open files, TIME_WAIT и исчерпание портов</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q313" data-k="5a2012db2d" data-ci="15"><span class="num">313</span><span class="q">MongoDB: документы, индексы, транзакции, шардирование</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q314" data-k="5e16ed7532" data-ci="15"><span class="num">314</span><span class="q">Cassandra: «таблица под запрос», partition key, консистентность</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q315" data-k="abead55c8f" data-ci="15"><span class="num">315</span><span class="q">Оркестрация бизнес-процессов: Camunda, Temporal или свой движок</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Опыт и лидерство</span><span class="count">13</span><span class="mini" role="img"></span></summary>
-<a href="#q316" data-k="d7f78ddca0" data-ci="16"><span class="num">316</span><span class="q">Расскажите о своём проекте</span><i class="st ico none"></i></a>
-<a href="#q317" data-k="e27557ec76" data-ci="16" data-top><span class="num">317</span><span class="q">Расскажите о прод-инциденте, который вы чинили</span><i class="st ico none"></i></a>
-<a href="#q318" data-k="b8523cd8a2" data-ci="16"><span class="num">318</span><span class="q">Расскажите о своей ошибке или провале</span><i class="st ico none"></i></a>
-<a href="#q319" data-k="398e6634d0" data-ci="16"><span class="num">319</span><span class="q">Как вы принимаете архитектурные решения?</span><i class="st ico none"></i></a>
-<a href="#q320" data-k="cc3a17a6cf" data-ci="16"><span class="num">320</span><span class="q">Как вы работаете с техническим долгом?</span><i class="st ico none"></i></a>
-<a href="#q321" data-k="649f435685" data-ci="16"><span class="num">321</span><span class="q">Как вы оцениваете сроки большой задачи?</span><i class="st ico none"></i></a>
-<a href="#q322" data-k="c7d0e7e0e4" data-ci="16"><span class="num">322</span><span class="q">Code review</span><i class="st ico none"></i></a>
-<a href="#q323" data-k="be444b1c41" data-ci="16"><span class="num">323</span><span class="q">Несогласие с решением / конфликт в команде</span><i class="st ico none"></i></a>
-<a href="#q324" data-k="e6bc518ca1" data-ci="16"><span class="num">324</span><span class="q">Как вы входите в незнакомый проект или legacy-код</span><i class="st ico none"></i></a>
-<a href="#q325" data-k="c82fce787f" data-ci="16"><span class="num">325</span><span class="q">Почему уходите с текущего места и почему к нам?</span><i class="st ico none"></i></a>
-<a href="#q326" data-k="c5cdca2b92" data-ci="16"><span class="num">326</span><span class="q">Где вы видите себя через 3–5 лет?</span><i class="st ico none"></i></a>
-<a href="#q327" data-k="871f2ce21b" data-ci="16"><span class="num">327</span><span class="q">Хотите стать тимлидом?</span><i class="st ico none"></i></a>
-<a href="#q328" data-k="c171d9666e" data-ci="16"><span class="num">328</span><span class="q">Какие вопросы задать интервьюеру</span><i class="st ico none"></i></a>
+<a href="#q316" data-k="d7f78ddca0" data-ci="16"><span class="num">316</span><span class="q">Расскажите о своём проекте</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q317" data-k="e27557ec76" data-ci="16" data-top><span class="num">317</span><span class="q">Расскажите о прод-инциденте, который вы чинили</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q318" data-k="b8523cd8a2" data-ci="16"><span class="num">318</span><span class="q">Расскажите о своей ошибке или провале</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q319" data-k="398e6634d0" data-ci="16"><span class="num">319</span><span class="q">Как вы принимаете архитектурные решения?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q320" data-k="cc3a17a6cf" data-ci="16"><span class="num">320</span><span class="q">Как вы работаете с техническим долгом?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q321" data-k="649f435685" data-ci="16"><span class="num">321</span><span class="q">Как вы оцениваете сроки большой задачи?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q322" data-k="c7d0e7e0e4" data-ci="16"><span class="num">322</span><span class="q">Code review</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q323" data-k="be444b1c41" data-ci="16"><span class="num">323</span><span class="q">Несогласие с решением / конфликт в команде</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q324" data-k="e6bc518ca1" data-ci="16"><span class="num">324</span><span class="q">Как вы входите в незнакомый проект или legacy-код</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q325" data-k="c82fce787f" data-ci="16"><span class="num">325</span><span class="q">Почему уходите с текущего места и почему к нам?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q326" data-k="c5cdca2b92" data-ci="16"><span class="num">326</span><span class="q">Где вы видите себя через 3–5 лет?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q327" data-k="871f2ce21b" data-ci="16"><span class="num">327</span><span class="q">Хотите стать тимлидом?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q328" data-k="c171d9666e" data-ci="16"><span class="num">328</span><span class="q">Какие вопросы задать интервьюеру</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 </nav>
 <section class="pane view" id="view">
-<header class="appbar"><div class="bar-row"><a class="back" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>Вопросы</a><div class="modes" role="group" aria-label="Режим"><button type="button" data-mode="read">Чтение</button><button type="button" data-mode="train">Тренировка</button></div><div class="keys"><span><kbd>Пробел</kbd>ответ</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>оценка</span><span><kbd>←</kbd><kbd>→</kbd>листать</span></div><span class="pos" id="pos"></span></div>
+<header class="appbar"><div class="bar-row"><a class="back" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>Вопросы</a><div class="modes" role="group" aria-label="Режим"><button type="button" data-mode="read">Чтение</button><button type="button" data-mode="train">Тренировка</button></div><div class="keys"><span><kbd>Пробел</kbd>ответ</span><span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>оценка</span><span><kbd>Esc</kbd>скрыть</span><span><kbd>←</kbd><kbd>→</kbd>листать</span></div><span class="pos" id="pos"></span></div>
 <div class="chbar" id="chbar" role="img"></div></header>
 <div class="scroll" id="scroll"><div class="content">
 <article id="q1" hidden><div class="crumbs">Java Core</div><h2 tabindex="-1">1. Как передаются параметры в Java?</h2><div class="answer" hidden><div class="short"><p>Всегда <b>по значению</b>. Для объектов значение — это <b>ссылка</b>, и метод получает её копию.</p>
@@ -811,7 +814,7 @@ limits.get(<span class="s">"a"</span>).equals(limits.get(<span class="s">"b"</sp
       <p>Кеши есть и у других обёрток: Byte, Short, Long (−128..127), Character (0..127), Boolean (TRUE/FALSE). У Double и Float кеша нет.</p>
       <p>Смешанное сравнение примитива с обёрткой (<code><span class="k">int</span> == <span class="t">Integer</span></code>) распаковывает обёртку — это сравнение значений, но при null будет NPE. Отдельная ловушка — <code><span class="k">new</span> <span class="t">BigDecimal</span>(<span class="s">"1.0"</span>).equals(<span class="k">new</span> <span class="t">BigDecimal</span>(<span class="s">"1.00"</span>))</code> = false, сравнивайте через <code>compareTo</code>.</p>
     </div></div></article>
-<article id="q3" hidden><div class="crumbs">Java Core</div><h2 tabindex="-1">3. Контракт equals/hashCode. Что будет, если hashCode всегда возвращает 42? <span class="tag">★ топ-12</span></h2><div class="answer" hidden><div class="short"><p>Равные по <code>equals</code> объекты обязаны иметь <b>одинаковый hashCode</b>, обратное не требуется. Сам equals — <b>рефлексивный, симметричный, транзитивный, консистентный</b> и false для null.</p>
+<article id="q3" hidden><div class="crumbs">Java Core</div><h2 tabindex="-1">3. Контракт equals/hashCode. Что будет, если hashCode всегда возвращает 42? <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><p>Равные по <code>equals</code> объекты обязаны иметь <b>одинаковый hashCode</b>, обратное не требуется. Сам equals — <b>рефлексивный, симметричный, транзитивный, консистентный</b> и false для null.</p>
 <p>hashCode, всегда равный 42, <b>контракт не нарушает</b>, но все ключи попадают в <b>один бакет</b>: поиск деградирует до O(n), а с Java 8 до O(log n) — и то только для Comparable-ключей. Переопределил equals — <b>переопредели и hashCode</b>, иначе HashSet хранит «одинаковые» объекты как разные.</p></div>
     <div class="more">
 <ul>
@@ -2732,7 +2735,7 @@ queue.offer(task); <span class="c">// addLast</span>
 queue.poll();      <span class="c">// pollFirst, пусто → null</span></pre>
       <p>Ограничения: не потокобезопасна (для конкурентного кода — ConcurrentLinkedDeque или LinkedBlockingDeque), не принимает null, нет доступа по индексу. Внимание к парам методов: исключение на пустой/полной (<code>push/pop/element</code>) против специального значения (<code>offer/poll/peek</code>).</p>
     </div></div></article>
-<article id="q46" hidden><div class="crumbs">Коллекции</div><h2 tabindex="-1">46. Как устроен HashMap? <span class="tag">★ топ-12</span></h2><div class="answer" hidden><div class="short"><p>HashMap — <b>массив бакетов</b>. Индекс — <code>hash &amp; (n − <span class="n">1</span>)</code>, где старшие биты хеша подмешаны к младшим.</p>
+<article id="q46" hidden><div class="crumbs">Коллекции</div><h2 tabindex="-1">46. Как устроен HashMap? <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><p>HashMap — <b>массив бакетов</b>. Индекс — <code>hash &amp; (n − <span class="n">1</span>)</code>, где старшие биты хеша подмешаны к младшим.</p>
 <ul><li><b>Коллизии</b> — список; если в бакете больше 8 элементов и таблица не меньше 64 — <b>красно-чёрное дерево</b>.</li><li>При заполнении больше <b>0.75</b> таблица <b>удваивается</b>, элемент остаётся на месте или переезжает ровно на старую ёмкость.</li><li><b>Не потокобезопасен</b>, ключи должны быть <b>неизменяемыми</b>.</li></ul></div>
     <div class="more">
 <ul>
@@ -5882,7 +5885,7 @@ acme-audit-spring-boot-starter/
       </table></div>
       <p>Для реактивного стека — <code><span class="t">ReactiveTransactionManager</span></code>: транзакция хранится не в ThreadLocal, а в Reactor Context подписки.</p>
     </div></div></article>
-<article id="q121" hidden><div class="crumbs">Spring</div><h2 tabindex="-1">121. Метод A вызывает @Transactional-метод B того же класса. Какая транзакция откроется? <span class="tag">★ топ-12</span></h2><div class="answer" hidden><div class="short"><p><b>Никакая</b>, если A сам не транзакционный: @Transactional работает через <b>прокси</b>, а <code><span class="k">this</span>.b()</code> — вызов на самом объекте, мимо прокси, и аннотация на B игнорируется.</p>
+<article id="q121" hidden><div class="crumbs">Spring</div><h2 tabindex="-1">121. Метод A вызывает @Transactional-метод B того же класса. Какая транзакция откроется? <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><p><b>Никакая</b>, если A сам не транзакционный: @Transactional работает через <b>прокси</b>, а <code><span class="k">this</span>.b()</code> — вызов на самом объекте, мимо прокси, и аннотация на B игнорируется.</p>
 <p>Если A транзакционный, B выполнится <b>в его транзакции</b>, но собственные настройки B (REQUIRES_NEW, readOnly) не применятся. Решения: <b>вынести B в отдельный бин</b> (лучший вариант), TransactionTemplate или self-injection.</p></div>
     <div class="more">
 <ul><li>Решения: вынести B в отдельный бин (лучше всего); self-injection через @Lazy или ObjectProvider; TransactionTemplate; AspectJ weaving.</li></ul>
@@ -5930,7 +5933,7 @@ txTemplate.executeWithoutResult(status -&gt; {
       <p>Обратный случай, о котором тоже спрашивают: A — @Transactional, B — @Transactional(propagation = REQUIRES_NEW), вызов через this. B выполнится в транзакции A — REQUIRES_NEW проигнорирован, и откат A откатит изменения B.</p>
 <p class="follow"><b>Почему внутри @Configuration вызов @Bean-метода перехватывается?</b> Там сам экземпляр — CGLIB-подкласс, а AOP-прокси — обёртка вокруг отдельного целевого объекта.</p>
     </div></div></article>
-<article id="q122" hidden><div class="crumbs">Spring</div><h2 tabindex="-1">122. @Transactional: propagation, NESTED и UnexpectedRollbackException <span class="tag">★ топ-12</span></h2><div class="answer" hidden><div class="short"><ul><li><b>REQUIRED</b> (по умолчанию) — присоединиться к текущей транзакции или создать новую.</li><li><b>REQUIRES_NEW</b> — приостановить текущую и открыть независимую на <b>другом соединении</b>.</li><li><b>NESTED</b> — savepoint внутри текущей.</li></ul>
+<article id="q122" hidden><div class="crumbs">Spring</div><h2 tabindex="-1">122. @Transactional: propagation, NESTED и UnexpectedRollbackException <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><ul><li><b>REQUIRED</b> (по умолчанию) — присоединиться к текущей транзакции или создать новую.</li><li><b>REQUIRES_NEW</b> — приостановить текущую и открыть независимую на <b>другом соединении</b>.</li><li><b>NESTED</b> — savepoint внутри текущей.</li></ul>
 <p>Ловушка: внутренний REQUIRED-метод бросил исключение, внешний поймал и продолжил — транзакция уже <b>rollback-only</b>, и при коммите вылетает <b>UnexpectedRollbackException</b>. REQUIRES_NEW под нагрузкой может <b>исчерпать пул</b>: потоку нужно два соединения.</p></div>
     <div class="more">
 <ul>
@@ -7212,7 +7215,7 @@ paymentRepository.findByStatus(<span class="t">NEW</span>);
       <p>В Spring Boot OSIV включён по умолчанию с WARN в логе на старте. Правильная практика — <code>spring.jpa.open-in-view=<span class="k">false</span></code> с первого дня; на существующем проекте выключение обнаружит все места ленивой загрузки в контроллерах как исключения — их и надо исправить.</p>
 <p class="follow"><b>Почему Spring пишет warning про open-in-view?</b> Значение включено по умолчанию неявно; его рекомендуют выключить осознанно.</p>
     </div></div></article>
-<article id="q149" hidden><div class="crumbs">JPA и Hibernate</div><h2 tabindex="-1">149. Проблема N+1: что это, как лечить и помогут ли индексы на FK? <span class="tag">★ топ-12</span></h2><div class="answer" hidden><div class="short"><p><b>N+1</b> — один запрос за родителями и по запросу на ленивую коллекцию каждого: сто заказов — сто один запрос.</p>
+<article id="q149" hidden><div class="crumbs">JPA и Hibernate</div><h2 tabindex="-1">149. Проблема N+1: что это, как лечить и помогут ли индексы на FK? <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><p><b>N+1</b> — один запрос за родителями и по запросу на ленивую коллекцию каждого: сто заказов — сто один запрос.</p>
 <ul><li>Лечат загрузкой заранее: <b>JOIN FETCH</b> или <b>@EntityGraph</b>, <b>batch fetching</b> (пачками через IN), DTO-проекция с JOIN.</li><li><b>Индексы на FK не помогут</b>: каждый запрос быстрее, но их число то же.</li><li>Ловят в тестах <b>счётчиком SQL-запросов</b>.</li></ul></div>
     <div class="more">
 <ul>
@@ -8932,7 +8935,7 @@ EXPLAIN <span class="k">SELECT</span> * <span class="k">FROM</span> payment
       <p>Компромисс для UI с номерами страниц: OFFSET для первых страниц (их смотрят чаще всего), ограничение максимальной глубины, а выгрузку «всего» — отдельным механизмом (экспорт в файл).</p>
 <p class="follow"><b>Зачем id в ключе сортировки?</b> created_at может совпадать; id делает порядок уникальным.</p>
     </div></div></article>
-<article id="q180" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">180. Уровни изоляции и MVCC. Чем PostgreSQL отличается от стандарта? <span class="tag">★ топ-12</span></h2><div class="answer" hidden><div class="short"><p>Стандарт — четыре уровня по запрещённым аномалиям: <b>Read Uncommitted, Read Committed, Repeatable Read, Serializable</b>.</p>
+<article id="q180" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">180. Уровни изоляции и MVCC. Чем PostgreSQL отличается от стандарта? <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><p>Стандарт — четыре уровня по запрещённым аномалиям: <b>Read Uncommitted, Read Committed, Repeatable Read, Serializable</b>.</p>
 <ul><li>В PostgreSQL по умолчанию <b>Read Committed</b>; Read Uncommitted работает как Read Committed.</li><li><b>Repeatable Read</b> — snapshot isolation, <b>фантомов нет</b> (но возможен write skew).</li><li><b>Serializable</b> не блокирует, а отслеживает зависимости (SSI) и обрывает транзакцию ошибкой <b>40001</b> — приложение обязано повторить.</li></ul>
 <p>Основа — <b>MVCC</b>: читатели не блокируют писателей.</p></div>
     <div class="more">
@@ -9021,7 +9024,7 @@ COMMIT; COMMIT;
       </table></div>
       <p>Bloat — таблица и индексы занимают больше места, чем живые данные: VACUUM освобождает место для повторного использования внутри файла, но не уменьшает файл. Вернуть место ОС — <code><span class="t">VACUUM</span> <span class="t">FULL</span></code> (полная блокировка таблицы) или <code>pg_repack</code> (онлайн). Индексам — <code><span class="t">REINDEX</span> <span class="t">CONCURRENTLY</span></code>.</p>
     </div></div></article>
-<article id="q182" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">182. Lost update: @Version или SELECT FOR UPDATE? Что выбрать для 500 параллельных оплат? <span class="tag">★ топ-12</span></h2><div class="answer" hidden><div class="short"><p><b>Lost update</b> — две транзакции прочитали баланс, посчитали новое значение, и вторая затёрла первую.</p>
+<article id="q182" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">182. Lost update: @Version или SELECT FOR UPDATE? Что выбрать для 500 параллельных оплат? <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><p><b>Lost update</b> — две транзакции прочитали баланс, посчитали новое значение, и вторая затёрла первую.</p>
 <ul><li><b>@Version</b> хорош при редких конфликтах, но на 500 списаниях с одного счёта утонет в ретраях.</li><li><b>SELECT FOR UPDATE</b> корректен, но выстраивает очередь: при 5 мс на транзакцию — около 200 в секунду.</li><li>Короче всего держит блокировку <b>атомарный условный UPDATE</b>: списать, если баланса хватает.</li></ul>
 <p>На масштабе — <b>очередь по счёту</b> или леджер с проводками.</p></div>
     <div class="more">
@@ -9463,7 +9466,7 @@ DROP <span class="k">TABLE</span> payment_2024_10;</pre>
       <p>Поиск по offset: в имени файла сегмента — его базовый offset, нужный сегмент находится бинарным поиском по именам, внутри — по разреженному индексу до ближайшей позиции и дочитывание. Поиск по времени (<code>offsetsForTimes</code>) — через timeindex; так работает «перемотать группу на вчерашние 10:00».</p>
       <p>Tiered storage (появился в 3.6, готов к продакшену с 3.9): старые сегменты выгружаются в объектное хранилище (S3), на брокерах остаётся только горячая часть — можно хранить месяцы без огромных дисков.</p>
     </div></div></article>
-<article id="q193" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">193. Kafka: partition key и порядок. 3 партиции и 4 консюмера — что будет? <span class="tag">★ топ-12</span></h2><div class="answer" hidden><div class="short"><p>Порядок гарантирован только <b>внутри партиции</b>. Одинаковый ключ — одна партиция (по хешу ключа), поэтому порядок по бизнес-ключу (счёту) сохраняется.</p>
+<article id="q193" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">193. Kafka: partition key и порядок. 3 партиции и 4 консюмера — что будет? <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><p>Порядок гарантирован только <b>внутри партиции</b>. Одинаковый ключ — одна партиция (по хешу ключа), поэтому порядок по бизнес-ключу (счёту) сохраняется.</p>
 <p>В consumer group партицию читает <b>ровно один консюмер</b>: при 3 партициях и 4 консюмерах <b>один простаивает</b>. Число партиций — <b>потолок параллелизма</b> группы, а увеличение числа партиций ломает порядок для существующих ключей.</p></div>
     <div class="more">
 <ul>
@@ -12625,7 +12628,7 @@ kubectl debug -it &lt;pod&gt; --image=busybox \
       <p>Частые причины у Spring Boot: отсутствует переменная окружения или секрет (ошибка биндинга <code><span class="a">@ConfigurationProperties</span></code>), неверный профиль, недоступная зависимость при старте (Kafka, Vault, БД) — сервис падает вместо того чтобы стартовать и ждать; миграция Liquibase упала или ждёт лок, оставленный предыдущим упавшим подом; старт дольше, чем позволяет liveness без startup-пробы; heap больше лимита контейнера при старте (Xms близко к лимиту).</p>
       <p>Смежные состояния: <code><span class="t">ImagePullBackOff</span></code> — образ не скачивается (тег, доступ к реестру); <code><span class="t">Pending</span></code> — нет ноды с нужными ресурсами или не привязался том; <code><span class="t">CreateContainerConfigError</span></code> — нет ConfigMap/Secret, на который ссылается под.</p>
     </div></div></article>
-<article id="q268" hidden><div class="crumbs">Kubernetes и эксплуатация</div><h2 tabindex="-1">268. Один из 16 подов раз в неделю падает: OOMKilled или CPU throttling. С чего начнёте? <span class="tag">★ топ-12</span></h2><div class="answer" hidden><div class="short"><ul><li><b>OOMKilled</b> — код <b>137</b> и причина в статусе пода: ядро убило процесс за превышение лимита. Java-OOM при этом может не быть — растёт не heap, а потоки, direct buffers, Metaspace.</li><li><b>Throttling</b> не убивает, но растёт латентность: GC и JIT выжигают CPU-квоту в начале периода.</li></ul>
+<article id="q268" hidden><div class="crumbs">Kubernetes и эксплуатация</div><h2 tabindex="-1">268. Один из 16 подов раз в неделю падает: OOMKilled или CPU throttling. С чего начнёте? <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><ul><li><b>OOMKilled</b> — код <b>137</b> и причина в статусе пода: ядро убило процесс за превышение лимита. Java-OOM при этом может не быть — растёт не heap, а потоки, direct buffers, Metaspace.</li><li><b>Throttling</b> не убивает, но растёт латентность: GC и JIT выжигают CPU-квоту в начале периода.</li></ul>
 <p>Смотрю метрики <b>RSS против heap</b> и <b>throttled periods</b>, затем — чем этот под отличается и что происходит <b>раз в неделю</b>: отчёт, батч, крупный клиент.</p></div>
     <div class="more">
 <ul>
@@ -13483,7 +13486,7 @@ await().atMost(<span class="n">10</span>, <span class="t">SECONDS</span>).untilA
       <p>Почему <code><span class="t">Date</span></code> в API плох: изменяемый, без часового пояса в смысле «календарной даты»; курс относится к дате, а не к моменту времени — <code><span class="t">LocalDate</span></code> выражает это точно.</p>
       <p>Дополнительные вопросы для обсуждения: что делать, если внешний сервис недоступен — отдать последний известный курс с пометкой (stale-if-error) или ошибку; для денег курс должен фиксироваться в операции (сохранять курс, по которому провели), а не пересчитываться при каждом показе.</p>
     </div></div></article>
-<article id="q278" hidden><div class="crumbs">Практика: код и задачи</div><h2 tabindex="-1">278. Code review: найдите проблемы <span class="tag">★ топ-12</span></h2><div class="task"><pre class="wide"><span class="k">private</span> <span class="k">final</span> <span class="t">Map</span>&lt;<span class="t">Long</span>, <span class="t">ReentrantLock</span>&gt; locks = <span class="k">new</span> <span class="t">HashMap</span>&lt;&gt;();
+<article id="q278" hidden><div class="crumbs">Практика: код и задачи</div><h2 tabindex="-1">278. Code review: найдите проблемы <span class="tag">★ топ</span></h2><div class="task"><pre class="wide"><span class="k">private</span> <span class="k">final</span> <span class="t">Map</span>&lt;<span class="t">Long</span>, <span class="t">ReentrantLock</span>&gt; locks = <span class="k">new</span> <span class="t">HashMap</span>&lt;&gt;();
 
 <span class="a">@Async</span> <span class="a">@Transactional</span>
 <span class="k">public</span> <span class="t">CompletableFuture</span>&lt;<span class="t">Void</span>&gt; transfer(<span class="t">Long</span> from, <span class="t">Long</span> to, <span class="k">double</span> amount) {
@@ -14716,7 +14719,7 @@ await().atMost(<span class="n">10</span>, <span class="t">SECONDS</span>).untilA
       <p>Варианты, которые могут попросить: sliding window на очереди меток времени (точный лимит «не больше N за последние T секунд»); лимит на пользователя с вытеснением неактивных ключей; распределённая версия на Redis (Lua-скрипт с той же логикой, время сервера Redis).</p>
 <p class="follow"><b>Как протестировать без sleep?</b> Передать фейковый источник времени (LongSupplier) и двигать его вручную.</p>
     </div></div></article>
-<article id="q292" hidden><div class="crumbs">Практика: код и задачи</div><h2 tabindex="-1">292. Мост и фонарик: 1, 2, 5 и 10 минут <span class="tag">★ топ-12</span></h2><div class="answer" hidden><div class="short"><p>Ответ — <b>17 минут</b>:</p>
+<article id="q292" hidden><div class="crumbs">Практика: код и задачи</div><h2 tabindex="-1">292. Мост и фонарик: 1, 2, 5 и 10 минут <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><p>Ответ — <b>17 минут</b>:</p>
 <ol><li>1 и 2 переходят — 2 мин;</li><li>1 возвращается — 1;</li><li><b>5 и 10 переходят вместе</b> — 10;</li><li>2 возвращается — 2;</li><li>1 и 2 переходят — 2.</li></ol>
 <p>Идея — отправить двух медленных вместе, чтобы платить только за больший. Наивное «самый быстрый провожает всех» даёт 19. Важно <b>проговаривать рассуждение</b>.</p></div>
     <div class="more">
@@ -14862,7 +14865,7 @@ server.http2.enabled: <span class="k">true</span></pre>
       <p>Server push из HTTP/2 браузеры отключили; для серверных уведомлений используют SSE (поверх обычного HTTP) или WebSocket (отдельный протокол после Upgrade).</p>
 <p class="follow"><b>Зачем пул соединений HTTP-клиенту?</b> Установка TCP+TLS дорогая; без пула каждый вызов платит 2 RTT и создаёт нагрузку на обе стороны.</p>
     </div></div></article>
-<article id="q296" hidden><div class="crumbs">Сети, HTTP и REST</div><h2 tabindex="-1">296. REST: методы, идемпотентность, PUT или PATCH, коды ответов <span class="tag">★ топ-12</span></h2><div class="answer" hidden><div class="short"><p>REST — <b>ресурсы-существительные</b> в URL и стандартные методы над ними.</p>
+<article id="q296" hidden><div class="crumbs">Сети, HTTP и REST</div><h2 tabindex="-1">296. REST: методы, идемпотентность, PUT или PATCH, коды ответов <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><p>REST — <b>ресурсы-существительные</b> в URL и стандартные методы над ними.</p>
 <ul><li><b>GET</b> — чтение, идемпотентен; <b>POST</b> — создание или действие, не идемпотентен; <b>PUT</b> — замена целиком, идемпотентен; <b>PATCH</b> — частичное изменение; <b>DELETE</b> — удаление, идемпотентен.</li><li>Коды: <b>200/201</b> успех и создание, <b>400</b> некорректный запрос, <b>401/403</b> нет аутентификации или прав, <b>404</b>, <b>409</b> конфликт состояния, <b>422</b> нарушено бизнес-правило, <b>5xx</b> ошибка сервера.</li></ul></div>
     <div class="more">
 <ul>
@@ -15935,7 +15938,7 @@ db.orders.updateOne(
     </ul>
 <p class="follow"><b>Уточнят:</b> откуда цифры нагрузки; что будет при отказе компонента X; почему не готовое решение; что делали другие члены команды.</p>
     </div></div></article>
-<article id="q317" hidden><div class="crumbs">Опыт и лидерство</div><h2 tabindex="-1">317. Расскажите о прод-инциденте, который вы чинили <span class="tag">★ топ-12</span></h2><div class="answer" hidden><div class="short"><p>По <b>STAR</b>:</p>
+<article id="q317" hidden><div class="crumbs">Опыт и лидерство</div><h2 tabindex="-1">317. Расскажите о прод-инциденте, который вы чинили <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><p>По <b>STAR</b>:</p>
 <ul><li><b>Ситуация</b> — что сломалось и как ударило по бизнесу;</li><li><b>Действия</b> — как шёл к причине (метрики, логи, гипотеза и проверка); отдельно — как <b>сначала остановил ущерб</b>, а потом нашёл корень;</li><li><b>Результат</b> — измеримый;</li><li><b>Вывод</b> — что изменили системно: тест, алерт, практика.</li></ul>
 <p>Лучше история с технической глубиной и <b>личным вкладом</b>; если ошибка была ваша — так и сказать.</p></div>
     <div class="more">
@@ -16063,7 +16066,7 @@ db.orders.updateOne(
       <li><b>Команда.</b> Сколько в ней бэкендеров, как устроено ревью?</li>
     </ul>
     </div></div></article>
-<section class="summary" id="summary" hidden><div class="sum-kicker">Глава пройдена</div><h2 tabindex="-1"></h2>
+<section class="summary" id="summary" hidden><div class="sum-kicker">Итог главы</div><h2 tabindex="-1"></h2><p class="sum-marked"></p>
 <div class="tiles"><div class="tile known"><i class="ico known"></i><b class="t-known"></b><span>знаю</span></div><div class="tile"><i class="ico partial"></i><b class="t-partial"></b><span>частично</span></div><div class="tile"><i class="ico unknown"></i><b class="t-unknown"></b><span>не знал</span></div></div>
 <div class="weak-block"><h3>Повторить в первую очередь</h3><div class="weak"></div><div class="weak-more"></div></div></section>
 <div class="lastmark" id="lastmark" hidden><i class="ico"></i><span></span></div>
@@ -16076,7 +16079,7 @@ db.orders.updateOne(
 <div class="pg-rate"><div class="rate-head"><span>Как вы ответили?</span><button type="button" class="link" id="hide">Скрыть ответ</button><button type="button" class="link" id="skip">Пропустить</button></div>
 <div class="rate-btns"><button type="button" data-mark="unknown"><i class="ico unknown"></i>Не знал<kbd>1</kbd></button><button type="button" data-mark="partial"><i class="ico partial"></i>Частично<kbd>2</kbd></button><button type="button" class="primary" data-mark="known"><i class="ico known"></i>Знаю<kbd>3</kbd></button></div>
 <div class="upnext">Дальше: <span id="upnext"></span></div></div>
-<div class="pg-done"><button type="button" class="primary" id="again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg><span></span></button><button type="button" id="nextchap"><span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>
+<div class="pg-done"><button type="button" class="primary" id="again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg><span></span></button><button type="button" id="unmarked"><span></span></button><button type="button" id="nextchap"><span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>
 </div>
 <button type="button" class="pg-next" id="next"><span class="lbl">Далее</span><span class="ttl"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
 </nav>
@@ -16118,6 +16121,8 @@ const mark = a => (progress.marks[a.dataset.k] || [])[0] || '';
 let mode = store.get('faq.mode', null) || (desktop.matches ? 'read' : 'train');
 let filter = 'all';
 let words = [];
+let queue = null;                                                      // «Повторить слабые» и «К неотмеченным»: только эта глава
+let queueChapter = null;
 
 // ---------- режим «Чтение / Тренировка» ----------
 function renderMode() {
@@ -16128,7 +16133,7 @@ document.querySelectorAll('.modes button').forEach(b => b.addEventListener('clic
   mode = b.dataset.mode;
   store.set('faq.mode', mode);
   renderMode();
-  if (current) show(current);
+  if (current) show(current, true);
 }));
 
 // ---------- прогресс в списке ----------
@@ -16149,10 +16154,14 @@ function bar(el, c, total) {
   el.setAttribute('aria-label', `Знаю ${c.known}, частично ${c.partial}, не знал ${c.unknown} из ${total}`);
 }
 function renderProgress() {
-  for (const a of links) a.querySelector('.st').className = 'st ico ' + (mark(a) || 'none');
+  for (const a of links) {
+    a.querySelector('.st').className = 'st ico ' + (mark(a) || 'none');
+    a.querySelector('.st-t').textContent = mark(a) ? ' — ' + LABEL[mark(a)] : '';
+  }
   const all = count(links), marked = all.known + all.partial + all.unknown;
   document.getElementById('marked').textContent = `Отмечено ${marked} из ${links.length}`;
-  document.getElementById('percent').textContent = Math.round(marked * 100 / links.length) + '%';
+  const pct = Math.round(marked * 100 / links.length);
+  document.getElementById('percent').textContent = marked && !pct ? '<1%' : pct + '%';
   bar(document.getElementById('totalbar'), all, links.length);
   for (const s of RATES) document.getElementById('n-' + s).textContent = all[s];
   chaps.forEach((c, ci) => {
@@ -16163,9 +16172,15 @@ function renderProgress() {
   document.getElementById('f-repeat').textContent = all.partial + all.unknown;
   renderSeen();
 }
+function resumeLink() {                                                // последний открытый или первый неотмеченный после него
+  const last = byKey.get(progress.last);
+  if (!last) return null;
+  const i = links.indexOf(last);
+  return [...links.slice(i), ...links.slice(0, i)].find(a => !mark(a)) || null;
+}
 function renderSeen() {
   document.getElementById('f-new').textContent = links.filter(a => !progress.seen[a.dataset.k]).length;
-  const a = byKey.get(progress.last), cont = document.getElementById('cont');
+  const a = resumeLink(), cont = document.getElementById('cont');
   cont.hidden = !a;
   if (!a) return;
   const ci = +a.dataset.ci;
@@ -16224,6 +16239,7 @@ search.addEventListener('input', () => {                               // пау
   pending = setTimeout(runSearch, 150);
 });
 function runSearch() {
+  queue = null;
   words = norm(search.value).split(/\s+/).filter(Boolean);
   applyList(true);
   highlight();
@@ -16238,6 +16254,7 @@ search.addEventListener('keydown', e => {
   if (e.key === 'Escape') { search.value = ''; clearTimeout(pending); runSearch(); }
 });
 function setFilter(f) {
+  queue = null;
   filter = f;
   document.querySelectorAll('.filters button').forEach(b => b.setAttribute('aria-pressed', b.dataset.f === f));
   applyList(true);
@@ -16245,7 +16262,7 @@ function setFilter(f) {
 document.querySelectorAll('.filters button').forEach(b => b.addEventListener('click', () => setFilter(b.dataset.f)));
 
 // ---------- навигация: при поиске и фильтре листаем только найденное ----------
-function order() { return words.length || filter !== 'all' ? links.filter(a => !a.hidden).map(a => a.hash.slice(1)) : ids; }
+function order() { return queue || (words.length || filter !== 'all' ? links.filter(a => !a.hidden).map(a => a.hash.slice(1)) : ids); }
 function neighbor(id, d) {
   const o = order(), i = o.indexOf(id);
   if (i >= 0) return o[i + d] || null;
@@ -16257,6 +16274,7 @@ function step(d) { if (current) go(neighbor(current, d)); }
 // куда ведёт оценка: к следующему вопросу или, после последнего вопроса главы, к её итогу
 function afterRate(id) {
   const a = byId.get(id), next = neighbor(id, 1);
+  if (queue) return next ? '#' + next : '#done-' + queueChapter;      // очередь пройдена — снова итог главы
   if (!words.length && filter === 'all' && (!next || byId.get(next).dataset.ci !== a.dataset.ci)) return '#done-' + a.dataset.ci;
   return next ? '#' + next : '#';
 }
@@ -16280,16 +16298,19 @@ function ago(ts) {
   const day = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d; };
   return rtf.format(-Math.round((day(Date.now()) - day(ts)) / 864e5), 'day');
 }
-function show(id, focus) {
+function show(id, focus, auto) {
+  if (queue && !queue.includes(id)) queue = null;
   doneChapter = null;
   summary.hidden = true;
   if (current && current !== id) document.getElementById(current).hidden = true;
   const art = document.getElementById(id), a = byId.get(id), ci = +a.dataset.ci;
   art.hidden = false;
   current = id;
-  progress.last = a.dataset.k;
-  progress.seen[a.dataset.k] = 1;
-  saveProgress();
+  if (!auto) {
+    progress.last = a.dataset.k;
+    progress.seen[a.dataset.k] = 1;
+    saveProgress();
+  }
   links.forEach(l => l.classList.toggle('active', l === a));
   setPos(ci, chapLinks[ci].indexOf(a));
   renderChapterBar(ci, a);
@@ -16325,7 +16346,13 @@ function setAnswer(open) {
   if (!tip.hidden) art.append(tip);
 }
 const answerOpen = () => !!current && !document.getElementById(current).querySelector('.answer').hidden;
-document.getElementById('show').onclick = () => setAnswer(true);
+function openAnswer() {
+  setAnswer(true);
+  const short = document.getElementById(current).querySelector('.short');   // кнопка исчезла — фокус не улетает в начало
+  short.tabIndex = -1;
+  short.focus({ preventScroll: true });
+}
+document.getElementById('show').onclick = openAnswer;
 document.getElementById('hide').onclick = () => setAnswer(false);
 document.getElementById('skip').onclick = () => { if (current) location.replace(afterRate(current)); };
 document.getElementById('tipok').onclick = () => { store.set('faq.tip', 1); tip.hidden = true; };
@@ -16349,7 +16376,10 @@ function showSummary(ci) {
   setPos(ci, as.length - 1);
   renderChapterBar(ci, null);
   links.forEach(l => l.classList.remove('active'));
+  queue = null;
   summary.querySelector('h2').textContent = chapName(ci);
+  const markedN = c.known + c.partial + c.unknown;
+  summary.querySelector('.sum-marked').textContent = `Отмечено ${markedN} из ${as.length}`;
   for (const s of RATES) summary.querySelector('.t-' + s).textContent = c[s];
   const weak = [...as.filter(a => mark(a) === 'unknown'), ...as.filter(a => mark(a) === 'partial')];
   summary.querySelector('.weak').replaceChildren(...weak.slice(0, 5).map(a => {
@@ -16359,7 +16389,8 @@ function showSummary(ci) {
     row.querySelector('.num').textContent = a.querySelector('.num').textContent;
     row.querySelector('.q').textContent = a.querySelector('.q').textContent;
     row.querySelector('.ico').className = 'ico ' + mark(a);
-    row.querySelector('.ico').setAttribute('aria-label', LABEL[mark(a)]);
+    row.insertAdjacentHTML('beforeend', '<span class="sr"></span>');
+    row.lastChild.textContent = ' — ' + LABEL[mark(a)];
     return row;
   }));
   summary.querySelector('.weak-more').textContent = weak.length > 5 ? `и ещё ${weak.length - 5}` : '';
@@ -16368,7 +16399,11 @@ function showSummary(ci) {
   const n = weak.length, word = n % 10 === 1 && n % 100 !== 11 ? 'слабый' : 'слабых';
   again.hidden = !n;
   again.querySelector('span').textContent = `Повторить ${n} ${word}`;
-  again.onclick = () => { setFilter('repeat'); go(weak[0].hash.slice(1)); };
+  again.onclick = () => startQueue(ci, weak);
+  const rest = as.filter(a => !mark(a)), unmarked = document.getElementById('unmarked');
+  unmarked.hidden = !rest.length;
+  unmarked.querySelector('span').textContent = `К неотмеченным (${rest.length})`;
+  unmarked.onclick = () => startQueue(ci, rest);
   const nextCi = ci + 1 < chaps.length ? ci + 1 : null;
   nextChap.querySelector('span').textContent = nextCi === null ? 'К списку вопросов' : `Дальше: ${chapName(nextCi)}`;
   nextChap.onclick = () => nextCi === null ? location.replace('#') : go(chapLinks[nextCi][0].hash.slice(1));
@@ -16376,6 +16411,13 @@ function showSummary(ci) {
   pager.dataset.state = 'done';
   scroller.scrollTop = 0;
   summary.querySelector('h2').focus({ preventScroll: true });
+}
+
+function startQueue(ci, as) {                                          // пройти только эти вопросы главы и вернуться к итогу
+  const ids = as.map(a => a.hash.slice(1));
+  go(ids[0]);
+  queue = ids;
+  queueChapter = ci;
 }
 
 // ---------- маршрут: #qN — вопрос, #done-N — итог главы, пусто — список ----------
@@ -16400,12 +16442,17 @@ function route() {
   } else {
     app.classList.remove('reading');                                   // телефон: экран списка
     if (current) revealActive();
-    else if (desktop.matches && doneChapter === null) show(ids[0]);    // широкий экран: сразу первый вопрос
+    else if (desktop.matches && doneChapter === null) startPage();     // широкий экран: сразу вопрос
     setInert();
   }
   routed = true;
 }
-desktop.addEventListener('change', () => { if (!current && doneChapter === null && desktop.matches) show(ids[0]); setInert(); });
+// широкий экран без ссылки на вопрос: где остановились, иначе первый — и этот показ не считается «открыл»
+function startPage() {
+  const a = resumeLink() || byKey.get(progress.last);
+  show(a ? a.hash.slice(1) : ids[0], false, true);
+}
+desktop.addEventListener('change', () => { if (!current && doneChapter === null && desktop.matches) startPage(); setInert(); });
 
 // ---------- тема: по умолчанию системная, кнопка переключает и запоминает ----------
 const SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
@@ -16470,10 +16517,11 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft') step(-1);
   if (e.key === 'ArrowRight') step(1);
   if (mode !== 'train' || !current) return;
-  if (e.key === ' ' && !e.target.closest('button, a, summary, input')) {  // пробел — показать/скрыть ответ
+  if (e.key === ' ' && !answerOpen() && !e.target.closest('button, a, summary, input')) {   // открыть; открыт — листает
     e.preventDefault();
-    setAnswer(!answerOpen());
+    openAnswer();
   }
+  if (e.key === 'Escape' && answerOpen()) setAnswer(false);
   const r = { 1: 'unknown', 2: 'partial', 3: 'known' }[e.key];         // 1/2/3 — оценка после показа ответа
   if (r && answerOpen()) rate(r);
 });
