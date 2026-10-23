@@ -659,8 +659,8 @@ limits.get(<span class="s">"a"</span>).equals(limits.get(<span class="s">"b"</sp
         amount.stripTrailingZeros(),
         currency);
 }</pre>
-      <p>Деградация при константном хеше: до Java 8 бакет — связный список, поиск O(n). С Java 8 при 8+ элементах бакет превращается в красно-чёрное дерево, но упорядочить элементы дерево может только через <code>compareTo</code> — если ключи не Comparable, поиск снова почти линейный (дерево обходит обе ветки).</p>
-      <p>На собеседовании хорошо добавить: в Lombok <code><span class="a">@EqualsAndHashCode</span></code> и в records equals/hashCode генерируются по всем полям — для JPA-сущностей это ловушка (ленивые коллекции, меняющийся id после persist).</p>
+      <p>Деградация при константном хеше: до Java 8 бакет — связный список, поиск O(n). С Java 8 бакет, в котором больше 8 элементов, превращается в красно-чёрное дерево — но только если в таблице не меньше 64 бакетов (<code><span class="t">MIN_TREEIFY_CAPACITY</span></code>), иначе HashMap просто увеличивает таблицу. Упорядочить элементы дерево может только через <code>compareTo</code> — если ключи не Comparable, поиск снова почти линейный (дерево обходит обе ветки).</p>
+      <p>На собеседовании хорошо добавить: в Lombok <code><span class="a">@EqualsAndHashCode</span></code> (и <code><span class="a">@Data</span></code>) equals/hashCode генерируются по всем полям — для JPA-сущностей это ловушка (ленивые коллекции, меняющийся id после persist).</p>
 <p class="follow"><b>Может ли hashCode меняться?</b> Не должен, пока не изменились поля из equals: мутабельный ключ в HashMap опасен.</p>
     </div></div></article>
 <article id="q4" hidden><div class="crumbs">Java Core</div><h2>4. Принципы ООП: инкапсуляция, наследование, полиморфизм, абстракция</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Инкапсуляция — объект сам охраняет свои инварианты: состояние скрыто, меняется только через методы с проверками. Наследование — переиспользование и отношение «является», но оно жёстко связывает с родителем, поэтому чаще выбирают композицию. Полиморфизм — один вызов, разное поведение: в Java это динамическая диспетчеризация переопределённых методов по реальному типу объекта. Абстракция — работаем с контрактом (интерфейсом), а не с реализацией, детали скрыты.</p></div>
@@ -710,6 +710,7 @@ limits.get(<span class="s">"a"</span>).equals(limits.get(<span class="s">"b"</sp
         <tr><td><code><span class="k">public</span></code></td><td>да</td><td>да</td><td>да</td><td>да</td></tr>
       </table></div>
 <ul>
+      <li><code><span class="k">protected</span></code> из другого пакета: наследник обращается к члену только через ссылку на свой тип или подтип. <code><span class="t">Parent</span> p = ...; p.protectedMethod()</code> в наследнике из другого пакета не скомпилируется — частый уточняющий вопрос после таблицы.</li>
       <li>Static-поле с коллекцией — частый источник утечки памяти: оно живёт столько же, сколько класс.</li>
       <li>Static nested class не держит ссылку на внешний объект, inner class — держит.</li>
       <li>Переопределяющий метод может расширить доступ (<code><span class="k">protected</span></code> → <code><span class="k">public</span></code>), но не сузить.</li>
@@ -766,10 +767,10 @@ list = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;(); <s
       <p>Правила override, которые спрашивают: модификатор доступа нельзя сузить (public → protected — ошибка), checked-исключения нельзя расширить (родитель бросает IOException — наследник не может бросать Exception), можно вернуть подтип. <code><span class="a">@Override</span></code> всегда ставят: без него опечатка в имени или параметре тихо создаёт перегрузку.</p>
       <p>Static-методы скрываются (hiding): <code><span class="t">Parent</span> p = <span class="k">new</span> <span class="t">Child</span>(); p.staticMethod()</code> вызовет метод Parent. Приватные методы не наследуются вовсе — метод с той же сигнатурой в наследнике просто новый метод.</p>
     </div></div></article>
-<article id="q7" hidden><div class="crumbs">Java Core</div><h2>7. Абстрактный класс или интерфейс?</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Интерфейс — это контракт без состояния, и класс может реализовать сколько угодно интерфейсов; с Java 8 в них есть default- и static-методы. Абстрактный класс хранит состояние, имеет конструктор и protected-члены, но наследоваться можно только от одного. По умолчанию выбирают интерфейс — на нём строятся прокси, моки и несколько реализаций. Абстрактный класс — когда нужна общая реализация и состояние, например шаблонный метод.</p></div>
+<article id="q7" hidden><div class="crumbs">Java Core</div><h2>7. Абстрактный класс или интерфейс?</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Интерфейс — это контракт без состояния, и класс может реализовать сколько угодно интерфейсов; с Java 8 в них есть default- и static-методы. Абстрактный класс хранит состояние, имеет конструктор и protected-члены, но наследоваться можно только от одного. Интерфейс заводят, когда нужны несколько реализаций, граница модуля или публичный API. Для прокси и моков он не обязателен: Spring Boot по умолчанию проксирует классы через CGLIB, а Mockito мокает и классы. Абстрактный класс — когда нужна общая реализация и состояние, например шаблонный метод.</p></div>
     <div class="more">
 <ul>
-      <li>По умолчанию — интерфейс; абстрактный класс — для общего состояния и шаблонного метода.</li>
+      <li>Интерфейс — для нескольких реализаций и границ модулей, абстрактный класс — для общего состояния и шаблонного метода. Интерфейс на каждый класс с одной реализацией — лишний слой.</li>
       <li>Конфликт двух default-методов с одной сигнатурой класс обязан разрешить сам (<code><span class="t">A</span>.<span class="k">super</span>.m()</code>).</li>
     </ul>
 <div class="table-wrap"><table>
@@ -780,7 +781,7 @@ list = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;(); <s
         <tr><td>Модификаторы методов</td><td>public (с Java 9 и private)</td><td>любые</td></tr>
         <tr><td>Реализация</td><td>default/static-методы</td><td>любые методы</td></tr>
       </table></div>
-      <p>Интерфейс описывает <i>что умеет</i> объект (роль, возможность), абстрактный класс — <i>что он есть</i> и общую часть реализации. В Spring-коде почти всегда интерфейсы: на них строятся прокси (JDK proxy), моки, несколько реализаций.</p>
+      <p>Интерфейс описывает <i>что умеет</i> объект (роль, возможность), абстрактный класс — <i>что он есть</i> и общую часть реализации. Довод «интерфейс нужен для прокси и моков» устарел: Spring Boot с 2.0 проксирует через CGLIB (<code>spring.aop.proxy-target-<span class="k">class</span>=<span class="k">true</span></code>), а Mockito 5 по умолчанию мокает любые классы, даже final. Реальный довод за интерфейс — несколько реализаций или граница модуля.</p>
       <p>Типичное применение абстрактного класса — Template Method: общий алгоритм с шагами, которые переопределяют наследники.</p>
 <pre class="wide"><span class="k">abstract</span> <span class="k">class</span> <span class="t">PaymentProcessor</span> {
     <span class="k">public</span> <span class="k">final</span> <span class="t">Result</span> process(<span class="t">Payment</span> p) {   <span class="c">// алгоритм фиксирован</span>
@@ -947,7 +948,7 @@ list = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;(); <s
 <span class="c">// 5 init Child</span>
 <span class="c">// 6 ctor Child</span></pre>
       <p>Если бы <code>describe</code> вызывал <code>items.add(...)</code> — NPE из конструктора родителя, и стектрейс указывает на конструктор родителя, хотя ошибка в наследнике. Такие баги встречаются во фреймворках с шаблонным методом в конструкторе (старые Swing-компоненты, самописные базовые классы).</p>
-      <p>Java 25 (JEP 513, flexible constructor bodies) разрешает код до <code><span class="k">super</span>(...)</code>: можно проверить аргументы и присвоить поля наследника до вызова конструктора родителя — тогда переопределённый метод увидит уже инициализированные поля. Это делается явным присваиванием в конструкторе до super, а не инициализатором поля.</p>
+      <p>С Java 25 (JEP 513, flexible constructor bodies; на Java 21 этого нет, там защищает только правило «не вызывать переопределяемые методы из конструктора») разрешён код до <code><span class="k">super</span>(...)</code>: можно проверить аргументы и присвоить поля наследника до вызова конструктора родителя — тогда переопределённый метод увидит уже инициализированные поля. Это делается явным присваиванием в конструкторе до super, а не инициализатором поля.</p>
       <p>Правило из Effective Java: конструктор не должен вызывать переопределяемые методы — ни прямо, ни косвенно. То же касается <code>clone</code> и <code>readObject</code>. Методы, вызываемые из конструктора, делают <code><span class="k">private</span></code>, <code><span class="k">final</span></code> или <code><span class="k">static</span></code>.</p>
     </div></div></article>
 <article id="q10" hidden><div class="crumbs">Java Core</div><h2>10. Вложенные классы: static nested, inner, анонимные и лямбды</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Static nested — обычный класс внутри другого, без ссылки на внешний объект. Inner-класс неявно хранит ссылку на внешний экземпляр — это частая причина утечек памяти, когда слушатель или задача живут дольше владельца. Анонимные классы и лямбды захватывают только effectively final переменные. По умолчанию вложенный класс делают static. Отличие лямбды от анонимного класса: <code><span class="k">this</span></code> внутри лямбды — это внешний объект.</p></div>
@@ -966,8 +967,8 @@ list = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;(); <s
 <pre class="wide"><span class="k">class</span> <span class="t">Service</span> {
     <span class="k">private</span> <span class="k">final</span> <span class="k">byte</span>[] bigCache = <span class="k">new</span> <span class="k">byte</span>[<span class="n">100_000_000</span>];
     <span class="t">Runnable</span> task() {
-        <span class="k">return</span> <span class="k">new</span> <span class="t">Runnable</span>() {          <span class="c">// захватывает Service.this → bigCache не освободится</span>
-            <span class="k">public</span> <span class="k">void</span> run() { ... }
+        <span class="k">return</span> <span class="k">new</span> <span class="t">Runnable</span>() {          <span class="c">// run() зовёт метод Service → держит Service.this и bigCache</span>
+            <span class="k">public</span> <span class="k">void</span> run() { refresh(); }
         };
     }
 }</pre>
@@ -975,13 +976,14 @@ list = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;(); <s
     <span class="k">private</span> <span class="k">final</span> <span class="k">byte</span>[] bigCache =
         <span class="k">new</span> <span class="k">byte</span>[<span class="n">100_000_000</span>];
     <span class="t">Runnable</span> task() {
-        <span class="c">// захватывает Service.this:</span>
-        <span class="c">// bigCache не освободится</span>
+        <span class="c">// run() зовёт метод Service →</span>
+        <span class="c">// держит Service.this и bigCache</span>
         <span class="k">return</span> <span class="k">new</span> <span class="t">Runnable</span>() {
-            <span class="k">public</span> <span class="k">void</span> run() { ... }
+            <span class="k">public</span> <span class="k">void</span> run() { refresh(); }
         };
     }
 }</pre>
+      <p>С JDK 18 javac не создаёт поле <code><span class="k">this</span>$<span class="n">0</span></code>, если inner- или анонимный класс не обращается к внешнему экземпляру (кроме классов, реализующих Serializable). На Java 21 утечка есть, только когда класс реально использует члены внешнего, как <code>refresh()</code> в примере.</p>
       <p>Лямбда захватывает <code><span class="k">this</span></code>, только если использует члены экземпляра. Внутри лямбды <code><span class="k">this</span></code> — внешний объект, внутри анонимного класса — сам анонимный объект. Effectively final нужен, потому что лямбда получает копию значения: если бы переменную можно было менять, копия разошлась бы с оригиналом.</p>
     </div></div></article>
 <article id="q11" hidden><div class="crumbs">Java Core</div><h2>11. Методы Object: clone, toString, getClass</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>У <code><span class="t">Object</span></code> 11 методов: <code>equals</code>, <code>hashCode</code>, <code>toString</code>, <code>getClass</code>, <code>clone</code>, <code>finalize</code>, <code>notify</code>, <code>notifyAll</code> и три <code>wait</code>. <code>clone</code> — protected и работает только для классов с <code><span class="t">Cloneable</span></code>, иначе <code><span class="t">CloneNotSupportedException</span></code>. Он делает поверхностную копию в обход конструктора, поэтому ломает инварианты и не дружит с final-полями. Вместо него — конструктор копирования или статическая фабрика (совет Effective Java). <code>toString</code> — для логов и отладки: не выводите в нём персональные данные. <code>getClass</code> возвращает реальный класс объекта — у Hibernate-прокси это подкласс сущности.</p></div>
@@ -1116,7 +1118,7 @@ x.equals(<span class="s">"a"</span>);             <span class="c">// NPE</span>
 <span class="s">"a,b,,"</span>.split(<span class="s">","</span>).length;
 <span class="s">"a,b,,"</span>.split(<span class="s">","</span>, -<span class="n">1</span>).length;   <span class="c">// 4</span></pre>
       <p>Что считается константой времени компиляции: литералы, <code><span class="k">final</span></code> локальные переменные и <code><span class="k">static</span> <span class="k">final</span></code> поля примитивных типов и String, инициализированные константными выражениями, и операции над ними. <code><span class="k">final</span> <span class="t">String</span> x = getValue()</code> — не константа (значение из метода). Компилятор склеивает такие выражения и кладёт результат в пул классов как один литерал.</p>
-      <p>Где пул живёт и как работает: хеш-таблица строк в нативной памяти JVM со ссылками на объекты в куче (с Java 7 сами строки в куче, а не в PermGen). Размер таблицы — <code>-<span class="t">XX</span>:<span class="t">StringTableSize</span></code>; <code>jcmd &lt;pid&gt; <span class="t">VM</span>.stringtable</code> показывает статистику. Ручной <code>intern()</code> миллионов строк раньше был способом сэкономить память на дубликатах, но цена — хеш-поиск при каждом вызове; G1 с <code><span class="t">UseStringDeduplication</span></code> делает дедупликацию массивов байт строк в фоне, без изменения кода.</p>
+      <p>Где пул живёт и как работает: хеш-таблица строк в нативной памяти JVM со ссылками на объекты в куче (с Java 7 сами строки в куче, а не в PermGen). Размер таблицы — <code>-<span class="t">XX</span>:<span class="t">StringTableSize</span></code>; <code>jcmd &lt;pid&gt; <span class="t">VM</span>.stringtable</code> показывает статистику. Ручной <code>intern()</code> миллионов строк раньше был способом сэкономить память на дубликатах, но цена — хеш-поиск при каждом вызове; <code>-<span class="t">XX</span>:+<span class="t">UseStringDeduplication</span></code> (с JDK 18 — во всех сборщиках, раньше только в G1) делает дедупликацию массивов байт строк в фоне, без изменения кода.</p>
     </div></div></article>
 <article id="q14" hidden><div class="crumbs">Java Core</div><h2>14. Конкатенация строк: +, StringBuilder, StringBuffer</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Строка неизменяема, поэтому <code>+</code> в цикле на каждой итерации создаёт новую строку и копирует всё накопленное — квадратичная сложность. В цикле нужен один StringBuilder или <code><span class="t">String</span>.join</code>. А в одном выражении <code>+</code> нормален: с Java 9 компилятор собирает его через StringConcatFactory не хуже ручного StringBuilder. StringBuffer — синхронизированная версия StringBuilder, сегодня почти не нужен.</p></div>
     <div class="more">
@@ -1324,12 +1326,12 @@ list.remove(<span class="t">Integer</span>.valueOf(<span class="n">1</span>));
 }</pre>
       <p>Ловушки: неизменяемость поверхностная — компонент <code><span class="t">List</span></code> копируйте через <code><span class="t">List</span>.copyOf</code> в компактном конструкторе; <code>toString</code> печатает все поля — для DTO с паспортом или токеном это утечка в логи; массивы в компонентах сравниваются по ссылке. Jackson 2.12+ и Spring Boot 3 (биндинг <code><span class="a">@ConfigurationProperties</span></code>) records поддерживают из коробки; JPA-сущностью record быть не может, а вот <code><span class="a">@Embeddable</span></code> и проекцией — может.</p>
     </div></div></article>
-<article id="q18" hidden><div class="crumbs">Java Core</div><h2>18. Enum: что умеет и где применить</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Enum — класс с фиксированным набором экземпляров: у него могут быть поля, конструктор, методы и даже своя реализация абстрактного метода в каждой константе — это готовая стратегия. Сравнивают через <code>==</code>, switch по enum проверяет полноту. Enum с одним элементом — потокобезопасный синглтон, защищённый от рефлексии и сериализации. Для множеств и мап по enum есть быстрые EnumSet и EnumMap. В БД храните имя константы, а не ordinal.</p></div>
+<article id="q18" hidden><div class="crumbs">Java Core</div><h2>18. Enum: что умеет и где применить</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Enum — класс с фиксированным набором экземпляров: у него могут быть поля, конструктор, методы и даже своя реализация абстрактного метода в каждой константе — это готовая стратегия. Сравнивают через <code>==</code>, switch-выражение по enum проверяет полноту (классический switch-оператор — нет). Enum с одним элементом — потокобезопасный синглтон, защищённый от рефлексии и сериализации. Для множеств и мап по enum есть быстрые EnumSet и EnumMap. В БД храните имя константы, а не ordinal.</p></div>
     <div class="more">
 <ul>
       <li>Для множеств и мап по enum — EnumSet и EnumMap (битовая маска и массив). В БД храните имя, а не ordinal: новая константа в середине сдвинет порядок.</li>
     </ul>
-<p>Enum компилируется в final-класс, наследующий <code>java.lang.<span class="t">Enum</span></code>, с public static final полем на каждую константу. Экземпляры создаются при инициализации класса, конструктор всегда private. Отсюда гарантия: констант ровно столько, сколько объявлено, и их можно сравнивать через ==.</p>
+<p>Enum компилируется в класс, наследующий <code>java.lang.<span class="t">Enum</span></code>, с public static final полем на каждую константу. Класс final, только если у констант нет собственных тел: константа с телом — анонимный подкласс (поэтому <code><span class="t">CARD</span>.getClass() != <span class="t">Commission</span>.<span class="k">class</span></code>, а тип enum даёт <code>getDeclaringClass()</code>). Экземпляры создаются при инициализации класса, конструктор всегда private. Отсюда гарантия: констант ровно столько, сколько объявлено, и их можно сравнивать через ==.</p>
 <pre class="wide"><span class="k">enum</span> <span class="t">Commission</span> {
     <span class="t">CARD</span>(<span class="k">new</span> <span class="t">BigDecimal</span>(<span class="s">"0.015"</span>)) {
         <span class="t">BigDecimal</span> calc(<span class="t">BigDecimal</span> amount) { <span class="k">return</span> amount.multiply(rate()); }
@@ -1526,7 +1528,8 @@ list.remove(<span class="t">Integer</span>.valueOf(<span class="n">1</span>));
       <li><code><span class="t">List</span>&lt;<span class="t">Integer</span>&gt;</code> не подтип <code><span class="t">List</span>&lt;<span class="t">Number</span>&gt;</code>; массивы ковариантны — ArrayStoreException.</li>
     </ul>
 <p><b>Стирание типов</b> выбрали ради обратной совместимости с кодом до Java 5: в байткоде <code><span class="t">List</span>&lt;<span class="t">String</span>&gt;</code> и <code><span class="t">List</span>&lt;<span class="t">Integer</span>&gt;</code> — один и тот же <code><span class="t">List</span></code>. Последствия: в рантайме тип-аргумента не узнать (кроме сигнатур полей, методов и суперклассов — отсюда трюк с <code><span class="t">TypeReference</span></code> в Jackson и <code><span class="t">ParameterizedTypeReference</span></code> в Spring).</p>
-<pre class="wide"><span class="c">// PECS на примере Collections.copy</span>
+<pre class="wide"><span class="c">// PECS на своём методе copy</span>
+<span class="c">// (Collections.copy пишет через set)</span>
 <span class="k">static</span> &lt;<span class="t">T</span>&gt; <span class="k">void</span> copy(<span class="t">List</span>&lt;? <span class="k">super</span> <span class="t">T</span>&gt; dest, <span class="t">List</span>&lt;? <span class="k">extends</span> <span class="t">T</span>&gt; src) {
     <span class="k">for</span> (<span class="t">T</span> item : src) dest.add(item);   <span class="c">// из extends читаем, в super пишем</span>
 }
@@ -1537,7 +1540,8 @@ copy(numbers, <span class="t">List</span>.of(<span class="n">1</span>, <span cla
 <span class="t">List</span>&lt;<span class="t">Integer</span>&gt; ints = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;();
 <span class="t">List</span>&lt;<span class="t">Number</span>&gt; nums = ints;              <span class="c">// не компилируется — иначе:</span>
 nums.add(<span class="n">3.14</span>);                        <span class="c">// в список Integer попал бы Double</span></pre>
-<pre class="narrow"><span class="c">// PECS на примере Collections.copy</span>
+<pre class="narrow"><span class="c">// PECS на своём методе copy</span>
+<span class="c">// (Collections.copy пишет через set)</span>
 <span class="k">static</span> &lt;<span class="t">T</span>&gt; <span class="k">void</span> copy(<span class="t">List</span>&lt;? <span class="k">super</span> <span class="t">T</span>&gt; dest,
                      <span class="t">List</span>&lt;? <span class="k">extends</span> <span class="t">T</span>&gt; src) {
     <span class="c">// из extends читаем, в super пишем</span>
@@ -1552,7 +1556,7 @@ copy(numbers, <span class="t">List</span>.of(<span class="n">1</span>, <span cla
 <span class="t">List</span>&lt;<span class="t">Number</span>&gt; nums = ints; <span class="c">// не компилируется,</span>
 nums.add(<span class="n">3.14</span>);           <span class="c">// иначе тут Double</span>
                           <span class="c">// попал бы в ints</span></pre>
-      <p><b>Heap pollution</b> возникает через raw-типы, непроверенные касты и generic varargs. Пример: метод <code><span class="k">static</span> &lt;<span class="t">T</span>&gt; <span class="t">T</span>[] toArray(<span class="t">T</span>... items)</code> на самом деле создаёт <code><span class="t">Object</span>[]</code>; вернув его как <code><span class="t">String</span>[]</code>, получите ClassCastException у вызывающего. Поэтому на generic varargs компилятор предупреждает, а <code><span class="a">@SafeVarargs</span></code> — обещание автора, что он не пишет в массив и не отдаёт его наружу.</p>
+      <p><b>Heap pollution</b> возникает через raw-типы, непроверенные касты и generic varargs. Пример из Effective Java (item 32): <code><span class="k">static</span> &lt;<span class="t">T</span>&gt; <span class="t">T</span>[] toArray(<span class="t">T</span>... items) { <span class="k">return</span> items; }</code> при прямом вызове безопасен — <code>toArray(<span class="s">"a"</span>, <span class="s">"b"</span>)</code> вернёт настоящий <code><span class="t">String</span>[]</code>, массив создаёт вызывающий код. Но из другого generic-метода, <code>pickTwo(<span class="t">T</span> a, <span class="t">T</span> b) { <span class="k">return</span> toArray(a, b); }</code>, T уже стёрт: создаётся <code><span class="t">Object</span>[]</code>, и <code><span class="t">String</span>[] s = pickTwo(<span class="s">"a"</span>, <span class="s">"b"</span>)</code> падает с ClassCastException. Поэтому на generic varargs компилятор предупреждает, а <code><span class="a">@SafeVarargs</span></code> — обещание автора, что он не пишет в массив и не отдаёт его наружу.</p>
       <p>Bridge-методы: класс <code><span class="t">MyComparator</span> <span class="k">implements</span> <span class="t">Comparator</span>&lt;<span class="t">String</span>&gt;</code> получает синтетический <code>compare(<span class="t">Object</span>, <span class="t">Object</span>)</code>, который кастует аргументы и зовёт <code>compare(<span class="t">String</span>, <span class="t">String</span>)</code>, — так сохраняется полиморфизм после стирания. Видно в стектрейсах и в рефлексии (<code><span class="t">Method</span>.isBridge()</code>).</p>
     </div></div></article>
 <article id="q23" hidden><div class="crumbs">Java Core</div><h2>23. Лямбды и функциональные интерфейсы: effectively final, ссылки на методы</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Лямбда — короткая реализация функционального интерфейса, то есть интерфейса ровно с одним абстрактным методом (<code><span class="a">@FunctionalInterface</span></code> только проверяет это при компиляции). Компилируется через <code>invokedynamic</code>, а не в анонимный класс; лямбда без захвата переменных — один общий экземпляр. Локальные переменные можно захватывать, только если они effectively final: лямбда получает копию значения. Стандартные интерфейсы — в <code>java.util.function</code>: <code><span class="t">Function</span></code>, <code><span class="t">Supplier</span></code>, <code><span class="t">Consumer</span></code>, <code><span class="t">Predicate</span></code> и примитивные версии без упаковки. Ссылка на метод — сокращённая запись лямбды.</p></div>
@@ -1999,7 +2003,8 @@ plusMonths(<span class="n">1</span>) от <span class="n">31</span> января
     <div class="more">
 <ul>
       <li><code><span class="t">ArrayList</span>&lt;<span class="t">Integer</span>&gt;</code> на миллион ≈ 4 МБ ссылок + 16 МБ Integer против 4 МБ у <code><span class="k">int</span>[]</code>.</li>
-      <li>Java 25: Compact Object Headers (<code>-<span class="t">XX</span>:+<span class="t">UseCompactObjectHeaders</span></code>) — заголовок 8 байт.</li>
+      <li>С Java 25 (в 24 — экспериментально, на 21 нет): Compact Object Headers (<code>-<span class="t">XX</span>:+<span class="t">UseCompactObjectHeaders</span></code>) — заголовок 8 байт. Таблица ниже описывает Java 21.</li>
+      <li>ZGC не использует compressed oops: ссылки всегда 8 байт при любой куче — при переходе с G1 на ZGC память под ссылки растёт.</li>
     </ul>
 <p>Структура объекта в HotSpot (64 бита, compressed oops и class pointers включены — это дефолт при куче до 32 ГБ):</p>
       <div class="table-wrap"><table>
@@ -2017,7 +2022,7 @@ plusMonths(<span class="n">1</span>) от <span class="n">31</span> января
 <article id="q33" hidden><div class="crumbs">Java Core</div><h2>33. Что нового в Java 17–25 и что вы используете?</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>LTS-версии — 17, 21 и 25. К 17-й появились records, sealed-классы, pattern matching для instanceof, switch-выражения и text blocks. В 21 — виртуальные потоки, pattern matching в switch, record patterns и Sequenced Collections. В 25 — Scoped Values, код до <code><span class="k">super</span>()</code> в конструкторе и компактные заголовки объектов. Отвечать лучше не списком, а примером: «sealed-интерфейс и records для типов платежей — компилятор проверяет, что switch обработал все случаи».</p></div>
     <div class="more">
 <pre class="wide"><span class="k">sealed</span> <span class="k">interface</span> <span class="t">Payment</span> <span class="k">permits</span> <span class="t">Card</span>, <span class="t">Sbp</span> {}
-<span class="k">record</span> <span class="t">Card</span>(<span class="t">String</span> pan) <span class="k">implements</span> <span class="t">Payment</span> {}
+<span class="k">record</span> <span class="t">Card</span>(<span class="t">String</span> pan, <span class="t">BigDecimal</span> amount) <span class="k">implements</span> <span class="t">Payment</span> {}
 <span class="k">record</span> <span class="t">Sbp</span>(<span class="t">String</span> phone) <span class="k">implements</span> <span class="t">Payment</span> {}
 
 <span class="t">String</span> describe(<span class="t">Payment</span> p) {
@@ -2027,7 +2032,8 @@ plusMonths(<span class="n">1</span>) от <span class="n">31</span> января
     };
 }</pre>
 <pre class="narrow"><span class="k">sealed</span> <span class="k">interface</span> <span class="t">Payment</span> <span class="k">permits</span> <span class="t">Card</span>, <span class="t">Sbp</span> {}
-<span class="k">record</span> <span class="t">Card</span>(<span class="t">String</span> pan) <span class="k">implements</span> <span class="t">Payment</span> {}
+<span class="k">record</span> <span class="t">Card</span>(<span class="t">String</span> pan, <span class="t">BigDecimal</span> amount)
+        <span class="k">implements</span> <span class="t">Payment</span> {}
 <span class="k">record</span> <span class="t">Sbp</span>(<span class="t">String</span> phone) <span class="k">implements</span> <span class="t">Payment</span> {}
 
 <span class="t">String</span> describe(<span class="t">Payment</span> p) {
@@ -2040,8 +2046,9 @@ plusMonths(<span class="n">1</span>) от <span class="n">31</span> января
         <tr><th>Версия</th><th>Что реально используют</th></tr>
         <tr><td>14–17</td><td>switch-выражения, text blocks, records, pattern matching для instanceof, sealed-классы, понятные NPE (какое именно поле null)</td></tr>
         <tr><td>21</td><td>виртуальные потоки, pattern matching в switch и record patterns, Sequenced Collections (<code>getFirst()</code>, <code>reversed()</code>), generational ZGC</td></tr>
-        <tr><td>22–25</td><td>unnamed variables <code>_</code>, Stream Gatherers (24), ScopedValue и statements до <code><span class="k">super</span>()</code> (25), Compact Object Headers (25), исправление pinning виртуальных потоков на synchronized (24)</td></tr>
+        <tr><td>22–25 (на 21 нет)</td><td>unnamed variables <code>_</code> (22, на 21 — превью), Stream Gatherers (24), ScopedValue и statements до <code><span class="k">super</span>()</code> (25), Compact Object Headers (25), исправление pinning виртуальных потоков на synchronized (24)</td></tr>
       </table></div>
+      <p>Для проекта на Java 21 в ответ «что используете» берут фичи 21-й — виртуальные потоки, pattern matching в switch, record patterns, Sequenced Collections, — а 22–25 упоминают как «знаю, что дальше».</p>
       <p>Как отвечать: не перечислять JEP, а показать 2–3 вещи, которые реально применили, и зачем. Например: «sealed-интерфейс + records для типов платежа — компилятор ловит необработанный тип в switch; записи вместо Lombok для DTO; виртуальные потоки для сервиса-интеграции с сотней медленных внешних вызовов».</p>
 <pre class="wide"><span class="c">// record pattern + guard: разбираем вложенную структуру прямо в case</span>
 <span class="t">String</span> risk(<span class="t">Payment</span> p) {
@@ -2907,7 +2914,7 @@ m.putFirst(<span class="s">"urgent"</span>, <span class="n">1</span>);          
 
 <span class="t">LinkedHashMap</span>&lt;<span class="t">String</span>, <span class="t">Integer</span>&gt; m = ...;
 m.putFirst(<span class="s">"urgent"</span>, <span class="n">1</span>);  <span class="c">// в начало порядка</span></pre>
-      <p>Подвох миграции: если в вашем классе-наследнике List уже был метод <code>getFirst()</code> с другим типом возврата или другой семантикой, код перестанет компилироваться или поведение изменится. Также Kotlin-код, вызывавший расширение <code>list.getFirst()</code>, на JDK 21 начинает вызывать метод Java — на Android и старых JDK это давало NoSuchMethodError.</p>
+      <p>Подвох миграции: если в вашем классе-наследнике List уже был метод <code>getFirst()</code> с другим типом возврата или другой семантикой, код перестанет компилироваться или поведение изменится. Также Kotlin: расширения <code>removeFirst()</code> и <code>removeLast()</code> для <code><span class="t">MutableList</span></code> при компиляции под JDK 21 начинают резолвиться в новые методы <code><span class="t">List</span></code> — на Android и старых JDK это даёт NoSuchMethodError (первый элемент в Kotlin берут через <code>first()</code>, а не <code>getFirst()</code>).</p>
       <p>Для неизменяемых коллекций <code>addFirst</code>/<code>removeFirst</code> бросают UnsupportedOperationException, для SortedSet <code>addFirst</code> — тоже (порядок задаёт компаратор).</p>
     </div></div></article>
 <article id="q56" hidden><div class="crumbs">Коллекции</div><h2>56. Arrays.sort и Collections.sort: какие алгоритмы</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Массивы примитивов сортируются dual-pivot quicksort — быстро, но неустойчиво; для примитивов устойчивость и не нужна. Объекты и списки сортируются TimSort — это устойчивая сортировка, O(n log n), а на почти отсортированных данных близкая к O(n). Устойчивость важна, когда сортируют по нескольким ключам по очереди. Компаратор, нарушающий контракт, может привести к исключению «Comparison method violates its general contract».</p></div>
@@ -3291,7 +3298,7 @@ ready = <span class="k">true</span>;          <span class="c">// volatile — «
 <ul>
       <li>Без конкуренции блокировка лёгкая (CAS по заголовку), при конкуренции раздувается до ObjectMonitor. Biased locking отключён с Java 15.</li>
       <li>JIT снимает блокировку с объекта, не покидающего метод (lock elision), и склеивает соседние блоки.</li>
-      <li>С Java 24 synchronized больше не «пинит» виртуальный поток.</li>
+      <li>На Java 21 блокирующая операция внутри synchronized «пинит» виртуальный поток к carrier — вокруг блокирующего I/O там лучше ReentrantLock. С Java 24 это исправлено.</li>
       <li>Не синхронизируйтесь на строковых литералах, Integer и публичных объектах.</li>
     </ul>
 <div class="table-wrap"><table>
@@ -3333,7 +3340,7 @@ ready = <span class="k">true</span>;          <span class="c">// volatile — «
         lock.unlock();
     }
 }</pre>
-      <p>Реентерабельность: поток, уже владеющий локом, может захватить его снова (рекурсия, вызов другого synchronized-метода того же объекта) — ведётся счётчик захватов. Выбор по умолчанию — synchronized (проще, не забудешь unlock); ReentrantLock — когда нужны его возможности. С Java 24 различие для виртуальных потоков ушло.</p>
+      <p>Реентерабельность: поток, уже владеющий локом, может захватить его снова (рекурсия, вызов другого synchronized-метода того же объекта) — ведётся счётчик захватов. Выбор по умолчанию — synchronized (проще, не забудешь unlock); ReentrantLock — когда нужны его возможности. Для виртуальных потоков на Java 21 вокруг блокирующих операций предпочтительнее ReentrantLock (synchronized пинит carrier); с Java 24 это различие ушло.</p>
       <p>Почему нельзя синхронизироваться на <code><span class="s">"lock"</span></code> или <code><span class="t">Integer</span></code>: литералы и кешированные Integer — общие для всей JVM объекты; чужой код, синхронизирующийся на том же литерале, получит неожиданную взаимную блокировку.</p>
     </div></div></article>
 <article id="q66" hidden><div class="crumbs">Многопоточность и JMM</div><h2>66. wait/notify: зачем цикл и чем notify отличается от notifyAll</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>wait освобождает монитор и ждёт сигнала; вызывать его можно только внутри synchronized на том же объекте. Ждать нужно в цикле <code><span class="k">while</span> (!условие) wait()</code>: бывают ложные пробуждения, и пока поток просыпался, условие могли снова изменить. notify будит один случайный поток, notifyAll — всех; если у монитора ждут потоки с разными условиями, надёжнее notifyAll. В новом коде вместо wait/notify берут BlockingQueue, CountDownLatch или Condition.</p></div>
@@ -3543,7 +3550,8 @@ ready = <span class="k">true</span>;          <span class="c">// volatile — «
         <tr><th>Где был поток при interrupt()</th><th>Что произойдёт</th></tr>
         <tr><td>sleep, wait, join, BlockingQueue.take, Future.get</td><td>InterruptedException, флаг сбрасывается</td></tr>
         <tr><td>Прерываемый канал NIO</td><td>канал закрывается, ClosedByInterruptException</td></tr>
-        <tr><td>Обычный блокирующий сокет (java.io)</td><td>ничего — нужно закрыть сокет или задать таймаут</td></tr>
+        <tr><td>Блокирующий сокет (java.io) в платформенном потоке</td><td>ничего — нужно закрыть сокет или задать таймаут</td></tr>
+        <tr><td>Сокет <code>java.net</code> в виртуальном потоке</td><td>прерываем: interrupt закрывает сокет, чтение падает с <code><span class="t">SocketException</span></code> (Java 21, JEP 444)</td></tr>
         <tr><td>synchronized (ожидание монитора)</td><td>ничего — ждёт дальше</td></tr>
         <tr><td>Вычисления</td><td>ничего — код должен сам проверять <code>isInterrupted()</code></td></tr>
       </table></div>
@@ -4041,8 +4049,8 @@ user.thenCombine(limits, <span class="t">Profile</span>::<span class="k">new</sp
 }</pre>
       <p><b>Почему утечка значения опасна</b>: поток Tomcat обслужит следующий запрос другого пользователя — и если SecurityContext или tenantId не очищены, код увидит чужие данные. Это уже не утечка памяти, а уязвимость.</p>
       <p><b>Почему слабая ссылка на ключ не спасает от утечки</b>: если сам ThreadLocal собран GC, запись остаётся с null-ключом и сильной ссылкой на значение, пока мапа не почистит устаревшие записи при следующих операциях. В долгоживущем потоке пула значение может висеть долго.</p>
-      <p>Перенос контекста в другие потоки: <code><span class="t">TaskDecorator</span></code> для @Async-пулов, <code><span class="t">DelegatingSecurityContextExecutor</span></code>, Micrometer Context Propagation для Reactor и CompletableFuture. InheritableThreadLocal копирует значения только при создании потока — пул создаёт потоки один раз, так что контекст будет от первого запроса. В Java 25 для этой задачи появился ScopedValue: неизменяемое значение, привязанное к области выполнения, наследуется структурированными подзадачами.</p>
-<p class="follow"><b>Почему SecurityContext не виден в @Async-методе?</b> Другой поток; нужна стратегия MODE_INHERITABLETHREADLOCAL или DelegatingSecurityContextExecutor.</p>
+      <p>Перенос контекста в другие потоки: <code><span class="t">TaskDecorator</span></code> для @Async-пулов, <code><span class="t">DelegatingSecurityContextExecutor</span></code>, Micrometer Context Propagation для Reactor и CompletableFuture. InheritableThreadLocal копирует значения только при создании потока — пул создаёт потоки один раз, так что контекст будет от первого запроса. В Java 25 для этой задачи появился ScopedValue (на 21 — превью): неизменяемое значение, привязанное к области выполнения, наследуется структурированными подзадачами.</p>
+<p class="follow"><b>Почему SecurityContext не виден в @Async-методе?</b> Другой поток. Нужен <code><span class="t">DelegatingSecurityContextAsyncTaskExecutor</span></code> или <code><span class="t">TaskDecorator</span></code>, который копирует контекст в момент постановки задачи. <code><span class="t">MODE_INHERITABLETHREADLOCAL</span></code> с пулом опасен: поток унаследует контекст первого запроса и отдаст чужую аутентификацию следующим задачам.</p>
     </div></div></article>
 <article id="q79" hidden><div class="crumbs">Многопоточность и JMM</div><h2>79. Потокобезопасный кеш без двойной загрузки <span class="tag">senior</span></h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Задача — чтобы при одновременных запросах одного ключа загрузка из БД выполнилась один раз. Классическое решение — Memoizer: в ConcurrentHashMap лежит не значение, а future. putIfAbsent гарантирует, что загрузку запустит ровно один поток, остальные получат тот же future и дождутся. Вычисление идёт вне локов мапы, а при ошибке запись удаляется, чтобы следующий вызов повторил загрузку. В проде то же самое даёт Caffeine LoadingCache с TTL.</p></div>
     <div class="more">
@@ -4099,12 +4107,13 @@ user.thenCombine(limits, <span class="t">Profile</span>::<span class="k">new</sp
       <p>Нюансы Memoizer, которые спросят: удаление при ошибке через <code>remove(key, created)</code> — условное, чтобы не удалить future, который уже успел поставить другой поток после нашего; отмена future у одного вызывающего не должна отменять загрузку для остальных; нужен TTL, иначе мапа растёт бесконечно.</p>
       <p>В распределённой системе та же проблема — на уровне Redis: истёк популярный ключ, все инстансы пошли в БД. Решения — блокировка на перезагрузку ключа, вероятностное раннее обновление, фоновый refresh.</p>
     </div></div></article>
-<article id="q80" hidden><div class="crumbs">Многопоточность и JMM</div><h2>80. Виртуальные потоки: как работают, pinning, ограничения</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Виртуальные потоки — лёгкие потоки, которыми управляет JVM. При блокирующем I/O виртуальный поток отмонтируется от платформенного carrier-потока, его стек сохраняется в куче, и carrier берёт другую задачу. Поэтому их можно создавать миллионами и снова писать в стиле «поток на запрос». Выигрыш только для I/O-bound задач. Ограничения: их не пулят, параллелизм к ресурсам ограничивают семафором, а до Java 24 synchronized «прикреплял» поток к carrier.</p></div>
+<article id="q80" hidden><div class="crumbs">Многопоточность и JMM</div><h2>80. Виртуальные потоки: как работают, pinning, ограничения</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Виртуальные потоки — лёгкие потоки, которыми управляет JVM. При блокирующем I/O виртуальный поток отмонтируется от платформенного carrier-потока, его стек сохраняется в куче, и carrier берёт другую задачу. Поэтому их можно создавать миллионами и снова писать в стиле «поток на запрос». Выигрыш только для I/O-bound задач. Ограничения: их не пулят, параллелизм к ресурсам ограничивают семафором, а на Java 21 (до 24) блокировка внутри synchronized «прикрепляет» поток к carrier (pinning) — вокруг блокирующего I/O используют ReentrantLock.</p></div>
     <div class="more">
 <ul>
       <li>Не пулить: <code><span class="t">Executors</span>.newVirtualThreadPerTaskExecutor()</code>; доступ к ограниченному ресурсу — Semaphore.</li>
-      <li>Pinning — поток не может отмонтироваться: native-вызовы и synchronized до Java 24. Видно по JFR <code>jdk.<span class="t">VirtualThreadPinned</span></code>.</li>
-      <li>Миллионы ThreadLocal — много памяти; альтернатива — ScopedValue (Java 25). Spring Boot 3.2+: <code>spring.threads.virtual.enabled=<span class="k">true</span></code>.</li>
+      <li>Pinning — поток не может отмонтироваться: на Java 21–23 блокировка внутри <code><span class="k">synchronized</span></code> и <code><span class="t">Object</span>.wait()</code>, во всех версиях — native-вызовы. Диагностика на 21: <code>-<span class="t">Djdk</span>.tracePinnedThreads=full</code> (удалён в 24) и JFR <code>jdk.<span class="t">VirtualThreadPinned</span></code>.</li>
+      <li>Файловый I/O (<code><span class="t">FileInputStream</span></code>, <code><span class="t">Files</span>.read*</code>) и DNS-резолв не отмонтируют поток: JDK компенсирует это, временно добавляя carrier-потоки.</li>
+      <li>Миллионы ThreadLocal — много памяти; альтернатива — ScopedValue (финальный в Java 25, на 21 — превью). Spring Boot 3.2+: <code>spring.threads.virtual.enabled=<span class="k">true</span></code>.</li>
     </ul>
 <p>Платформенный поток = поток ОС: ~1 МБ стека, создание и переключение через ядро, тысячи на сервер. Виртуальный поток — объект JVM: стек хранится в куче (растёт и сжимается по мере нужды), запускается на небольшом пуле carrier-потоков (ForkJoinPool, по умолчанию по числу ядер).</p>
       <p>Механика: когда виртуальный поток вызывает блокирующую операцию (сокет, <code><span class="t">Thread</span>.sleep</code>, <code><span class="t">BlockingQueue</span>.take</code>, <code><span class="t">ReentrantLock</span></code>), JDK вместо блокировки carrier-потока сохраняет кадры стека в куче (unmount) и регистрирует продолжение. Carrier свободен и берёт другой виртуальный поток. Когда данные пришли — поток снова монтируется на любой свободный carrier.</p>
@@ -4150,11 +4159,11 @@ user.thenCombine(limits, <span class="t">Profile</span>::<span class="k">new</sp
         <tr><td>много одновременных ожиданий I/O: интеграции, шлюзы, fan-out запросы</td><td>CPU-bound вычисления</td></tr>
         <tr><td>замена реактивного кода ради масштабирования на простой блокирующий стиль</td><td>когда узкое место — пул соединений БД (он не вырастет)</td></tr>
       </table></div>
-      <p>Pinning до Java 24: внутри <code><span class="k">synchronized</span></code> поток не мог отмонтироваться — carrier блокировался, и при числе таких потоков, равном числу carrier’ов, приложение вставало. Типичный источник — старые JDBC-драйверы и библиотеки с synchronized вокруг I/O. Остался pinning на native-вызовах и в class initializers.</p>
+      <p>Pinning на Java 21 (исправлен в 24, JEP 491): блокирующая операция внутри <code><span class="k">synchronized</span></code>, ожидание занятого монитора и <code><span class="t">Object</span>.wait()</code> держат carrier-поток. При числе таких потоков, равном числу carrier’ов, приложение встаёт. Типичный источник — старые JDBC-драйверы и библиотеки с synchronized вокруг I/O. Практика на 21: вокруг блокирующего I/O заменить <code><span class="k">synchronized</span></code> на <code><span class="t">ReentrantLock</span></code>, проверить драйверы и библиотеки, искать pinning через <code>-<span class="t">Djdk</span>.tracePinnedThreads=full</code> и JFR-событие <code>jdk.<span class="t">VirtualThreadPinned</span></code>. С Java 24 synchronized больше не пинит; остаются native-вызовы и class initializers.</p>
       <p>Что ещё учесть: ThreadLocal работает, но кешировать в нём дорогие объекты (как раньше с SimpleDateFormat на поток) бессмысленно — потоков миллионы и каждый живёт одну задачу. Пулы объектов на ThreadLocal превращаются в создание на каждый запрос.</p>
 <p class="follow"><b>Включили виртуальные потоки, а RPS не вырос?</b> Узкое место — пул соединений к БД или внешний сервис, а не потоки.</p>
     </div></div></article>
-<article id="q81" hidden><div class="crumbs">Многопоточность и JMM</div><h2>81. Structured concurrency и ScopedValue <span class="tag">senior</span></h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Structured concurrency (<code><span class="t">StructuredTaskScope</span></code>, preview с Java 21, в Java 25 — пятое превью с новым API) связывает подзадачи с блоком кода, который их запустил. Подзадачи живут не дольше этого блока. Если одна падает, остальные отменяются. В thread dump видна иерархия, кто чью задачу запустил. Это замена ручным <code><span class="t">ExecutorService</span></code> и <code><span class="t">CompletableFuture</span>.allOf</code>, где легко потерять отмену и «утечь» задачей. <code><span class="t">ScopedValue</span></code> (финальный в Java 25) — неизменяемое значение, привязанное к области выполнения. Это замена ThreadLocal для контекста запроса: не нужно чистить вручную, оно дёшево наследуется подзадачами и не течёт в пулах.</p></div>
+<article id="q81" hidden><div class="crumbs">Многопоточность и JMM</div><h2>81. Structured concurrency и ScopedValue <span class="tag">senior</span></h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Structured concurrency (<code><span class="t">StructuredTaskScope</span></code>, preview с Java 21, в Java 25 — пятое превью с новым API) связывает подзадачи с блоком кода, который их запустил. Подзадачи живут не дольше этого блока. Если одна падает, остальные отменяются. В thread dump видна иерархия, кто чью задачу запустил. Это замена ручным <code><span class="t">ExecutorService</span></code> и <code><span class="t">CompletableFuture</span>.allOf</code>, где легко потерять отмену и «утечь» задачей. <code><span class="t">ScopedValue</span></code> (на Java 21 — превью, финальный в Java 25) — неизменяемое значение, привязанное к области выполнения. Это замена ThreadLocal для контекста запроса: не нужно чистить вручную, оно дёшево наследуется подзадачами и не течёт в пулах.</p></div>
     <div class="more">
 <ul>
       <li>API <code><span class="t">StructuredTaskScope</span></code> менялся между превью: в Java 21–24 были <code><span class="t">ShutdownOnFailure</span></code> и <code><span class="t">ShutdownOnSuccess</span></code>, в Java 25 — <code>open()</code> с политикой <code><span class="t">Joiner</span></code>. Нужен флаг <code><span class="c">--enable-preview</span></code>.</li>
@@ -4162,24 +4171,28 @@ user.thenCombine(limits, <span class="t">Profile</span>::<span class="k">new</sp
       <li>Подзадачи по умолчанию запускаются в виртуальных потоках, поэтому блокирующие вызовы внутри — норма.</li>
       <li>Значение <code><span class="t">ScopedValue</span></code> нельзя изменить внутри области, можно только перепривязать во вложенной области через <code>where(...)</code>.</li>
     </ul>
-<pre><span class="c">// Java 25, --enable-preview</span>
+<pre><span class="c">// Java 21, --enable-preview</span>
 <span class="t">Overview</span> overview(<span class="k">long</span> clientId)
-        <span class="k">throws</span> <span class="t">InterruptedException</span> {
-    <span class="k">try</span> (<span class="k">var</span> scope =
-            <span class="t">StructuredTaskScope</span>.open()) {
-        <span class="k">var</span> client = scope.fork(
+        <span class="k">throws</span> <span class="t">InterruptedException</span>,
+               <span class="t">ExecutionException</span> {
+    <span class="k">try</span> (<span class="k">var</span> scope = <span class="k">new</span> <span class="t">StructuredTaskScope</span>
+            .<span class="t">ShutdownOnFailure</span>()) {
+        <span class="t">Subtask</span>&lt;<span class="t">Client</span>&gt; client = scope.fork(
                 () -&gt; clients.find(clientId));
-        <span class="k">var</span> limits = scope.fork(
+        <span class="t">Subtask</span>&lt;<span class="t">Limits</span>&gt; lim = scope.fork(
                 () -&gt; limits.find(clientId));
-        <span class="c">// ждёт обе; ошибка одной</span>
-        <span class="c">// отменяет другую и бросается здесь</span>
-        scope.join();
+        <span class="c">// ждёт обе; ошибка одной отменяет</span>
+        <span class="c">// другую и бросается здесь</span>
+        scope.join().throwIfFailed();
         <span class="k">return</span> <span class="k">new</span> <span class="t">Overview</span>(client.get(),
-                            limits.get());
+                            lim.get());
     }
 }
+<span class="c">// Java 25: StructuredTaskScope.open()</span>
+<span class="c">// и Joiner вместо ShutdownOnFailure</span>
 
 <span class="c">// ScopedValue вместо ThreadLocal</span>
+<span class="c">// (Java 21 — превью, Java 25 — финальный)</span>
 <span class="k">static</span> <span class="k">final</span> <span class="t">ScopedValue</span>&lt;<span class="t">String</span>&gt; <span class="t">TENANT</span> =
         <span class="t">ScopedValue</span>.newInstance();
 
@@ -4189,6 +4202,7 @@ user.thenCombine(limits, <span class="t">Profile</span>::<span class="k">new</sp
 <span class="c">// глубже по стеку, в том же потоке</span>
 <span class="c">// или в подзадаче scope</span>
 <span class="t">String</span> tenant = <span class="t">TENANT</span>.get();</pre>
+      <p>На Java 21 оба API — превью, а превью-API в проде обычно не включают. На собеседовании честный ответ: «знаю и слежу, в проде на 21 использую ExecutorService на виртуальных потоках и CompletableFuture».</p>
       <p class="follow"><b>Чем StructuredTaskScope лучше CompletableFuture.allOf?</b>При ошибке одной задачи <code>allOf</code> не отменяет остальные — они продолжают работать и тратить ресурсы. Scope отменяет их автоматически, гарантирует, что ни одна подзадача не переживёт блок, и возвращает обычный блокирующий код вместо цепочек колбэков.</p>
     </div></div></article>
 <article id="q82" hidden><div class="crumbs">Многопоточность и JMM</div><h2>82. Как диагностировать проблемы многопоточности в проде <span class="tag">senior</span></h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Сначала классифицирую симптом. CPU 100% — ищу горячий поток: top по потокам, его id в hex, этот поток в thread dump. Сервис «завис» при почти нулевом CPU — почти всегда ожидание: лок, пул соединений или внешний вызов без таймаута. Базовый инструмент — 3–5 thread dump подряд с интервалом в несколько секунд: смотрю BLOCKED-потоки, владельца лока и стеки, которые не меняются между дампами. Глубже — async-profiler и JFR.</p></div>
@@ -4228,7 +4242,7 @@ jcmd &lt;pid&gt; <span class="t">JFR</span>.start duration=60s \
       <p>В Kubernetes: <code>kubectl exec</code> в под + jcmd (если в образе JDK, а не только JRE — ещё один довод держать jcmd под рукой) или Spring Boot Actuator <code>/actuator/threaddump</code>.</p>
 <p class="follow"><b>Сервис «завис», CPU около нуля. Первые действия?</b> Thread dumps: почти всегда это ожидание — лок, пул соединений или внешний вызов без таймаута.</p>
     </div></div></article>
-<article id="q83" hidden><div class="crumbs">JVM и производительность</div><h2>83. Байткод, JVM, JRE и JDK</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>javac компилирует исходники в платформенно-независимый байткод — class-файлы. JVM загружает и исполняет его: интерпретатор, JIT-компилятор, сборщик мусора. JRE — это JVM плюс стандартная библиотека, всё нужное для запуска. JDK — JRE плюс инструменты разработчика: javac, jcmd, jfr, jlink. С Java 11 отдельного JRE не поставляют, минимальный рантайм под приложение собирают через jlink.</p></div>
+<article id="q83" hidden><div class="crumbs">JVM и производительность</div><h2>83. Байткод, JVM, JRE и JDK</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>javac компилирует исходники в платформенно-независимый байткод — class-файлы. JVM загружает и исполняет его: интерпретатор, JIT-компилятор, сборщик мусора. JRE — это JVM плюс стандартная библиотека, всё нужное для запуска. JDK — JRE плюс инструменты разработчика: javac, jcmd, jfr, jlink. С Java 11 Oracle не выпускает JRE отдельно, но у других вендоров (Temurin, Liberica, Zulu, Corretto) JRE-сборки есть — образ <code>eclipse-temurin:<span class="n">21</span>-jre</code> в проде обычное дело. Минимальный рантайм под приложение собирают через jlink.</p></div>
     <div class="more">
 <p>Цепочка от исходника до машинного кода: <code>.java</code> → javac → <code>.<span class="k">class</span></code> (байткод для стековой виртуальной машины) → JVM загружает, верифицирует, сначала интерпретирует, горячие участки JIT компилирует в машинный код под конкретный процессор.</p>
 <pre class="wide"><span class="c">// int sum(int a, int b) { return a + b; }  →  javap -c</span>
@@ -4515,7 +4529,7 @@ a = <span class="k">null</span>; b = <span class="k">null</span>;</pre>
 <article id="q93" hidden><div class="crumbs">JVM и производительность</div><h2>93. ZGC и Shenandoah: как получаются паузы меньше миллисекунды <span class="tag">senior</span></h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Оба сборщика делают почти всю работу, включая перемещение объектов, конкурентно с приложением. ZGC хранит метаданные прямо в битах ссылки и чинит устаревшие указатели барьером при чтении, поэтому пауза не зависит от размера кучи и укладывается в миллисекунду. Цена — CPU на барьеры и запас памяти: если приложение аллоцирует быстрее, чем сборщик успевает, потоки получают allocation stall. Для маленьких куч и жёстких CPU-лимитов G1 обычно лучше.</p></div>
     <div class="more">
 <ul>
-      <li>Generational ZGC — с Java 21, режим по умолчанию с Java 23.</li>
+      <li>Generational ZGC — с Java 21, но там включается только флагом <code>-<span class="t">XX</span>:+<span class="t">ZGenerational</span></code>; по умолчанию — с Java 23, единственный режим — с 24. Без флага на 21 сравнение ZGC с G1 нечестное.</li>
       <li>Хуже G1: маленькие кучи, пакетная обработка на пропускную способность, контейнеры с жёстким лимитом CPU.</li>
     </ul>
 <p>Почему у G1 паузы растут с размером кучи: эвакуация (копирование живых объектов и исправление всех ссылок на них) идёт в STW-паузе. ZGC и Shenandoah переносят и эвакуацию в конкурентную фазу. Проблема: приложение работает, пока объекты переезжают, и может прочитать старый адрес.</p>
@@ -4528,11 +4542,12 @@ a = <span class="k">null</span>; b = <span class="k">null</span>;</pre>
       </table></div>
       <p>Паузы остаются, но короткие и не зависят от кучи: сканирование корней (стеков потоков) — поэтому важна не куча, а число потоков и глубина стеков.</p>
       <p>Когда ZGC проигрывает: на CPU-ограниченном контейнере конкурентной фазе не хватает ядер, GC отстаёт, и приложение получает allocation stall — поток, которому нужна память, ждёт, пока GC её освободит. Это хуже паузы G1. Также барьеры стоят несколько процентов throughput, а для мелких куч (до 1–2 ГБ) выигрыш от ZGC обычно не нужен.</p>
-<pre class="wide">-<span class="t">XX</span>:+<span class="t">UseZGC</span>                         # в <span class="n">23</span>+ generational по умолчанию
+<pre class="wide">-<span class="t">XX</span>:+<span class="t">UseZGC</span> -<span class="t">XX</span>:+<span class="t">ZGenerational</span>     # на <span class="n">21</span> — явно; в <span class="n">23</span>+ generational по умолчанию
 -<span class="t">XX</span>:<span class="t">SoftMaxHeapSize</span>=6g              # стараться держаться ниже, оставляя запас до <span class="t">Xmx</span> на пики
 -<span class="t">Xlog</span>:gc*:file=gc.log              # искать <span class="s">"Allocation Stall"</span></pre>
-<pre class="narrow"># в <span class="n">23</span>+ generational по умолчанию
--<span class="t">XX</span>:+<span class="t">UseZGC</span>
+<pre class="narrow"># на <span class="t">Java</span> <span class="n">21</span> поколенческий режим —
+# только с <span class="t">ZGenerational</span> (в <span class="n">23</span>+ по умолч.)
+-<span class="t">XX</span>:+<span class="t">UseZGC</span> -<span class="t">XX</span>:+<span class="t">ZGenerational</span>
 # держаться ниже, оставляя запас до <span class="t">Xmx</span>
 -<span class="t">XX</span>:<span class="t">SoftMaxHeapSize</span>=6g
 # искать <span class="s">"Allocation Stall"</span>
@@ -4833,7 +4848,7 @@ java -<span class="t">Xlog</span>:os+container=trace -version</pre>
         <tr><td>Ленивая инициализация бинов (<code>spring.main.lazy-initialization</code>)</td><td>быстрый старт</td><td>ошибки конфигурации всплывают на первом запросе, первый запрос медленный</td></tr>
         <tr><td>Отключить ненужные автоконфигурации</td><td>меньше бинов</td><td>ручной труд</td></tr>
         <tr><td>AppCDS (<code>-<span class="t">XX</span>:<span class="t">SharedArchiveFile</span></code>, в Boot 3.3 — поддержка extract + CDS)</td><td>старт на 20–40% быстрее</td><td>архив под конкретный JDK и classpath</td></tr>
-        <tr><td>AOT cache Leyden (JDK 24+: <code>-<span class="t">XX</span>:<span class="t">AOTCache</span></code>)</td><td>классы загружены и связаны заранее, в 25 — плюс профили методов</td><td>тренировочный запуск в сборке</td></tr>
+        <tr><td>AOT cache Leyden (JDK 24+, на 21 нет: <code>-<span class="t">XX</span>:<span class="t">AOTCache</span></code>)</td><td>классы загружены и связаны заранее, в 25 — плюс профили методов</td><td>тренировочный запуск в сборке</td></tr>
         <tr><td>CRaC</td><td>старт за десятки мс, сразу прогретый JIT</td><td>Linux, поддерживающий JDK, закрытие и переоткрытие соединений при checkpoint/restore, секреты в снимке</td></tr>
         <tr><td>GraalVM native image</td><td>старт за десятки мс, малая память</td><td>сборка минутами, ограничения рефлексии и прокси, ниже пиковая производительность без PGO</td></tr>
       </table></div>
@@ -4912,7 +4927,7 @@ jcmd &lt;pid&gt; <span class="t">JFR</span>.dump \
         <tr><td>final-поля, неизменяемость</td><td>да</td><td>нет</td><td>нет</td></tr>
         <tr><td>Объект всегда полностью собран</td><td>да</td><td>нет — можно забыть вызвать</td><td>только в контейнере</td></tr>
         <tr><td>Тест без Spring</td><td><code><span class="k">new</span> <span class="t">Service</span>(mockRepo)</code></td><td>можно</td><td>только рефлексия / @InjectMocks</td></tr>
-        <tr><td>Цикл зависимостей</td><td>ошибка на старте — сразу видно</td><td>разрешается молча</td><td>разрешается молча</td></tr>
+        <tr><td>Цикл зависимостей</td><td>ошибка на старте — сразу видно</td><td>с Boot 2.6 — ошибка на старте; технически разрешим через <code>allow-circular-references</code></td><td>то же, что у сеттера</td></tr>
         <tr><td>Необязательные зависимости</td><td>ObjectProvider / Optional</td><td>естественно</td><td>@Autowired(required = false)</td></tr>
       </table></div>
 <pre class="wide"><span class="a">@Service</span>
@@ -5009,7 +5024,8 @@ jcmd &lt;pid&gt; <span class="t">JFR</span>.dump \
 }</pre>
       <p>Как Spring выбирает при нескольких кандидатах: сначала <code><span class="a">@Qualifier</span></code>, затем <code><span class="a">@Primary</span></code>, затем <code><span class="a">@Priority</span></code>, и в конце — совпадение имени параметра/поля с именем бина. Последнее работает, только если имена параметров есть в байткоде (флаг <code>-parameters</code>, в Boot-проектах включён плагином) — в проекте без него внедрение «по имени параметра» молча перестанет работать.</p>
       <p>Типичный боевой кейс: добавили в проект вторую библиотеку со своим <code><span class="t">ObjectMapper</span></code> или <code><span class="t">RestTemplate</span></code>-бином — автоконфигурация с <code><span class="a">@ConditionalOnMissingBean</span></code> перестаёт создавать дефолтный, и настройки Boot (jackson.*) больше не применяются. Признак — внезапно изменившийся формат дат в JSON после добавления зависимости.</p>
-    </div></div></article>
+<p>С Spring 6.2 (Boot 3.4+) есть <code><span class="a">@Fallback</span></code> — противоположность <code><span class="a">@Primary</span></code>: такой бин берётся, только если других кандидатов нет. Удобно для бинов «по умолчанию» в стартерах и тестах. Ещё с 6.2 совпадение имени параметра с именем бина проверяется раньше остальных правил — параметры стоит называть по именам бинов.</p>
+          </div></div></article>
 <article id="q110" hidden><div class="crumbs">Spring</div><h2>110. Жизненный цикл бина</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Сначала Spring читает определения бинов, и BeanFactoryPostProcessor могут их изменить — например, подставить <code>${...}</code>. Затем для каждого бина: создание экземпляра, внедрение зависимостей, Aware-колбэки, BeanPostProcessor до инициализации, @PostConstruct, BeanPostProcessor после инициализации — именно здесь бин подменяется прокси для @Transactional и @Async. Потом бин работает, а при закрытии — @PreDestroy. Ловушка: в @PostConstruct прокси ещё нет, и транзакционные методы там не работают.</p></div>
     <div class="more">
 <ul>
@@ -5326,7 +5342,7 @@ discouraged and they are prohibited by
 }</pre>
       <p class="follow"><b>Чем Spring AOP отличается от AspectJ?</b>Spring AOP работает через прокси в runtime и только для бинов и внешних вызовов. AspectJ вплетает код аспекта прямо в байткод класса, поэтому перехватывает и self-invocation, и private-методы, и объекты, созданные через <code><span class="k">new</span></code>, — ценой отдельного шага сборки или java-агента.</p>
     </div></div></article>
-<article id="q117" hidden><div class="crumbs">Spring</div><h2>117. Конфигурация Spring Boot: профили, порядок источников, @ConfigurationProperties</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Значения собираются из многих источников с приоритетом: аргументы командной строки и переменные окружения перекрывают профильный <code>application-{profile}.yml</code>, а тот — общий application.yml. Профиль включают через <code>spring.profiles.active</code>. Группы настроек лучше оформлять типизированным @ConfigurationProperties — record с валидацией, — а не россыпью @Value: типы, проверка при старте и автодополнение. Секреты — только из окружения или Vault, не из yml в git.</p></div>
+<article id="q117" hidden><div class="crumbs">Spring</div><h2>117. Конфигурация Spring Boot: профили, порядок источников, @ConfigurationProperties</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Значения собираются из многих источников с приоритетом: аргументы командной строки и переменные окружения перекрывают файлы конфигурации. Среди файлов внешние (рядом с jar) сильнее упакованных в jar, а внутри одного расположения профильный <code>application-{profile}.yml</code> сильнее общего — поэтому внешний application.yml перекрывает профильный файл внутри jar. Профиль включают через <code>spring.profiles.active</code>. Группы настроек лучше оформлять типизированным @ConfigurationProperties — record с валидацией, — а не россыпью @Value: типы, проверка при старте и автодополнение. Секреты — только из окружения или Vault, не из yml в git.</p></div>
     <div class="more">
 <ul><li>Секреты — из переменных окружения или Vault, не из yml в git. @Value не поддерживает relaxed binding для вложенных структур так, как @ConfigurationProperties.</li></ul>
 <p>Порядок источников (выше перекрывает ниже), сокращённо:</p>
@@ -5336,8 +5352,10 @@ discouraged and they are prohibited by
         <li>SPRING_APPLICATION_JSON</li>
         <li>системные свойства JVM <code>-<span class="t">Dkey</span>=value</code></li>
         <li>переменные окружения (<code><span class="t">SERVER_PORT</span></code>, relaxed binding)</li>
-        <li><code>application-{profile}.yml</code> вне jar, затем внутри jar</li>
-        <li><code>application.yml</code> вне jar, затем внутри jar</li>
+        <li><code>application-{profile}.yml</code> вне jar</li>
+        <li><code>application.yml</code> вне jar</li>
+        <li><code>application-{profile}.yml</code> внутри jar</li>
+        <li><code>application.yml</code> внутри jar</li>
         <li>@PropertySource, значения по умолчанию</li>
       </ol>
 <pre class="wide"><span class="a">@ConfigurationProperties</span>(prefix = <span class="s">"payments.partner"</span>)
@@ -5646,6 +5664,7 @@ txTemplate.executeWithoutResult(status -&gt; {
 <ul>
       <li>Чтение из реплики — это не вторая база, а маршрутизация: <code><span class="t">AbstractRoutingDataSource</span></code> по <code>readOnly</code> транзакции (см. вопрос про <code><span class="a">@Transactional</span>(readOnly = <span class="k">true</span>)</code>).</li>
       <li>Ошибка «expected single matching bean but found 2» — не помечен <code><span class="a">@Primary</span></code> или не указан квалификатор.</li>
+      <li><code><span class="a">@ConfigurationProperties</span></code> прямо над <code><span class="t">DataSourceBuilder</span>.create().build()</code> настраивает HikariDataSource, а у него свойство называется <code>jdbc-url</code>, не <code>url</code>. С привычным <code>url:</code> старт падает с «jdbcUrl is required». Через <code><span class="t">DataSourceProperties</span></code> работает обычный <code>url</code>.</li>
       <li>Liquibase и Flyway по умолчанию мигрируют только основной DataSource, для второго нужен свой бин миграций.</li>
     </ul>
 <pre><span class="a">@Configuration</span>
@@ -5657,8 +5676,14 @@ txTemplate.executeWithoutResult(status -&gt; {
     <span class="a">@Bean</span>
     <span class="a">@ConfigurationProperties</span>(
             <span class="s">"app.reports.datasource"</span>)
+    <span class="t">DataSourceProperties</span> reportsDsProps() {
+        <span class="k">return</span> <span class="k">new</span> <span class="t">DataSourceProperties</span>();
+    }
+
+    <span class="a">@Bean</span>
     <span class="t">DataSource</span> reportsDataSource() {
-        <span class="k">return</span> <span class="t">DataSourceBuilder</span>.create()
+        <span class="k">return</span> reportsDsProps()
+                .initializeDataSourceBuilder()
                 .build();
     }
 
@@ -5745,7 +5770,7 @@ txTemplate.executeWithoutResult(status -&gt; {
         <tr><td>Вызов @Async из транзакции с передачей сущности</td><td>в другом потоке другая сессия — LazyInitializationException; передавайте id, а не сущность</td></tr>
         <tr><td>Потеря задач при рестарте</td><td>очередь в памяти — задачи пропадут при остановке пода; нужна гарантия — очередь сообщений или outbox</td></tr>
       </table></div>
-      <p>Без явного пула Boot создаёт <code>applicationTaskExecutor</code> (8 потоков, неограниченная очередь) — под нагрузкой задачи копятся в памяти. С <code>spring.threads.virtual.enabled=<span class="k">true</span></code> @Async выполняется на виртуальных потоках.</p>
+      <p>Без явного пула Boot создаёт <code>applicationTaskExecutor</code> (8 потоков, неограниченная очередь) — под нагрузкой задачи копятся в памяти. С <code>spring.threads.virtual.enabled=<span class="k">true</span></code> @Async выполняется на виртуальных потоках — на Java 21 только после аудита pinning (synchronized вокруг I/O) и с явным лимитом параллелизма к БД.</p>
     </div></div></article>
 <article id="q125" hidden><div class="crumbs">Spring</div><h2>125. События Spring и @TransactionalEventListener</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>ApplicationEventPublisher публикует событие, а @EventListener обрабатывает его синхронно, в том же потоке и в той же транзакции. @TransactionalEventListener с фазой AFTER_COMMIT вызывается только после успешного коммита — чтобы не отправить письмо по данным, которые потом откатились. Но гарантии доставки это не даёт: если процесс упадёт между коммитом и обработчиком, событие потеряно. Когда нужна гарантия, используют transactional outbox.</p></div>
     <div class="more">
@@ -5794,7 +5819,7 @@ txTemplate.executeWithoutResult(status -&gt; {
         <tr><td>AFTER_COMMIT (по умолчанию)</td><td>после успешного коммита</td><td>уведомления, отправка во внешние системы, инвалидация кеша</td></tr>
         <tr><td>AFTER_ROLLBACK / AFTER_COMPLETION</td><td>после отката / в любом случае</td><td>компенсации, метрики</td></tr>
       </table></div>
-      <p>Ловушки AFTER_COMMIT: транзакция уже закрыта, но ресурсы ещё привязаны к потоку — запись в БД из такого слушателя без <code><span class="t">REQUIRES_NEW</span></code> не закоммитится (молча!). Если событие опубликовано вне транзакции, транзакционный слушатель не вызовется вообще (если не указан <code>fallbackExecution = <span class="k">true</span></code>).</p>
+      <p>Ловушки AFTER_COMMIT: транзакция уже закрыта, но ресурсы ещё привязаны к потоку — запись в БД из такого слушателя без <code><span class="t">REQUIRES_NEW</span></code> не закоммитится (молча!). Если событие опубликовано вне транзакции, транзакционный слушатель не вызовется вообще (если не указан <code>fallbackExecution = <span class="k">true</span></code>). С Spring 6.1 (Boot 3.2+) <code><span class="a">@Transactional</span></code> на самом методе-слушателе разрешён только с <code><span class="t">REQUIRES_NEW</span></code> или <code><span class="t">NOT_SUPPORTED</span></code> (<code><span class="t">RestrictedTransactionalEventListenerFactory</span></code>), но если слушатель вызывает другой сервис с обычным <code><span class="a">@Transactional</span></code>, ловушка остаётся.</p>
       <p>Главная мысль для интервью: события уменьшают связанность модулей внутри сервиса, но не дают гарантий доставки. Между коммитом и вызовом слушателя процесс может упасть. Для надёжной отправки во внешний мир (Kafka, другой сервис) — Transactional Outbox: событие пишется в таблицу в той же транзакции, отдельный процесс отправляет. Spring Modulith реализует это поверх событий Spring (Event Publication Registry).</p>
     </div></div></article>
 <article id="q126" hidden><div class="crumbs">Spring</div><h2>126. @Cacheable: как работает и ловушки</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>@Cacheable работает через прокси: перед вызовом метода ищет значение в кеше по ключу из параметров и вызывает метод только при промахе. Отсюда ограничения прокси — вызов из того же класса кеш не использует. TTL и размер из коробки не задаются: дефолтный кеш на ConcurrentHashMap растёт бесконечно, поэтому нужен провайдер — Caffeine или Redis. <code>sync = <span class="k">true</span></code> защищает от одновременной загрузки одного ключа. При нескольких инстансах локальный кеш расходится между ними.</p></div>
@@ -5840,7 +5865,7 @@ spring.cache.caffeine.spec:
         <tr><td>Кеширование null и исключений</td><td>null кешируется (если не <code>unless = <span class="s">"#result == null"</span></code>), исключения — нет</td></tr>
         <tr><td>Изменяемые объекты в локальном кеше</td><td>вызывающий меняет объект — меняется и закешированный</td></tr>
         <tr><td>Распределённый кеш</td><td>сериализация, версии классов при деплое, отказ Redis не должен ронять запросы</td></tr>
-        <tr><td>Кеш + транзакция</td><td>если транзакция открыта выше метода с @CacheEvict, очистка случится до коммита — другой поток успеет загрузить в кеш старое значение</td></tr>
+        <tr><td>Кеш + транзакция</td><td>если транзакция открыта выше метода с @CacheEvict, очистка случится до коммита — другой поток успеет загрузить в кеш старое значение. Решение — <code><span class="t">TransactionAwareCacheManagerProxy</span></code> вокруг менеджера (в том числе Caffeine) или <code>transactionAware()</code> у <code><span class="t">RedisCacheManager</span></code>: put и evict откладываются до коммита</td></tr>
       </table></div>
       <p>Несколько инстансов с локальным кешем: каждый кеширует своё, инвалидация на одном не видна другим. Варианты — короткий TTL (если допустима устаревшая информация), распределённый кеш (Redis), рассылка инвалидаций через брокер, двухуровневый кеш (локальный L1 с коротким TTL + Redis L2).</p>
     </div></div></article>
@@ -6033,7 +6058,7 @@ spring:
 <ul>
       <li>Правила URL проверяются по порядку, срабатывает первое подходящее: частные правила пишут раньше общих, последним — <code>anyRequest()</code>.</li>
       <li><code><span class="a">@PreAuthorize</span></code> работает через AOP-прокси: на self-invocation и private-методах проверки нет.</li>
-      <li>SecurityContext в ThreadLocal не переходит в <code><span class="a">@Async</span></code> и в пулы сам — нужен <code><span class="t">DelegatingSecurityContextExecutor</span></code> или стратегия <code><span class="t">MODE_INHERITABLETHREADLOCAL</span></code>.</li>
+      <li>SecurityContext в ThreadLocal не переходит в <code><span class="a">@Async</span></code> и в пулы сам — нужен <code><span class="t">DelegatingSecurityContextExecutor</span></code> или <code><span class="t">TaskDecorator</span></code>. <code><span class="t">MODE_INHERITABLETHREADLOCAL</span></code> — антипример: с пулом поток отдаст аутентификацию первого пользователя следующим задачам.</li>
       <li>Проверка владельца ресурса (это счёт текущего пользователя?) — тоже авторизация. Её делают в запросе к БД или в <code><span class="a">@PreAuthorize</span></code> с вызовом бина.</li>
     </ul>
 <pre><span class="a">@Configuration</span>
@@ -6334,7 +6359,7 @@ spring:
         <tr><td>Контекст (MDC, security, транзакции)</td><td>ThreadLocal работает</td><td>Reactor Context и context-propagation</td></tr>
       </table></div>
       <p>Что важно сказать про виртуальные потоки: они убирают ограничение «200 потоков Tomcat», но не убирают ограничения ресурсов за ними. Если каждый запрос берёт соединение из пула на 20, то 10 000 виртуальных потоков будут ждать соединение — нужен явный лимит параллелизма (семафор, bulkhead), иначе таймауты на ожидании пула. В реактивном стеке тот же вопрос решается размером пула R2DBC.</p>
-      <p>Практическая рекомендация на 2025–2026: новый сервис с обычной логикой и интеграциями — MVC на виртуальных потоках (Java 21+, лучше 24+ из-за pinning). WebFlux — когда уже есть реактивный стек, нужны стриминг и backpressure, или gateway-подобный сервис с огромным fan-out (Spring Cloud Gateway реактивный).</p>
+      <p>Практическая рекомендация на 2025–2026: новый сервис с обычной логикой и интеграциями — MVC на виртуальных потоках (на Java 21 — после аудита pinning: synchronized вокруг I/O в своём коде и драйверах, — и с явным лимитом параллелизма к БД; с 24 pinning на synchronized исправлен). WebFlux — когда уже есть реактивный стек, нужны стриминг и backpressure, или gateway-подобный сервис с огромным fan-out (Spring Cloud Gateway реактивный).</p>
 <p class="follow"><b>В WebFlux без JDBC никак?</b> Выносить блокирующие вызовы на свой <code><span class="t">Schedulers</span>.newBoundedElastic(...)</code> по размеру пула БД и понимать, что это костыль.</p>
     </div></div></article>
 <article id="q138" hidden><div class="crumbs">JPA и Hibernate</div><h2>138. Требования к Entity. Почему final-класс мешает Hibernate</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Сущности нужны @Entity и @Id, конструктор без аргументов — можно protected, — и класс, методы и поля не должны быть final. Причина: для ленивой загрузки Hibernate создаёт прокси — подкласс сущности, — а final-класс или final-метод его ломают. Records для сущностей не подходят, они хороши для DTO-проекций. Ещё правило: аккуратно с Lombok — @Data и @ToString на связях дают рекурсию и случайную загрузку ленивых коллекций.</p></div>
@@ -7067,7 +7092,7 @@ em.createQuery(<span class="s">""</span>"
     }
 }</pre>
       <p>Зачем value objects в модели: тип <code><span class="t">Money</span></code> вместо пары полей не даёт сложить рубли с долларами, хранит правила округления в одном месте, делает сигнатуры понятнее (<code>pay(<span class="t">Money</span>)</code> вместо <code>pay(<span class="t">BigDecimal</span>, <span class="t">String</span>)</code>). Это основа «богатой» доменной модели из DDD.</p>
-      <p>Выбор: несколько колонок → @Embeddable; одна колонка из сложного типа (телефон, ИНН, JSON, шифрованная строка) → AttributeConverter. Ограничения конвертера: по преобразованным значениям нельзя эффективно искать частичным совпадением, а для enum и id конвертеры не применяются (для id — свои механизмы). Для JSON в Hibernate 6 проще <code><span class="a">@JdbcTypeCode</span>(<span class="t">SqlTypes</span>.<span class="t">JSON</span>)</code>.</p>
+      <p>Выбор: несколько колонок → @Embeddable; одна колонка из сложного типа (телефон, ИНН, JSON, шифрованная строка) → AttributeConverter. Ограничения конвертера: по преобразованным значениям нельзя эффективно искать частичным совпадением, а к id, <code><span class="a">@Version</span></code>, связям и полям с явной <code><span class="a">@Enumerated</span></code> конвертер не применяется. Enum без @Enumerated через конвертер маппить можно — это стандартный способ хранить коды вроде "C"/"D" вместо имён констант. Для JSON в Hibernate 6 проще <code><span class="a">@JdbcTypeCode</span>(<span class="t">SqlTypes</span>.<span class="t">JSON</span>)</code>.</p>
     </div></div></article>
 <article id="q153" hidden><div class="crumbs">JPA и Hibernate</div><h2>153. Spring Data JPA: проекции, @Query и @Modifying</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Для чтения не нужны полные сущности: интерфейсные проекции и DTO-проекции, в том числе records, выбирают только нужные колонки и не попадают в persistence context. Сложные запросы пишут через @Query на JPQL или нативном SQL. @Modifying вместе с @Query выполняет массовый UPDATE или DELETE одним запросом, минуя dirty checking, — но после него загруженные сущности устаревают, поэтому нужен clearAutomatically.</p></div>
     <div class="more">
@@ -7573,7 +7598,7 @@ spring.jpa.properties.hibernate.cache:
       </table></div>
       <p>Для финансовых систем важно: аудит должен быть неизменяемым (append-only, без UPDATE/DELETE прав у приложения), содержать причину изменения и не зависеть от того, каким путём изменили данные. Поэтому ORM-аудит часто дополняют аудитом на уровне БД.</p>
     </div></div></article>
-<article id="q163" hidden><div class="crumbs">JPA и Hibernate</div><h2>163. Soft delete в JPA</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Вместо удаления ставят флаг или дату удаления. В Hibernate это @SQLDelete, переопределяющий DELETE на UPDATE, и @SQLRestriction — условие «не удалено» во всех запросах и связях; с 6.4 есть готовая @SoftDelete. Цена: уникальные индексы становятся частичными, таблицы растут, в нативных запросах легко забыть условие, а персональные данные формально не удалены. Альтернатива — перенос удалённых строк в архивную таблицу.</p></div>
+<article id="q163" hidden><div class="crumbs">JPA и Hibernate</div><h2>163. Soft delete в JPA</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Вместо удаления ставят флаг или дату удаления. В Hibernate это @SQLDelete, переопределяющий DELETE на UPDATE, и @SQLRestriction — условие «не удалено» во всех запросах и связях; с Hibernate 6.4 есть готовая @SoftDelete, но на Boot 3 (Hibernate 6) она хранит только логический флаг. Цена: уникальные индексы становятся частичными, таблицы растут, в нативных запросах легко забыть условие, а персональные данные формально не удалены. Альтернатива — перенос удалённых строк в архивную таблицу.</p></div>
     <div class="more">
 <ul>
       <li>Цена: уникальные индексы — частичные (<code>where not deleted</code>), таблицы растут, нужна архивация.</li>
@@ -7613,7 +7638,7 @@ create unique index ux_client_email
         <tr><td></td><td>таблица растёт; персональные данные формально не удалены (152-ФЗ / GDPR требуют реального удаления или обезличивания)</td></tr>
       </table></div>
       <p>Альтернативы: перенос удалённых строк в архивную таблицу (триггером или в той же транзакции) — основная таблица остаётся чистой; статус как часть доменной модели (<code><span class="t">CLOSED</span></code> у счёта — это не «удалён», а состояние с бизнес-смыслом); event sourcing, где удаление — просто событие.</p>
-      <p>С Hibernate 6.4 есть встроенная аннотация <code><span class="a">@SoftDelete</span></code>, заменяющая пару @SQLDelete + @SQLRestriction.</p>
+      <p>С Hibernate 6.4 есть встроенная аннотация <code><span class="a">@SoftDelete</span></code>, но в Hibernate 6 (Boot 3) она хранит только логический флаг (стратегии DELETED/ACTIVE). Для колонки со временем удаления, как <code>deleted_at</code> в примере, остаётся пара @SQLDelete + @SQLRestriction; стратегия TIMESTAMP появилась только в Hibernate 7.</p>
     </div></div></article>
 <article id="q164" hidden><div class="crumbs">PostgreSQL и SQL</div><h2>164. ACID: что гарантирует каждая буква</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Atomicity — транзакция применяется целиком или никак. Consistency — после транзакции соблюдены ограничения базы: внешние ключи, CHECK, уникальность. Isolation — параллельные транзакции не видят промежуточных состояний друг друга в пределах уровня изоляции. Durability — подтверждённый коммит переживёт падение, потому что журнал WAL сбрасывается на диск до ответа клиенту. Важно не путать C из ACID с C из CAP — там речь о согласованности реплик.</p></div>
     <div class="more">
@@ -8911,7 +8936,7 @@ COMMIT; COMMIT;
       <div class="table-wrap"><table>
         <tr><th>Операция</th><th>Безопасно?</th><th>Как правильно</th></tr>
         <tr><td>ADD COLUMN NULL / с константным DEFAULT</td><td>да (PG 11+), мгновенно</td><td>с lock_timeout</td></tr>
-        <tr><td>ADD COLUMN NOT NULL без DEFAULT</td><td>нет — ошибка на существующих строках</td><td>nullable → backfill → CHECK NOT VALID → VALIDATE → SET NOT NULL (PG 12+ использует проверенный CHECK)</td></tr>
+        <tr><td>ADD COLUMN NOT NULL без DEFAULT</td><td>нет — ошибка на существующих строках</td><td>nullable → backfill → CHECK NOT VALID → VALIDATE → SET NOT NULL (PG 12+ использует проверенный CHECK); с PG 18 короче: <code><span class="t">ADD</span> <span class="t">CONSTRAINT</span> … <span class="t">NOT</span> <span class="t">NULL</span> col <span class="t">NOT</span> <span class="t">VALID</span></code>, затем <code><span class="t">VALIDATE</span> <span class="t">CONSTRAINT</span></code> без блокировки записи</td></tr>
         <tr><td>CREATE INDEX</td><td>нет — блокирует запись на время построения</td><td>CREATE INDEX CONCURRENTLY, вне транзакции</td></tr>
         <tr><td>ADD FOREIGN KEY</td><td>долгая проверка под блокировкой</td><td>ADD CONSTRAINT ... NOT VALID, затем VALIDATE CONSTRAINT</td></tr>
         <tr><td>Изменить тип колонки</td><td>часто перезапись таблицы</td><td>новая колонка + двойная запись + backfill + переключение</td></tr>
@@ -9004,7 +9029,7 @@ DROP <span class="k">TABLE</span> payment_2024_10;</pre>
         <tr><td>Потоковая обработка</td><td>Kafka Streams, ksqlDB, Connect</td><td>нет экосистемы</td></tr>
       </table></div>
       <p>Как выбирать на практике: Kafka — когда события — источник для многих независимых потребителей, нужна история и перечитывание (новый сервис догоняет с начала), CDC, аналитика, высокий поток, порядок по ключу. RabbitMQ — очередь задач (отправить письмо, сгенерировать отчёт), RPC поверх брокера, сложная маршрутизация, приоритеты, отложенная доставка, когда объёмы умеренные.</p>
-      <p>Частое заблуждение — «Kafka для всего». Очередь задач на Kafka упирается в число партиций (нельзя просто добавить воркеров), одна долгая задача блокирует партицию, нет приоритетов и подтверждения отдельных сообщений (offset — это «всё до сюда»). В Kafka 4.0 в раннем доступе появились share groups (KIP-932, Queues for Kafka) — консюмеры читают одну партицию совместно с подтверждением отдельных сообщений, это сближает модели.</p>
+      <p>Частое заблуждение — «Kafka для всего». Очередь задач на Kafka упирается в число партиций (нельзя просто добавить воркеров), одна долгая задача блокирует партицию, нет приоритетов и подтверждения отдельных сообщений (offset — это «всё до сюда»). Share groups (KIP-932, Queues for Kafka): консюмеры читают одну партицию совместно и подтверждают отдельные сообщения, это сближает модели. В Kafka 4.0 они вышли в раннем доступе, в 4.2 (2026) объявлены готовыми к проду, но клиентская поддержка в Spring есть только со Spring Kafka 4.0 — на Boot 3 ими не воспользоваться.</p>
     </div></div></article>
 <article id="q192" hidden><div class="crumbs">Kafka</div><h2>192. Как Kafka хранит данные и почему она быстрая</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Партиция — это append-only лог, разбитый на сегменты с индексами по offset и времени. Запись только последовательная, а это самая быстрая операция для диска. Данные не держатся в куче JVM: чтение идёт через page cache ОС, а отдача консюмерам — через zero-copy, без копирования в пространство приложения. Плюс всё работает пачками со сжатием, а брокеру не нужно помнить, кому что отдано — offset хранит консюмер.</p></div>
     <div class="more">
@@ -9084,7 +9109,7 @@ kafkaTemplate.send(<span class="s">"payments"</span>, key, event);
 <p>Процесс: консюмеры отправляют координатору группы (один из брокеров) JoinGroup; один консюмер становится лидером группы и по выбранной стратегии считает распределение; координатор раздаёт его остальным через SyncGroup. В новом протоколе KIP-848 распределение считает брокер.</p>
       <div class="table-wrap"><table>
         <tr><th>Стратегия</th><th>Как делит</th><th>Особенность</th></tr>
-        <tr><td>RangeAssignor (по умолчанию в старых версиях)</td><td>по каждому топику отдельно — непрерывными диапазонами</td><td>при нескольких топиках первые консюмеры получают больше</td></tr>
+        <tr><td>RangeAssignor (фактически по умолчанию: с Kafka 3.0 дефолт — <code>[<span class="t">RangeAssignor</span>, <span class="t">CooperativeStickyAssignor</span>]</code>, и группа берёт первый, который поддерживают все)</td><td>по каждому топику отдельно — непрерывными диапазонами</td><td>при нескольких топиках первые консюмеры получают больше</td></tr>
         <tr><td>RoundRobinAssignor</td><td>по кругу все партиции всех топиков</td><td>равномерно, но всё перетасовывает при изменении</td></tr>
         <tr><td>StickyAssignor</td><td>равномерно и минимум переездов</td><td>eager-протокол</td></tr>
         <tr><td>CooperativeStickyAssignor</td><td>то же, кооперативно</td><td>рекомендуемый для классического протокола</td></tr>
@@ -9242,6 +9267,7 @@ kafkaTemplate.send(topic, key, event)
     <div class="more">
 <ul>
       <li><code>unclean.leader.election.enable=<span class="k">false</span></code> (по умолчанию): отстающая реплика не станет лидером — доступность в обмен на данные.</li>
+      <li>С Kafka 4.1 на новых кластерах включены Eligible Leader Replicas (KIP-966): реплика, выпавшая из ISR, но гарантированно имеющая закоммиченные данные, может стать лидером без unclean election. Это свойство брокера, от версии клиента не зависит.</li>
     </ul>
 <div class="table-wrap"><table>
         <tr><th>RF / min.insync.replicas</th><th>Переживёт без потери подтверждённых</th><th>Запись доступна при</th></tr>
@@ -10319,9 +10345,9 @@ ResponseEntity&lt;?&gt; <span class="k">create</span>(
     </div></div></article>
 <article id="q225" hidden><div class="crumbs">Архитектура и микросервисы</div><h2>225. Устойчивость: таймауты, ретраи, circuit breaker, каскадные отказы</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>Медленная зависимость опаснее упавшей: вызывающий копит потоки и соединения в ожидании, и отказ поднимается по цепочке. Защита: таймаут на любой сетевой вызов; ретраи только для идемпотентных операций и транзиентных ошибок, с экспоненциальной задержкой и jitter; circuit breaker, который перестаёт звать мёртвую зависимость; bulkhead — отдельные лимиты на каждую зависимость; и load shedding — быстрый отказ вместо медленной смерти. Ретраить — на одном уровне, иначе ретраи перемножаются.</p></div>
     <div class="more">
-<ul><li>Retry storm: три уровня по три попытки — до 27 запросов в нижний сервис. Ретраят на одном уровне.</li></ul>
+<ul><li>Retry storm: три уровня по три попытки — до 27 запросов в нижний сервис. Ретраят на одном уровне.</li>
+      <li>TimeLimiter в Resilience4j работает только для асинхронных вызовов (<code><span class="t">CompletableFuture</span></code>, <code><span class="t">Mono</span></code>). Блокирующий вызов через RestClient он не ограничит: таймаут синхронного вызова — это connect и read timeout HTTP-клиента.</li></ul>
 <pre class="wide">resilience4j:
-  timelimiter.instances.partner.timeout-duration: 2s
   retry.instances.partner:
     max-attempts: <span class="n">3</span>
     wait-duration: 200ms
@@ -10338,8 +10364,6 @@ ResponseEntity&lt;?&gt; <span class="k">create</span>(
     wait-duration-in-open-state: 30s             # потом <span class="t">HALF_OPEN</span>: пробные вызовы
   bulkhead.instances.partner.max-concurrent-calls: <span class="n">20</span></pre>
 <pre class="narrow">resilience4j:
-  timelimiter.instances.partner:
-    timeout-duration: 2s
   retry.instances.partner:
     max-attempts: <span class="n">3</span>
     wait-duration: 200ms
@@ -10405,6 +10429,7 @@ ResponseEntity&lt;?&gt; <span class="k">create</span>(
       <li>Персистентность: RDB — снимки (теряется всё после последнего), AOF — журнал команд (fsync everysec — до секунды потерь). Источником истины для денег не делают.</li>
       <li>При maxmemory работает политика вытеснения (allkeys-lru, volatile-ttl…); noeviction — ошибки на запись.</li>
       <li>Блокировка: <code><span class="t">SET</span> key token <span class="t">NX</span> <span class="t">PX</span> <span class="n">30000</span></code>, снятие — Lua-скриптом с проверкой токена. При failover реплика может не получить ключ — корректность даёт fencing-токен, а не Redlock.</li>
+      <li>Лицензия: в 2024 Redis ушёл с открытой лицензии на RSALv2/SSPL, Linux Foundation сделала форк Valkey (на него перешли многие облака и дистрибутивы), с Redis 8.0 (2025) добавлена AGPLv3. Вопрос «Redis или Valkey» на собеседовании реален.</li>
       <li>Cluster: 16384 слота, мультиключевые команды — только в одном слоте (hash tag <code>{client:<span class="n">1</span>}</code>); горячий ключ упирается в один шард.</li>
     </ul>
 <pre class="wide"><span class="t">INCR</span> rate:client:<span class="n">42</span>:<span class="n">202610221015</span>             -- fixed window rate limit
@@ -11646,9 +11671,27 @@ spec:
               service:
                 name: payments
                 port: { number: <span class="n">8080</span> }</pre>
+      <p>Самый распространённый контроллер ingress-nginx снят с поддержки: SIG Network объявила retirement, best-effort поддержка закончилась в марте 2026, дальше нет ни релизов, ни исправлений безопасности. Ingress API устаревшим не объявлен, но для новых кластеров рекомендуют Gateway API, а Ingress остаётся наследием.</p>
       <p>Gateway API — преемник Ingress: роли разделены (оператор кластера управляет Gateway, команды — своими HTTPRoute), есть веса для канареек, заголовки, gRPC-маршруты без аннотаций конкретного контроллера.</p>
       <p>Важная деталь для Java: kube-proxy балансирует соединения. Клиент с пулом keep-alive соединений к Service после масштабирования продолжает ходить только на старые поды, пока соединения живы — новые поды недогружены. Лечат ограничением времени жизни соединений в клиенте или L7-балансировкой (mesh).</p>
-    </div></div></article>
+<pre># <span class="t">Gateway</span> <span class="t">API</span>: маршрут вместо <span class="t">Ingress</span>
+apiVersion: gateway.networking.k8s.io/v1
+kind: <span class="t">HTTPRoute</span>
+metadata:
+  name: payments
+spec:
+  parentRefs:
+    - name: <span class="k">public</span>-gateway
+  hostnames: [api.bank.example]
+  rules:
+    - matches:
+        - path:
+            type: <span class="t">PathPrefix</span>
+            value: /payments
+      backendRefs:
+        - name: payments
+          port: <span class="n">8080</span></pre>
+          </div></div></article>
 <article id="q258" hidden><div class="crumbs">Kubernetes и эксплуатация</div><h2>258. ConfigMap и Secret: как передать конфигурацию</h2><button class="reveal">Показать ответ</button><div class="answer" hidden><div class="short"><p>ConfigMap хранит несекретные настройки, Secret — пароли и ключи. Secret — это base64, а не шифрование: нужны шифрование etcd и права доступа, а секреты обычно синхронизируют из Vault через External Secrets. В под их передают переменными окружения или файлами в томе. Файлы обновляются без рестарта, но приложение должно их перечитать; переменные окружения — только при перезапуске пода. Образ при этом один на все окружения.</p></div>
     <div class="more">
 <ul>
