@@ -4,18 +4,19 @@
 <meta charset="utf-8">
 <script>try { const t = localStorage.getItem('faq.theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f4f5f7">
+<meta name="theme-color" content="#eaeaeb">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Java FAQ">
 <title>Вопросы и ответы по Java</title>
 <style>
 :root {
   --radius: 14px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --bg: #f4f5f7; --surface: #fff; --fg: #111827; --muted: #6b7280; --line: #e5e7eb; --chip: #eceef1;
-  --chip-pressed: #dfe2e6; --accent: #2563eb; --accent-soft: #eef3ff; --code-bg: #f6f8fa;
-  --head-bg: rgba(244, 245, 247, .88); --shadow: 0 1px 2px rgba(17, 24, 39, .05); --tag-fg: #8a5a00; --tag-bg: #fff1cc;
-  --mark: #ffe58a; --code-fg: #0550ae;
-  --hl-k: #cf222e; --hl-s: #0a3069; --hl-c: #59636e; --hl-n: #0550ae; --hl-a: #8250df; --hl-t: #953800;
+  /* светлая тема — палитра Atom One Light */
+  --bg: #eaeaeb; --surface: #fafafa; --fg: #383a42; --muted: #696c77; --line: #e0e0e2; --chip: #e5e5e6;
+  --chip-pressed: #d4d4d6; --accent: #4078f2; --accent-soft: rgba(64, 120, 242, .09); --code-bg: #f0f0f1;
+  --head-bg: rgba(234, 234, 235, .88); --shadow: 0 1px 2px rgba(56, 58, 66, .06); --tag-fg: #986801;
+  --tag-bg: rgba(193, 132, 1, .13); --mark: rgba(193, 132, 1, .24); --code-fg: #e45649;
+  --hl-k: #a626a4; --hl-s: #50a14f; --hl-c: #a0a1a7; --hl-n: #986801; --hl-a: #4078f2; --hl-t: #c18401;
   color-scheme: light;
 }
 /* тёмная тема — палитра One Dark Pro: по системной настройке, если не выбрана вручную, или явно кнопкой (data-theme на <html>) */
@@ -8351,7 +8352,7 @@ function renderTheme() {
     b.innerHTML = dark ? SUN : MOON;
     b.setAttribute('aria-label', dark ? 'Светлая тема' : 'Тёмная тема');
   });
-  document.querySelector('meta[name="theme-color"]').content = dark ? '#21252b' : '#f4f5f7';
+  document.querySelector('meta[name="theme-color"]').content = dark ? '#21252b' : '#eaeaeb';
 }
 document.querySelectorAll('.theme').forEach(b => b.addEventListener('click', () => {
   root.dataset.theme = isDark() ? 'light' : 'dark';
