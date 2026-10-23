@@ -117,6 +117,11 @@ article h2 { font-size: 22px; line-height: 1.3; letter-spacing: -.01em; margin: 
 .reveal { display: block; width: 100%; height: 48px; margin: 6px 0 14px; border: 0; border-radius: 12px;
           background: var(--accent-soft); color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
 .reveal:active { background: var(--chip-pressed); }
+/* широкий экран: ответ виден сразу, кнопка «Показать ответ» только на телефоне */
+@media (min-width: 960px) {
+  .reveal { display: none; }
+  .answer[hidden] { display: block !important; }
+}
 .short { margin: 0 0 6px; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); }
 .short::before { content: "Короткий ответ"; display: block; margin-bottom: 4px; font-size: 12px; font-weight: 700;
                  letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
@@ -16028,7 +16033,7 @@ document.addEventListener('keydown', e => {
   if (e.key === '/') { e.preventDefault(); search.focus(); search.select(); }
   if (e.key === 'ArrowLeft') step(-1);
   if (e.key === 'ArrowRight') step(1);
-  if (e.key === ' ' && current && !e.target.closest('button')) {      // на кнопке пробел и так нажимает её
+  if (e.key === ' ' && current && !desktop.matches && !e.target.closest('button')) {      // на кнопке пробел и так нажимает её
     e.preventDefault();                                                // пробел — показать/скрыть ответ
     setAnswer(!answerOpen());
   }
