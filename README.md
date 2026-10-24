@@ -1,6 +1,6 @@
 # Java-собеседование
 
-Подготовка к собеседованию Java Middle+ / Senior: 328 вопросов — Java Core, коллекции, многопоточность, JVM, Spring,
+Подготовка к собеседованию Java Middle+ / Senior: 326 вопросов — Java Core, коллекции, многопоточность, JVM, Spring,
 JPA, PostgreSQL, Kafka, микросервисы, System Design, Kubernetes, практика (code review и лайв-кодинг), деньги и время,
 сети, безопасность, алгоритмы, Git, Maven и Gradle, опыт и лидерство.
 
