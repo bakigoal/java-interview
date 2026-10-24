@@ -255,7 +255,8 @@ kbd { min-width: 20px; height: 20px; box-sizing: border-box; display: inline-fle
 .cont svg { flex: none; width: 22px; height: 22px; }
 
 /* глава: мини-полоса под названием, значок статуса у вопроса */
-.chap summary .ct { min-width: 0; }
+/* длинное название переносится, а не сталкивает счётчик и шеврон на новую строку */
+.chap summary .ct { flex: 1 1 0; min-width: 0; }
 .chap summary::after { order: 2; }
 .chap summary .mini { order: 3; flex-basis: 100%; height: 4px; }
 .app:not(.train) .chap summary .mini { display: none; }
