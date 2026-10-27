@@ -156,7 +156,16 @@ article li { margin: 6px 0; }
 code { font-family: var(--mono); font-size: .86em; color: var(--code-fg); background: var(--code-bg); padding: 1px 5px;
        border-radius: 6px; }
 pre { font-family: var(--mono); font-size: 13px; line-height: 1.55; background: var(--code-bg); border-radius: 12px;
-      padding: 12px 14px; overflow-x: auto; margin: 12px 0; -webkit-overflow-scrolling: touch; }
+      padding: 12px 14px; overflow-x: auto; margin: 12px 0; -webkit-overflow-scrolling: touch; position: relative; }
+/* кнопка «Копировать» — в правом верхнем углу кода; на устройствах с мышью видна при наведении */
+.copy { position: absolute; top: 6px; right: 6px; display: grid; place-items: center; width: 30px; height: 30px; padding: 0;
+        border: 1px solid var(--line); border-radius: 8px; background: var(--code-bg); color: var(--muted); cursor: pointer; }
+.copy svg { width: 16px; height: 16px; }
+.copy:hover, .copy.done { color: var(--accent); }
+@media (hover: hover) {
+  .copy { opacity: 0; transition: opacity .15s; }
+  pre:hover .copy, .copy:focus-visible, .copy.done { opacity: 1; }
+}
 .table-wrap { overflow-x: auto; margin: 12px 0; -webkit-overflow-scrolling: touch;
               /* тени у краёв, пока есть что прокрутить: «local»-заливка закрывает тень у достигнутого края */
               background: linear-gradient(to right, var(--surface) 30%, transparent) left / 24px 100% no-repeat local,
@@ -17077,6 +17086,40 @@ document.querySelectorAll('.theme').forEach(b => b.addEventListener('click', () 
 }));
 systemDark.addEventListener('change', renderTheme);
 renderTheme();
+
+// ---------- копирование кода: кнопка в каждом <pre>, иконка без текста — не попадает ни в поиск, ни в копию ----------
+const COPY = SVG + '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+const CHECK = SVG + '<path d="M5 12l5 5L20 7"/></svg>';
+const copyBtn = document.createElement('button');
+copyBtn.type = 'button';
+copyBtn.className = 'copy';
+copyBtn.setAttribute('aria-label', 'Копировать код');
+copyBtn.innerHTML = COPY;
+document.querySelectorAll('article pre').forEach(p => p.append(copyBtn.cloneNode(true)));
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return; } catch (e) {}
+  // без Clipboard API (старый браузер, http) — через скрытое поле
+  const ta = Object.assign(document.createElement('textarea'), { value: text });
+  ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.append(ta);
+  ta.select();
+  document.execCommand('copy');
+  ta.remove();
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('.copy');
+  if (!b) return;
+  await copyText(b.parentElement.textContent.replace(/\n$/, ''));
+  b.classList.add('done');
+  b.innerHTML = CHECK;
+  b.setAttribute('aria-label', 'Скопировано');
+  clearTimeout(b.timer);
+  b.timer = setTimeout(() => {
+    b.classList.remove('done');
+    b.innerHTML = COPY;
+    b.setAttribute('aria-label', 'Копировать код');
+  }, 1500);
+});
 
 // свайп влево/вправо по ответу — следующий/предыдущий; код и таблицы прокручиваются сами
 let touch = null;
