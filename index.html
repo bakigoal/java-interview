@@ -7141,7 +7141,7 @@ spring.cache.caffeine.spec:
     <span class="a">@ExceptionHandler</span>(<span class="t">InsufficientFundsException</span>.<span class="k">class</span>)
     <span class="t">ProblemDetail</span> funds(<span class="t">InsufficientFundsException</span> ex) {
         <span class="t">ProblemDetail</span> pd = problem(<span class="t">HttpStatus</span>.<span class="t">UNPROCESSABLE_ENTITY</span>, <span class="s">"Not enough money on the account"</span>);
-        pd.setType(<span class="t">URI</span>.create(<span class="s">"https://api.bank/errors/insufficient-funds"</span>));
+        pd.setType(<span class="t">URI</span>.create(<span class="s">"/errors/insufficient-funds"</span>));
         pd.setTitle(<span class="s">"Insufficient funds"</span>);               <span class="c">// иначе Spring подставит reason phrase статуса</span>
         <span class="k">return</span> pd;
     }
@@ -7227,9 +7227,9 @@ spring.cache.caffeine.spec:
     }
   ]
 }</pre>
-      <p>Ответ на бизнес-ошибку: статус 422, свой <code>type</code> — по нему клиент понимает, что не хватает денег, и, например, предлагает пополнить счёт. <code>title</code> задан явно: стандарт требует, чтобы он описывал тип, а без <code>setTitle</code> Spring подставил бы «Unprocessable Entity».</p>
+      <p>Ответ на бизнес-ошибку: статус 422, свой <code>type</code> — по нему клиент понимает, что не хватает денег, и, например, предлагает пополнить счёт. Путь относительный: он разрешается от адреса запроса (<code>https:<span class="c">//&lt;host&gt;/errors/insufficient-funds</span></code>) — там удобно держать документацию по ошибке, а для логики клиенту достаточно сравнить строку. <code>title</code> задан явно: стандарт требует, чтобы он описывал тип, а без <code>setTitle</code> Spring подставил бы «Unprocessable Entity».</p>
 <pre>{
-  <span class="p">"type"</span>: <span class="s">"https://api.bank/errors/insufficient-funds"</span>,
+  <span class="p">"type"</span>: <span class="s">"/errors/insufficient-funds"</span>,
   <span class="p">"title"</span>: <span class="s">"Insufficient funds"</span>,
   <span class="p">"status"</span>: <span class="n">422</span>,
   <span class="p">"detail"</span>: <span class="s">"Not enough money on the account"</span>,
