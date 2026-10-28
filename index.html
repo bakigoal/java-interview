@@ -7142,6 +7142,7 @@ spring.cache.caffeine.spec:
     <span class="t">ProblemDetail</span> funds(<span class="t">InsufficientFundsException</span> ex) {
         <span class="t">ProblemDetail</span> pd = problem(<span class="t">HttpStatus</span>.<span class="t">UNPROCESSABLE_ENTITY</span>, <span class="s">"Not enough money on the account"</span>);
         pd.setType(<span class="t">URI</span>.create(<span class="s">"https://api.bank/errors/insufficient-funds"</span>));
+        pd.setTitle(<span class="s">"Insufficient funds"</span>);               <span class="c">// иначе Spring подставит reason phrase статуса</span>
         <span class="k">return</span> pd;
     }
 
@@ -7190,6 +7191,8 @@ spring.cache.caffeine.spec:
                 <span class="s">"Not enough money"</span>);
         pd.setType(<span class="t">URI</span>.create(
             <span class="s">"/errors/insufficient-funds"</span>));
+        <span class="c">// иначе title = reason phrase статуса</span>
+        pd.setTitle(<span class="s">"Insufficient funds"</span>);
         <span class="k">return</span> pd;
     }
 
@@ -7223,6 +7226,16 @@ spring.cache.caffeine.spec:
       <span class="p">"message"</span>: <span class="s">"must match \"[A-Z]{3}\""</span>
     }
   ]
+}</pre>
+      <p>Ответ на бизнес-ошибку: статус 422, свой <code>type</code> — по нему клиент понимает, что не хватает денег, и, например, предлагает пополнить счёт. <code>title</code> задан явно: стандарт требует, чтобы он описывал тип, а без <code>setTitle</code> Spring подставил бы «Unprocessable Entity».</p>
+<pre>{
+  <span class="p">"type"</span>: <span class="s">"https://api.bank/errors/insufficient-funds"</span>,
+  <span class="p">"title"</span>: <span class="s">"Insufficient funds"</span>,
+  <span class="p">"status"</span>: <span class="n">422</span>,
+  <span class="p">"detail"</span>: <span class="s">"Not enough money on the account"</span>,
+  <span class="p">"instance"</span>: <span class="s">"/payments"</span>,
+  <span class="p">"timestamp"</span>: <span class="s">"2026-10-28T09:42:03.118Z"</span>,
+  <span class="p">"traceId"</span>: <span class="s">"0b9d4e72c1a85f36e4d27a90b1c3f845"</span>
 }</pre>
       <div class="table-wrap"><table>
         <tr><th>Ситуация</th><th>Код</th></tr>
