@@ -8738,6 +8738,33 @@ paymentRepository.findByStatus(<span class="t">NEW</span>);
 }
 <span class="c">// 100 заказов = 101 запрос; каждый быстрый,</span>
 <span class="c">// но сетевые round-trip’ы складываются</span></pre>
+      <p>То же без коллекций — ссылка <code><span class="a">@ManyToOne</span></code> / <code><span class="a">@OneToOne</span></code>:</p>
+<pre class="wide"><span class="a">@ManyToOne</span>(fetch = <span class="t">FetchType</span>.<span class="t">LAZY</span>)
+<span class="k">private</span> <span class="t">Address</span> address;
+
+<span class="t">List</span>&lt;<span class="t">User</span>&gt; users = userRepository.findByCity(city);       <span class="c">// 1 запрос</span>
+<span class="k">for</span> (<span class="t">User</span> u : users) {
+    log.info(<span class="s">"user address: {}"</span>, u.getAddress());          <span class="c">// getAddress() вернёт прокси без запроса,</span>
+}                                                           <span class="c">// а toString() при логировании его загрузит: + N</span></pre>
+<pre class="narrow"><span class="a">@ManyToOne</span>(fetch = <span class="t">FetchType</span>.<span class="t">LAZY</span>)
+<span class="k">private</span> <span class="t">Address</span> address;
+
+<span class="c">// 1 запрос</span>
+<span class="t">List</span>&lt;<span class="t">User</span>&gt; users =
+        userRepository.findByCity(city);
+<span class="k">for</span> (<span class="t">User</span> u : users) {
+    <span class="c">// getAddress() вернёт прокси без</span>
+    <span class="c">// запроса, а toString() при логировании</span>
+    <span class="c">// его загрузит: + N запросов</span>
+    log.info(<span class="s">"user address: {}"</span>,
+            u.getAddress());
+}</pre>
+      <ul>
+        <li>Запрос уходит только при обращении к данным прокси. Если INFO выключен, SLF4J не вызовет <code>toString()</code> — и N+1 «появится» только на проде с другим уровнем логов.</li>
+        <li><b>EAGER</b> (по умолчанию у <code><span class="a">@ManyToOne</span></code> и <code><span class="a">@OneToOne</span></code>) не спасает, а делает хуже: JPQL-запрос не знает про EAGER, и Hibernate догружает адреса отдельными SELECT сразу после <code>findByCity</code> — даже без цикла.</li>
+        <li><code><span class="a">@OneToOne</span></code> на стороне <code>mappedBy</code> не бывает ленивым: Hibernate не знает без запроса, есть ли связанная запись, — N+1 при любом чтении списка.</li>
+        <li>Лечится так же: <code>join fetch u.address</code>, <code><span class="a">@EntityGraph</span>(attributePaths = <span class="s">"address"</span>)</code> или <code><span class="a">@BatchSize</span></code> на классе <code><span class="t">Address</span></code> (для ссылок — на классе, а не на поле).</li>
+      </ul>
       <p>Решение — загрузить позиции тем же запросом:</p>
 <pre class="wide"><span class="a">@Query</span>(<span class="s">"select o from Order o join fetch o.items where o.status = :s"</span>)
 <span class="t">List</span>&lt;<span class="t">Order</span>&gt; findWithItems(<span class="a">@Param</span>(<span class="s">"s"</span>) <span class="t">Status</span> s);
