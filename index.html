@@ -7141,7 +7141,7 @@ spring.cache.caffeine.spec:
     <span class="a">@ExceptionHandler</span>(<span class="t">InsufficientFundsException</span>.<span class="k">class</span>)
     <span class="t">ProblemDetail</span> funds(<span class="t">InsufficientFundsException</span> ex) {
         <span class="t">ProblemDetail</span> pd = problem(<span class="t">HttpStatus</span>.<span class="t">UNPROCESSABLE_ENTITY</span>, <span class="s">"Not enough money on the account"</span>);
-        pd.setType(<span class="t">URI</span>.create(<span class="s">"/errors/insufficient-funds"</span>));
+        pd.setType(<span class="t">URI</span>.create(<span class="s">"/business-errors?type=insufficient-funds"</span>));
         pd.setTitle(<span class="s">"Insufficient funds"</span>);               <span class="c">// иначе Spring подставит reason phrase статуса</span>
         <span class="k">return</span> pd;
     }
@@ -7190,7 +7190,7 @@ spring.cache.caffeine.spec:
         <span class="k">var</span> pd = problem(<span class="t">UNPROCESSABLE_ENTITY</span>,
                 <span class="s">"Not enough money"</span>);
         pd.setType(<span class="t">URI</span>.create(
-            <span class="s">"/errors/insufficient-funds"</span>));
+            <span class="s">"/business-errors?type=insufficient-funds"</span>));
         <span class="c">// иначе title = reason phrase статуса</span>
         pd.setTitle(<span class="s">"Insufficient funds"</span>);
         <span class="k">return</span> pd;
@@ -7227,15 +7227,64 @@ spring.cache.caffeine.spec:
     }
   ]
 }</pre>
-      <p>Ответ на бизнес-ошибку: статус 422, свой <code>type</code> — по нему клиент понимает, что не хватает денег, и, например, предлагает пополнить счёт. Путь относительный: он разрешается от адреса запроса (<code>https:<span class="c">//&lt;host&gt;/errors/insufficient-funds</span></code>) — там удобно держать документацию по ошибке, а для логики клиенту достаточно сравнить строку. <code>title</code> задан явно: стандарт требует, чтобы он описывал тип, а без <code>setTitle</code> Spring подставил бы «Unprocessable Entity».</p>
+      <p>Ответ на бизнес-ошибку: статус 422, свой <code>type</code> — по нему клиент понимает, что не хватает денег, и, например, предлагает пополнить счёт. Путь относительный: он разрешается от адреса запроса (<code>https:<span class="c">//&lt;host&gt;/business-errors?type=insufficient-funds</span></code>) — там удобно держать документацию по ошибке, а для логики клиенту достаточно сравнить строку. <code>title</code> задан явно: стандарт требует, чтобы он описывал тип, а без <code>setTitle</code> Spring подставил бы «Unprocessable Entity».</p>
 <pre>{
-  <span class="p">"type"</span>: <span class="s">"/errors/insufficient-funds"</span>,
+  <span class="p">"type"</span>: <span class="s">"/business-errors?type=insufficient-funds"</span>,
   <span class="p">"title"</span>: <span class="s">"Insufficient funds"</span>,
   <span class="p">"status"</span>: <span class="n">422</span>,
   <span class="p">"detail"</span>: <span class="s">"Not enough money on the account"</span>,
   <span class="p">"instance"</span>: <span class="s">"/payments"</span>,
   <span class="p">"timestamp"</span>: <span class="s">"2026-10-28T09:42:03.118Z"</span>,
   <span class="p">"traceId"</span>: <span class="s">"0b9d4e72c1a85f36e4d27a90b1c3f845"</span>
+}</pre>
+      <p>По адресу из <code>type</code> — страница для разработчиков клиента: что значит ошибка и что с ней делать. Один эндпоинт на все бизнес-ошибки, тип — в параметре запроса. Часто её держат в портале документации API, а не в сервисе; если отдаёт сам сервис — путь открывают без аутентификации (<code>permitAll</code>), иначе по ссылке из ошибки придёт 401.</p>
+<pre class="wide"><span class="a">@RestController</span>
+<span class="k">class</span> <span class="t">BusinessErrorDocsController</span> {
+    <span class="k">private</span> <span class="k">static</span> <span class="k">final</span> <span class="t">Map</span>&lt;<span class="t">String</span>, <span class="t">String</span>&gt; <span class="t">DOCS</span> = <span class="t">Map</span>.of(
+            <span class="s">"insufficient-funds"</span>, <span class="s">"""
+                &lt;h1&gt;Insufficient funds&lt;/h1&gt;
+                &lt;p&gt;HTTP 422. The account balance is lower than the payment amount.&lt;/p&gt;
+                &lt;p&gt;Top up the account or reduce the amount, then retry with the same Idempotency-Key.&lt;/p&gt;
+                """</span>,
+            <span class="s">"account-blocked"</span>, <span class="s">"""
+                &lt;h1&gt;Account blocked&lt;/h1&gt;
+                &lt;p&gt;HTTP 422. Payments from this account are suspended.&lt;/p&gt;
+                &lt;p&gt;Contact support: retrying will not help.&lt;/p&gt;
+                """</span>);
+
+    <span class="a">@GetMapping</span>(value = <span class="s">"/business-errors"</span>, produces = <span class="t">MediaType</span>.<span class="t">TEXT_HTML_VALUE</span>)
+    <span class="t">ResponseEntity</span>&lt;<span class="t">String</span>&gt; describe(<span class="a">@RequestParam</span>(<span class="s">"type"</span>) <span class="t">String</span> type) {
+        <span class="k">return</span> <span class="t">ResponseEntity</span>.of(<span class="t">Optional</span>.ofNullable(<span class="t">DOCS</span>.get(type)));   <span class="c">// неизвестный тип → 404</span>
+    }
+}</pre>
+<pre class="narrow"><span class="a">@RestController</span>
+<span class="k">class</span> <span class="t">BusinessErrorDocsController</span> {
+    <span class="k">static</span> <span class="k">final</span> <span class="t">Map</span>&lt;<span class="t">String</span>, <span class="t">String</span>&gt; <span class="t">DOCS</span> =
+        <span class="t">Map</span>.of(
+            <span class="s">"insufficient-funds"</span>, <span class="s">"""
+                &lt;h1&gt;Insufficient funds&lt;/h1&gt;
+                &lt;p&gt;HTTP 422. The balance is lower
+                than the payment amount.&lt;/p&gt;
+                &lt;p&gt;Top up the account or reduce
+                the amount, then retry with the
+                same Idempotency-Key.&lt;/p&gt;
+                """</span>,
+            <span class="s">"account-blocked"</span>, <span class="s">"""
+                &lt;h1&gt;Account blocked&lt;/h1&gt;
+                &lt;p&gt;HTTP 422. Payments from this
+                account are suspended.&lt;/p&gt;
+                &lt;p&gt;Contact support: retrying
+                will not help.&lt;/p&gt;
+                """</span>);
+
+    <span class="a">@GetMapping</span>(value = <span class="s">"/business-errors"</span>,
+        produces = <span class="t">MediaType</span>.<span class="t">TEXT_HTML_VALUE</span>)
+    <span class="t">ResponseEntity</span>&lt;<span class="t">String</span>&gt; describe(
+            <span class="a">@RequestParam</span>(<span class="s">"type"</span>) <span class="t">String</span> type) {
+        <span class="c">// неизвестный тип → 404</span>
+        <span class="k">return</span> <span class="t">ResponseEntity</span>.of(<span class="t">Optional</span>
+                .ofNullable(<span class="t">DOCS</span>.get(type)));
+    }
 }</pre>
       <div class="table-wrap"><table>
         <tr><th>Ситуация</th><th>Код</th></tr>
@@ -8098,10 +8147,10 @@ paymentRepository.findByStatus(<span class="t">NEW</span>);
         {<span class="s">"account"</span>, <span class="s">"client"</span>})
 <span class="t">List</span>&lt;<span class="t">Payment</span>&gt; findByStatus(<span class="t">Status</span> status);
 
-<span class="a">@Query</span>(<span class="s">""</span>"
-        select p from <span class="t">Payment</span> p
+<span class="a">@Query</span>(<span class="s">"""
+        select p from Payment p
           join fetch p.account
-         where p.id = :id<span class="s">""</span>")
+         where p.id = :id"""</span>)
 <span class="t">Optional</span>&lt;<span class="t">Payment</span>&gt; findWithAccount(
         <span class="a">@Param</span>(<span class="s">"id"</span>) <span class="k">long</span> id);</pre>
       <p>Тонкость с @OneToOne: на стороне без FK Hibernate не знает, есть ли связанная запись, — чтобы вернуть null или прокси, нужен запрос, поэтому LAZY не работает. Решения: <code><span class="a">@MapsId</span></code> (общий первичный ключ), сделать владеющей стороной ту, к которой обращаются, bytecode enhancement, или однонаправленная связь.</p>
@@ -8165,10 +8214,10 @@ paymentRepository.findByStatus(<span class="t">NEW</span>);
 
 <span class="a">@EntityGraph</span>(attributePaths = <span class="s">"items"</span>)
 <span class="t">List</span>&lt;<span class="t">Order</span>&gt; findByStatus(<span class="t">Status</span> s);</pre>
-<pre class="narrow"><span class="a">@Query</span>(<span class="s">""</span>"
-        select o from <span class="t">Order</span> o
+<pre class="narrow"><span class="a">@Query</span>(<span class="s">"""
+        select o from Order o
           join fetch o.items
-         where o.status = :s<span class="s">""</span>")
+         where o.status = :s"""</span>)
 <span class="t">List</span>&lt;<span class="t">Order</span>&gt; findWithItems(
         <span class="a">@Param</span>(<span class="s">"s"</span>) <span class="t">Status</span> s);
 
@@ -8235,17 +8284,17 @@ paymentRepository.findByStatus(<span class="t">NEW</span>);
 
 <span class="c">// две коллекции заказа без декартова</span>
 <span class="c">// произведения: два запроса, одна сессия</span>
-<span class="t">List</span>&lt;<span class="t">Order</span>&gt; orders = em.createQuery(<span class="s">""</span>"
-    select o from <span class="t">Order</span> o
+<span class="t">List</span>&lt;<span class="t">Order</span>&gt; orders = em.createQuery(<span class="s">"""
+    select o from Order o
       left join fetch o.items
-     where o.id in :ids<span class="s">""</span>", <span class="t">Order</span>.<span class="k">class</span>)
+     where o.id in :ids"""</span>, <span class="t">Order</span>.<span class="k">class</span>)
     .setParameter(<span class="s">"ids"</span>, ids)
     .getResultList();
 <span class="c">// дозаполнит уже загруженные заказы</span>
-em.createQuery(<span class="s">""</span>"
-    select o from <span class="t">Order</span> o
+em.createQuery(<span class="s">"""
+    select o from Order o
       left join fetch o.payments
-     where o in :orders<span class="s">""</span>", <span class="t">Order</span>.<span class="k">class</span>)
+     where o in :orders"""</span>, <span class="t">Order</span>.<span class="k">class</span>)
     .setParameter(<span class="s">"orders"</span>, orders)
     .getResultList();</pre>
       <p class="follow"><b>Почему нельзя просто поставить FetchType.EAGER на обе коллекции?</b>EAGER не решает проблему: Hibernate либо падает с той же <code><span class="t">MultipleBagFetchException</span></code>, либо догружает коллекции отдельными запросами (N+1) на каждый запрос к сущности, даже там, где они не нужны.</p>
@@ -8395,38 +8444,38 @@ em.createQuery(<span class="s">""</span>"
 <pre class="wide"><span class="a">@Query</span>(<span class="s">"select p from Payment p join fetch p.account where p.clientId = :c and p.status = :s"</span>)
 <span class="t">List</span>&lt;<span class="t">Payment</span>&gt; findWithAccount(<span class="a">@Param</span>(<span class="s">"c"</span>) <span class="k">long</span> clientId, <span class="a">@Param</span>(<span class="s">"s"</span>) <span class="t">Status</span> status);
 
-<span class="a">@Query</span>(nativeQuery = <span class="k">true</span>, value = <span class="s">""</span>"
+<span class="a">@Query</span>(nativeQuery = <span class="k">true</span>, value = <span class="s">"""
         insert into payment_dedup(key, payment_id) values (:k, :p)
-        on conflict <span class="k">do</span> nothing<span class="s">""</span>")
+        on conflict do nothing"""</span>)
 <span class="a">@Modifying</span>
 <span class="k">int</span> markProcessed(<span class="a">@Param</span>(<span class="s">"k"</span>) <span class="t">String</span> key, <span class="a">@Param</span>(<span class="s">"p"</span>) <span class="k">long</span> paymentId);
 
 <span class="a">@Modifying</span>(clearAutomatically = <span class="k">true</span>)
 <span class="a">@Query</span>(<span class="s">"update Payment p set p.status = 'EXPIRED' where p.createdAt &lt; :t"</span>)
 <span class="k">int</span> expire(<span class="a">@Param</span>(<span class="s">"t"</span>) <span class="t">Instant</span> t);</pre>
-<pre class="narrow"><span class="a">@Query</span>(<span class="s">""</span>"
-        select p from <span class="t">Payment</span> p
+<pre class="narrow"><span class="a">@Query</span>(<span class="s">"""
+        select p from Payment p
           join fetch p.account
          where p.clientId = :c
-           and p.status = :s<span class="s">""</span>")
+           and p.status = :s"""</span>)
 <span class="t">List</span>&lt;<span class="t">Payment</span>&gt; findWithAccount(
         <span class="a">@Param</span>(<span class="s">"c"</span>) <span class="k">long</span> clientId,
         <span class="a">@Param</span>(<span class="s">"s"</span>) <span class="t">Status</span> status);
 
-<span class="a">@Query</span>(nativeQuery = <span class="k">true</span>, value = <span class="s">""</span>"
+<span class="a">@Query</span>(nativeQuery = <span class="k">true</span>, value = <span class="s">"""
         insert into payment_dedup(key,
                                   payment_id)
         values (:k, :p)
-        on conflict <span class="k">do</span> nothing<span class="s">""</span>")
+        on conflict do nothing"""</span>)
 <span class="a">@Modifying</span>
 <span class="k">int</span> markProcessed(<span class="a">@Param</span>(<span class="s">"k"</span>) <span class="t">String</span> key,
                   <span class="a">@Param</span>(<span class="s">"p"</span>) <span class="k">long</span> paymentId);
 
 <span class="a">@Modifying</span>(clearAutomatically = <span class="k">true</span>)
-<span class="a">@Query</span>(<span class="s">""</span>"
-        update <span class="t">Payment</span> p
-           set p.status = '<span class="t">EXPIRED</span>'
-         where p.createdAt &lt; :t<span class="s">""</span>")
+<span class="a">@Query</span>(<span class="s">"""
+        update Payment p
+           set p.status = 'EXPIRED'
+         where p.createdAt &lt; :t"""</span>)
 <span class="k">int</span> expire(<span class="a">@Param</span>(<span class="s">"t"</span>) <span class="t">Instant</span> t);</pre>
       <p>@Modifying-запросы: выполняются через <code>executeUpdate</code>, возвращают число затронутых строк, требуют транзакции. Параметры <code>clearAutomatically</code> (очистить контекст после) и <code>flushAutomatically</code> (сбросить изменения до) защищают от рассинхрона с persistence context. Bulk UPDATE не увеличивает @Version — если важно, обновляйте её в запросе явно: <code>set p.version = p.version + <span class="n">1</span></code>.</p>
       <p>Без <code>-parameters</code> у компилятора имя параметра не известно в рантайме — <code><span class="a">@Param</span>(<span class="s">"c"</span>)</code> обязателен, иначе ошибка проявится только при вызове. Нативный запрос не проверяется на старте приложения, JPQL — проверяется: опечатка в JPQL роняет контекст сразу.</p>
@@ -8452,9 +8501,9 @@ em.createQuery(<span class="s">""</span>"
 &lt;<span class="t">T</span>&gt; <span class="t">List</span>&lt;<span class="t">T</span>&gt; findByClientId(<span class="k">long</span> clientId, <span class="t">Class</span>&lt;<span class="t">T</span>&gt; type);
 
 <span class="c">// 4. Нативный SQL с проекцией</span>
-<span class="a">@Query</span>(value = <span class="s">""</span>"
+<span class="a">@Query</span>(value = <span class="s">"""
         select date_trunc('day', created_at) as day, sum(amount) as total
-          from payment where client_id = :c group by <span class="n">1</span> order by <span class="n">1</span><span class="s">""</span>", nativeQuery = <span class="k">true</span>)
+          from payment where client_id = :c group by 1 order by 1"""</span>, nativeQuery = <span class="k">true</span>)
 <span class="t">List</span>&lt;<span class="t">DailyTotal</span>&gt; dailyTotals(<span class="a">@Param</span>(<span class="s">"c"</span>) <span class="k">long</span> clientId);   <span class="c">// интерфейс с getDay(), getTotal()</span></pre>
 <pre class="narrow"><span class="c">// 1. Интерфейсная проекция: Spring создаст</span>
 <span class="c">//    прокси, SELECT только нужных колонок</span>
@@ -8482,49 +8531,49 @@ em.createQuery(<span class="s">""</span>"
                            <span class="t">Class</span>&lt;<span class="t">T</span>&gt; type);
 
 <span class="c">// 4. Нативный SQL с проекцией</span>
-<span class="a">@Query</span>(nativeQuery = <span class="k">true</span>, value = <span class="s">""</span>"
+<span class="a">@Query</span>(nativeQuery = <span class="k">true</span>, value = <span class="s">"""
         select date_trunc('day', created_at)
                  as day,
                sum(amount) as total
           from payment
          where client_id = :c
-         group by <span class="n">1</span>
-         order by <span class="n">1</span><span class="s">""</span>")
+         group by 1
+         order by 1"""</span>)
 <span class="c">// интерфейс с getDay(), getTotal()</span>
 <span class="t">List</span>&lt;<span class="t">DailyTotal</span>&gt; dailyTotals(
         <span class="a">@Param</span>(<span class="s">"c"</span>) <span class="k">long</span> clientId);</pre>
       <p>Выбор: интерфейсные проекции (закрытые — только геттеры полей) удобны и эффективны; открытые с SpEL выглядят удобно, но загружают сущность полностью. Records — явные, неизменяемые, легко тестировать. Для сложных отчётов — нативный SQL или JdbcTemplate/jOOQ, а не JPQL.</p>
 <pre class="wide"><span class="c">// JPQL constructor expression</span>
-<span class="a">@Query</span>(<span class="s">""</span>"
-    select <span class="k">new</span> ru.bank.api.<span class="t">PaymentListItem</span>(p.id, p.amount, p.status, a.number)
-      from <span class="t">Payment</span> p join p.account a
+<span class="a">@Query</span>(<span class="s">"""
+    select new ru.bank.api.PaymentListItem(p.id, p.amount, p.status, a.number)
+      from Payment p join p.account a
      where a.client.id = :clientId
-     order by p.createdAt desc<span class="s">""</span>")
+     order by p.createdAt desc"""</span>)
 <span class="t">List</span>&lt;<span class="t">PaymentListItem</span>&gt; listForClient(<span class="a">@Param</span>(<span class="s">"clientId"</span>) <span class="k">long</span> clientId, <span class="t">Pageable</span> page);
 
 <span class="c">// JdbcTemplate — когда SQL сложный или нужны возможности PostgreSQL</span>
-<span class="t">List</span>&lt;<span class="t">PaymentListItem</span>&gt; rows = jdbc.query(<span class="s">""</span>"
+<span class="t">List</span>&lt;<span class="t">PaymentListItem</span>&gt; rows = jdbc.query(<span class="s">"""
         select p.id, p.amount, p.status, a.number
           from payment p join account a on a.id = p.account_id
-         where a.client_id = ? order by p.created_at desc limit ?<span class="s">""</span>",
+         where a.client_id = ? order by p.created_at desc limit ?"""</span>,
         (rs, i) -&gt; <span class="k">new</span> <span class="t">PaymentListItem</span>(rs.getLong(<span class="n">1</span>), rs.getBigDecimal(<span class="n">2</span>),
                 <span class="t">Status</span>.valueOf(rs.getString(<span class="n">3</span>)), rs.getString(<span class="n">4</span>)),
         clientId, limit);</pre>
 <pre class="narrow"><span class="c">// JPQL constructor expression</span>
-<span class="a">@Query</span>(<span class="s">""</span>"
-    select <span class="k">new</span> ru.bank.api.<span class="t">PaymentListItem</span>(
+<span class="a">@Query</span>(<span class="s">"""
+    select new ru.bank.api.PaymentListItem(
                p.id, p.amount, p.status,
                a.number)
-      from <span class="t">Payment</span> p join p.account a
+      from Payment p join p.account a
      where a.client.id = :clientId
-     order by p.createdAt desc<span class="s">""</span>")
+     order by p.createdAt desc"""</span>)
 <span class="t">List</span>&lt;<span class="t">PaymentListItem</span>&gt; listForClient(
         <span class="a">@Param</span>(<span class="s">"clientId"</span>) <span class="k">long</span> clientId,
         <span class="t">Pageable</span> page);
 
 <span class="c">// JdbcTemplate — когда SQL сложный или нужны</span>
 <span class="c">// возможности PostgreSQL</span>
-<span class="t">List</span>&lt;<span class="t">PaymentListItem</span>&gt; rows = jdbc.query(<span class="s">""</span>"
+<span class="t">List</span>&lt;<span class="t">PaymentListItem</span>&gt; rows = jdbc.query(<span class="s">"""
         select p.id, p.amount, p.status,
                a.number
           from payment p
@@ -8532,7 +8581,7 @@ em.createQuery(<span class="s">""</span>"
             on a.id = p.account_id
          where a.client_id = ?
          order by p.created_at desc
-         limit ?<span class="s">""</span>",
+         limit ?"""</span>,
         (rs, i) -&gt; <span class="k">new</span> <span class="t">PaymentListItem</span>(
             rs.getLong(<span class="n">1</span>),
             rs.getBigDecimal(<span class="n">2</span>),
@@ -8936,9 +8985,9 @@ spring.jpa.properties.hibernate.cache:
 -- уникальность только среди неудалённых
 create unique index ux_client_email on client (email) where deleted_at is <span class="k">null</span>;</pre>
 <pre class="narrow"><span class="a">@Entity</span>
-<span class="a">@SQLDelete</span>(sql = <span class="s">""</span>"
+<span class="a">@SQLDelete</span>(sql = <span class="s">"""
         update client set deleted_at = now()
-         where id = ? and version = ?<span class="s">""</span>")
+         where id = ? and version = ?"""</span>)
 <span class="c">// Hibernate 6.3+; добавляется во все запросы</span>
 <span class="c">// и связи</span>
 <span class="a">@SQLRestriction</span>(<span class="s">"deleted_at is null"</span>)
@@ -9860,24 +9909,24 @@ EXPLAIN <span class="k">SELECT</span> * <span class="k">FROM</span> payment
 <pre class="wide"><span class="c">// курсор = значения ключа сортировки последней строки, закодированные в base64</span>
 <span class="k">record</span> <span class="t">Cursor</span>(<span class="t">Instant</span> createdAt, <span class="k">long</span> id) {}
 
-<span class="a">@Query</span>(<span class="s">""</span>"
-    select p from <span class="t">Payment</span> p
+<span class="a">@Query</span>(<span class="s">"""
+    select p from Payment p
      where p.clientId = :client
        and (p.createdAt &lt; :ts or (p.createdAt = :ts and p.id &lt; :id))
-     order by p.createdAt desc, p.id desc<span class="s">""</span>")
+     order by p.createdAt desc, p.id desc"""</span>)
 <span class="t">List</span>&lt;<span class="t">Payment</span>&gt; nextPage(<span class="a">@Param</span>(<span class="s">"client"</span>) <span class="k">long</span> client, <span class="a">@Param</span>(<span class="s">"ts"</span>) <span class="t">Instant</span> ts,
                        <span class="a">@Param</span>(<span class="s">"id"</span>) <span class="k">long</span> id, <span class="t">Limit</span> limit);</pre>
 <pre class="narrow"><span class="c">// курсор = значения ключа сортировки</span>
 <span class="c">// последней строки, закодированные в base64</span>
 <span class="k">record</span> <span class="t">Cursor</span>(<span class="t">Instant</span> createdAt, <span class="k">long</span> id) {}
 
-<span class="a">@Query</span>(<span class="s">""</span>"
-    select p from <span class="t">Payment</span> p
+<span class="a">@Query</span>(<span class="s">"""
+    select p from Payment p
      where p.clientId = :client
        and (p.createdAt &lt; :ts
             or (p.createdAt = :ts
                 and p.id &lt; :id))
-     order by p.createdAt desc, p.id desc<span class="s">""</span>")
+     order by p.createdAt desc, p.id desc"""</span>)
 <span class="t">List</span>&lt;<span class="t">Payment</span>&gt; nextPage(
         <span class="a">@Param</span>(<span class="s">"client"</span>) <span class="k">long</span> client,
         <span class="a">@Param</span>(<span class="s">"ts"</span>) <span class="t">Instant</span> ts,
@@ -10704,19 +10753,19 @@ kafkaTemplate.send(topic, key, event)
 <pre class="wide"><span class="a">@KafkaListener</span>(topics = <span class="s">"payments"</span>)
 <span class="a">@Transactional</span>                                       <span class="c">// транзакция БД</span>
 <span class="k">public</span> <span class="k">void</span> on(<span class="t">PaymentEvent</span> e) {
-    <span class="k">int</span> inserted = jdbc.update(<span class="s">""</span>"
-        insert into processed_message(message_id) values (?) on conflict <span class="k">do</span> nothing<span class="s">""</span>", e.eventId());
+    <span class="k">int</span> inserted = jdbc.update(<span class="s">"""
+        insert into processed_message(message_id) values (?) on conflict do nothing"""</span>, e.eventId());
     <span class="k">if</span> (inserted == <span class="n">0</span>) <span class="k">return</span>;                       <span class="c">// уже обрабатывали — выходим</span>
     ledger.post(e);                                  <span class="c">// эффект в той же транзакции</span>
 }   <span class="c">// коммит БД, затем offset; упали между ними — повтор отсечётся processed_message</span></pre>
 <pre class="narrow"><span class="a">@KafkaListener</span>(topics = <span class="s">"payments"</span>)
 <span class="a">@Transactional</span>   <span class="c">// транзакция БД</span>
 <span class="k">public</span> <span class="k">void</span> on(<span class="t">PaymentEvent</span> e) {
-    <span class="k">int</span> inserted = jdbc.update(<span class="s">""</span>"
+    <span class="k">int</span> inserted = jdbc.update(<span class="s">"""
             insert into processed_message
                    (message_id)
             values (?)
-            on conflict <span class="k">do</span> nothing<span class="s">""</span>",
+            on conflict do nothing"""</span>,
             e.eventId());
     <span class="c">// уже обрабатывали — выходим</span>
     <span class="k">if</span> (inserted == <span class="n">0</span>) <span class="k">return</span>;
@@ -13633,9 +13682,9 @@ dmesg | grep -i 'killed process'</pre>
             <span class="k">throws</span> <span class="t">Exception</span> {
         mvc.perform(post(<span class="s">"/payments"</span>)
                 .contentType(<span class="t">APPLICATION_JSON</span>)
-                .content(<span class="s">""</span>"
-                    {<span class="s">"accountId"</span>: <span class="s">"a1"</span>,
-                     <span class="s">"amount"</span>: -<span class="n">5</span>}<span class="s">""</span>"))
+                .content(<span class="s">"""
+                    {"accountId": "a1",
+                     "amount": -5}"""</span>))
            .andExpect(
                status().isBadRequest());
         then(service)
@@ -13919,10 +13968,10 @@ await().atMost(<span class="n">10</span>, <span class="t">SECONDS</span>).untilA
             .replace(<span class="s">"%"</span>, <span class="s">"\\%"</span>)
             .replace(<span class="s">"_"</span>, <span class="s">"\\_"</span>) + <span class="s">"%"</span>;
     <span class="c">// JdbcTemplate сам закрывает ресурсы</span>
-    <span class="k">return</span> jdbc.queryForList(<span class="s">""</span>"
+    <span class="k">return</span> jdbc.queryForList(<span class="s">"""
             select name from client
-             where name ilike ? escape <span class="s">'\\'</span>
-             order by name limit <span class="n">50</span><span class="s">""</span>",
+             where name ilike ? escape '\\'
+             order by name limit 50"""</span>,
             <span class="t">String</span>.<span class="k">class</span>, pattern);
 }
 
@@ -14241,10 +14290,10 @@ await().atMost(<span class="n">10</span>, <span class="t">SECONDS</span>).untilA
     <span class="k">return</span> <span class="k">new</span> <span class="t">TotalDto</span>(payments.sumByClient(id));
 }
 
-<span class="a">@Query</span>(<span class="s">""</span>"
-    select coalesce(sum(p.amount), <span class="n">0</span>) from <span class="t">Payment</span> p
+<span class="a">@Query</span>(<span class="s">"""
+    select coalesce(sum(p.amount), 0) from Payment p
       join p.account a
-     where a.client.id = :clientId<span class="s">""</span>")
+     where a.client.id = :clientId"""</span>)
 <span class="t">BigDecimal</span> sumByClient(<span class="a">@Param</span>(<span class="s">"clientId"</span>) <span class="k">long</span> clientId);   <span class="c">// одна агрегация в БД вместо N+1 и цикла в Java</span></pre>
 <pre class="narrow"><span class="a">@GetMapping</span>(<span class="s">"/clients"</span>)
 <span class="k">public</span> <span class="t">Page</span>&lt;<span class="t">ClientDto</span>&gt; list(
@@ -14269,11 +14318,11 @@ await().atMost(<span class="n">10</span>, <span class="t">SECONDS</span>).untilA
 
 <span class="c">// одна агрегация в БД вместо N+1</span>
 <span class="c">// и цикла в Java</span>
-<span class="a">@Query</span>(<span class="s">""</span>"
-    select coalesce(sum(p.amount), <span class="n">0</span>)
-      from <span class="t">Payment</span> p
+<span class="a">@Query</span>(<span class="s">"""
+    select coalesce(sum(p.amount), 0)
+      from Payment p
       join p.account a
-     where a.client.id = :clientId<span class="s">""</span>")
+     where a.client.id = :clientId"""</span>)
 <span class="t">BigDecimal</span> sumByClient(
         <span class="a">@Param</span>(<span class="s">"clientId"</span>) <span class="k">long</span> clientId);</pre>
       <div class="table-wrap"><table>
