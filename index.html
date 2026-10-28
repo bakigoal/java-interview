@@ -7133,16 +7133,22 @@ spring.cache.caffeine.spec:
 <span class="k">class</span> <span class="t">ApiErrors</span> {
     <span class="a">@ExceptionHandler</span>(<span class="t">MethodArgumentNotValidException</span>.<span class="k">class</span>)
     <span class="t">ProblemDetail</span> validation(<span class="t">MethodArgumentNotValidException</span> ex) {
-        <span class="t">ProblemDetail</span> pd = <span class="t">ProblemDetail</span>.forStatusAndDetail(<span class="t">HttpStatus</span>.<span class="t">BAD_REQUEST</span>, <span class="s">"Invalid request"</span>);
+        <span class="t">ProblemDetail</span> pd = problem(<span class="t">HttpStatus</span>.<span class="t">BAD_REQUEST</span>, <span class="s">"Invalid request"</span>);
         pd.setProperty(<span class="s">"errors"</span>, ex.getBindingResult().getFieldErrors().stream()
                 .map(e -&gt; <span class="t">Map</span>.of(<span class="s">"field"</span>, e.getField(), <span class="s">"message"</span>, e.getDefaultMessage())).toList());
         <span class="k">return</span> pd;
     }
     <span class="a">@ExceptionHandler</span>(<span class="t">InsufficientFundsException</span>.<span class="k">class</span>)
     <span class="t">ProblemDetail</span> funds(<span class="t">InsufficientFundsException</span> ex) {
-        <span class="t">ProblemDetail</span> pd = <span class="t">ProblemDetail</span>.forStatus(<span class="t">HttpStatus</span>.<span class="t">UNPROCESSABLE_ENTITY</span>);
+        <span class="t">ProblemDetail</span> pd = problem(<span class="t">HttpStatus</span>.<span class="t">UNPROCESSABLE_ENTITY</span>, <span class="s">"Not enough money on the account"</span>);
         pd.setType(<span class="t">URI</span>.create(<span class="s">"https://api.bank/errors/insufficient-funds"</span>));
-        pd.setDetail(<span class="s">"Not enough money on the account"</span>);
+        <span class="k">return</span> pd;
+    }
+
+    <span class="k">private</span> <span class="k">static</span> <span class="t">ProblemDetail</span> problem(<span class="t">HttpStatus</span> status, <span class="t">String</span> detail) {
+        <span class="t">ProblemDetail</span> pd = <span class="t">ProblemDetail</span>.forStatusAndDetail(status, detail);
+        pd.setProperty(<span class="s">"timestamp"</span>, <span class="t">Instant</span>.now());
+        pd.setProperty(<span class="s">"traceId"</span>, <span class="t">MDC</span>.get(<span class="s">"traceId"</span>));   <span class="c">// Micrometer Tracing кладёт его в MDC</span>
         <span class="k">return</span> pd;
     }
 }</pre>
@@ -7164,9 +7170,8 @@ spring.cache.caffeine.spec:
     <span class="a">@ExceptionHandler</span>
     <span class="t">ProblemDetail</span> validation(
         <span class="t">MethodArgumentNotValidException</span> ex) {
-        <span class="k">var</span> pd = <span class="t">ProblemDetail</span>
-                .forStatus(<span class="t">BAD_REQUEST</span>);
-        pd.setDetail(<span class="s">"Invalid request"</span>);
+        <span class="k">var</span> pd = problem(<span class="t">BAD_REQUEST</span>,
+                <span class="s">"Invalid request"</span>);
         <span class="k">var</span> errors = ex.getBindingResult()
             .getFieldErrors().stream()
             .map(f -&gt; <span class="t">Map</span>.of(
@@ -7181,21 +7186,33 @@ spring.cache.caffeine.spec:
     <span class="a">@ExceptionHandler</span>
     <span class="t">ProblemDetail</span> funds(
             <span class="t">InsufficientFundsException</span> ex) {
-        <span class="k">var</span> pd = <span class="t">ProblemDetail</span>.forStatus(
-                <span class="t">UNPROCESSABLE_ENTITY</span>);
+        <span class="k">var</span> pd = problem(<span class="t">UNPROCESSABLE_ENTITY</span>,
+                <span class="s">"Not enough money"</span>);
         pd.setType(<span class="t">URI</span>.create(
             <span class="s">"/errors/insufficient-funds"</span>));
-        pd.setDetail(<span class="s">"Not enough money"</span>);
+        <span class="k">return</span> pd;
+    }
+
+    <span class="k">private</span> <span class="k">static</span> <span class="t">ProblemDetail</span> problem(
+            <span class="t">HttpStatus</span> status, <span class="t">String</span> detail) {
+        <span class="k">var</span> pd = <span class="t">ProblemDetail</span>
+                .forStatusAndDetail(status, detail);
+        pd.setProperty(<span class="s">"timestamp"</span>, <span class="t">Instant</span>.now());
+        <span class="c">// Micrometer Tracing кладёт его в MDC</span>
+        pd.setProperty(<span class="s">"traceId"</span>,
+                <span class="t">MDC</span>.get(<span class="s">"traceId"</span>));
         <span class="k">return</span> pd;
     }
 }</pre>
-      <p>Ответ на <code><span class="t">POST</span> /payments</code> с <code>amount: -<span class="n">5</span></code> и <code>currency: <span class="s">"usd"</span></code>: статус 400, <code><span class="t">Content</span>-<span class="t">Type</span>: application/problem+json</code>. Поля из <code>setProperty</code> Jackson кладёт на верхний уровень, <code>instance</code> Spring заполняет путём запроса сам.</p>
+      <p>Ответ на <code><span class="t">POST</span> /payments</code> с <code>amount: -<span class="n">5</span></code> и <code>currency: <span class="s">"usd"</span></code>: статус 400, <code><span class="t">Content</span>-<span class="t">Type</span>: application/problem+json</code>. Поля из <code>setProperty</code> Jackson кладёт на верхний уровень, <code>instance</code> Spring заполняет путём запроса сам. <code>timestamp</code> — <code><span class="t">Instant</span></code>, Boot пишет его строкой ISO-8601; по <code>traceId</code> ошибку находят в логах и трейсах (без трассировки он будет <code><span class="k">null</span></code>).</p>
 <pre>{
   <span class="p">"type"</span>: <span class="s">"about:blank"</span>,
   <span class="p">"title"</span>: <span class="s">"Bad Request"</span>,
   <span class="p">"status"</span>: <span class="n">400</span>,
   <span class="p">"detail"</span>: <span class="s">"Invalid request"</span>,
   <span class="p">"instance"</span>: <span class="s">"/payments"</span>,
+  <span class="p">"timestamp"</span>: <span class="s">"2026-10-28T09:41:12.345Z"</span>,
+  <span class="p">"traceId"</span>: <span class="s">"6f2c1a9e4b7d03f58a21c4e9d0b7a613"</span>,
   <span class="p">"errors"</span>: [
     {
       <span class="p">"field"</span>: <span class="s">"amount"</span>,
