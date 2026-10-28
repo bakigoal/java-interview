@@ -7867,7 +7867,7 @@ spring:
 <p class="follow"><b>В WebFlux без JDBC никак?</b> Выносить блокирующие вызовы на свой <code><span class="t">Schedulers</span>.newBoundedElastic(...)</code> по размеру пула БД и понимать, что это костыль.</p>
     </div></div></article>
 <article id="q154" hidden><div class="crumbs">Spring</div><h2 tabindex="-1">154. WebFlux на примере: контроллер → сервис → R2DBC и WebClient <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p>Весь путь от контроллера до драйвера — одна цепочка <b>Mono/Flux</b>. Контроллер возвращает Mono, Spring подписывается на него и пишет ответ, когда придут данные; пока ждём БД и соседа, поток event loop обслуживает другие запросы.</p>
-<ul><li>БД — <b>R2DBC</b> (<code><span class="t">ReactiveCrudRepository</span></code>), внешний сервис — <b>WebClient</b>, шаги связывает <b>flatMap</b>.</li><li><b>Ни одного блокирующего вызова</b>: JDBC, RestTemplate, <code>block()</code> останавливают event loop для всех запросов сразу.</li><li>Пустой результат — <code>switchIfEmpty</code> → 404; у внешнего вызова — <b>timeout</b>.</li><li>Транзакцию <b>не держат</b> на время внешнего вызова.</li></ul></div>
+<ul><li>БД — <b>R2DBC</b> (<code><span class="t">ReactiveCrudRepository</span></code>), внешний сервис — <b>WebClient</b>, шаги связывает <b>flatMap</b>.</li><li><b>Ни одного блокирующего вызова</b>: JDBC, RestTemplate, <code>block()</code> останавливают event loop для всех запросов сразу.</li><li>Пустой результат — <code>switchIfEmpty</code> → 404; у внешнего вызова — <b>timeout</b>.</li><li>Транзакцию <b>не держат</b> на время внешнего вызова.</li><li>MDC для логов — через <b>Reactor Context</b> и context-propagation, а не <code><span class="t">MDC</span>.put</code>: шаги цепочки идут на разных потоках.</li></ul></div>
     <div class="more">
       <p>Пример: подтверждение платежа. Платёж читается из БД, отправляется на проверку в антифрод, статус сохраняется, клиент получает результат.</p>
 <pre class="wide"><span class="a">@Table</span>(<span class="s">"payments"</span>)
@@ -7884,10 +7884,12 @@ spring:
 
     <span class="a">@PostMapping</span>(<span class="s">"/payments/{id}/confirm"</span>)
     <span class="t">Mono</span>&lt;<span class="t">PaymentView</span>&gt; confirm(<span class="a">@PathVariable</span>(<span class="s">"id"</span>) <span class="k">long</span> id) {
-        <span class="k">return</span> service.confirm(id);              <span class="c">// Spring подпишется сам и запишет ответ, когда Mono завершится</span>
+        <span class="k">return</span> service.confirm(id)               <span class="c">// Spring подпишется сам и запишет ответ, когда Mono завершится</span>
+                .contextWrite(<span class="t">Context</span>.of(<span class="s">"paymentId"</span>, <span class="t">String</span>.valueOf(id)));   <span class="c">// его видят все операторы выше</span>
     }
 }
 
+<span class="a">@Slf4j</span>
 <span class="a">@Service</span>
 <span class="a">@RequiredArgsConstructor</span>
 <span class="k">class</span> <span class="t">PaymentService</span> {
@@ -7896,10 +7898,14 @@ spring:
 
     <span class="t">Mono</span>&lt;<span class="t">PaymentView</span>&gt; confirm(<span class="k">long</span> id) {
         <span class="k">return</span> payments.findById(id)                                          <span class="c">// SELECT, поток не ждёт</span>
-                .switchIfEmpty(<span class="t">Mono</span>.error(<span class="k">new</span> <span class="t">NotFoundException</span>(id)))  <span class="c">// пустой Mono → 404 в @ControllerAdvice</span>
+                .doOnNext(p -&gt; log.info(<span class="s">"Payment loaded: status={}"</span>, p.status()))
+                .switchIfEmpty(<span class="t">Mono</span>.error(<span class="k">new</span> <span class="t">NotFoundException</span>(id)))         <span class="c">// пустой Mono → 404 в @ControllerAdvice</span>
                 .flatMap(p -&gt; antifraud.check(p)                              <span class="c">// внешний вызов — flatMap, не map</span>
+                        .doOnNext(v -&gt; log.info(<span class="s">"Antifraud: approved={}"</span>, v.approved()))
                         .map(v -&gt; p.withStatus(v.approved() ? <span class="t">APPROVED</span> : <span class="t">REJECTED</span>)))
                 .flatMap(payments::save)                                      <span class="c">// UPDATE: id не null</span>
+                .doOnNext(p -&gt; log.info(<span class="s">"Payment saved: status={}"</span>, p.status()))
+                .doOnError(e -&gt; log.warn(<span class="s">"Confirm failed: {}"</span>, e.toString()))
                 .map(<span class="t">PaymentView</span>::from);
     }
 }
@@ -7919,6 +7925,14 @@ spring:
                 .bodyToMono(<span class="t">Verdict</span>.<span class="k">class</span>)
                 .timeout(<span class="t">Duration</span>.ofSeconds(<span class="n">2</span>))                   <span class="c">// по умолчанию ответа ждут без ограничения</span>
                 .retryWhen(<span class="t">Retry</span>.backoff(<span class="n">2</span>, <span class="t">Duration</span>.ofMillis(<span class="n">200</span>)));   <span class="c">// повтор безопасен: проверка идемпотентна по id</span>
+    }
+}
+
+<span class="a">@Configuration</span>
+<span class="k">class</span> <span class="t">MdcPropagationConfig</span> {
+    <span class="k">static</span> {                         <span class="c">// ключ Reactor Context ↔ MDC: выставляется перед каждым оператором</span>
+        <span class="t">ContextRegistry</span>.getInstance().registerThreadLocalAccessor(<span class="s">"paymentId"</span>,
+                () -&gt; <span class="t">MDC</span>.get(<span class="s">"paymentId"</span>), v -&gt; <span class="t">MDC</span>.put(<span class="s">"paymentId"</span>, v), () -&gt; <span class="t">MDC</span>.remove(<span class="s">"paymentId"</span>));
     }
 }</pre>
 <pre class="narrow"><span class="a">@Table</span>(<span class="s">"payments"</span>)
@@ -7943,12 +7957,18 @@ spring:
     <span class="a">@PostMapping</span>(<span class="s">"/payments/{id}/confirm"</span>)
     <span class="t">Mono</span>&lt;<span class="t">PaymentView</span>&gt; confirm(
             <span class="a">@PathVariable</span>(<span class="s">"id"</span>) <span class="k">long</span> id) {
+        <span class="k">var</span> paymentId = <span class="t">String</span>.valueOf(id);
         <span class="c">// Spring подпишется сам и запишет</span>
         <span class="c">// ответ, когда Mono завершится</span>
-        <span class="k">return</span> service.confirm(id);
+        <span class="k">return</span> service.confirm(id)
+            <span class="c">// контекст видят все операторы</span>
+            <span class="c">// выше по цепочке — весь сервис</span>
+            .contextWrite(<span class="t">Context</span>.of(
+                    <span class="s">"paymentId"</span>, paymentId));
     }
 }
 
+<span class="a">@Slf4j</span>
 <span class="a">@Service</span>
 <span class="a">@RequiredArgsConstructor</span>
 <span class="k">class</span> <span class="t">PaymentService</span> {
@@ -7958,16 +7978,28 @@ spring:
     <span class="t">Mono</span>&lt;<span class="t">PaymentView</span>&gt; confirm(<span class="k">long</span> id) {
         <span class="c">// SELECT, поток не ждёт</span>
         <span class="k">return</span> payments.findById(id)
+            .doOnNext(p -&gt; log.info(
+                <span class="s">"Payment loaded: status={}"</span>,
+                p.status()))
             <span class="c">// пустой Mono → 404</span>
             .switchIfEmpty(<span class="t">Mono</span>.error(
                 <span class="k">new</span> <span class="t">NotFoundException</span>(id)))
             <span class="c">// внешний вызов — flatMap, не map</span>
             .flatMap(p -&gt; antifraud.check(p)
+                .doOnNext(v -&gt; log.info(
+                    <span class="s">"Antifraud: approved={}"</span>,
+                    v.approved()))
                 .map(v -&gt; p.withStatus(
                     v.approved() ? <span class="t">APPROVED</span>
                                  : <span class="t">REJECTED</span>)))
             <span class="c">// UPDATE: id не null</span>
             .flatMap(payments::save)
+            .doOnNext(p -&gt; log.info(
+                <span class="s">"Payment saved: status={}"</span>,
+                p.status()))
+            .doOnError(e -&gt; log.warn(
+                <span class="s">"Confirm failed: {}"</span>,
+                e.toString()))
             .map(<span class="t">PaymentView</span>::from);
     }
 }
@@ -7999,6 +8031,21 @@ spring:
             .retryWhen(<span class="t">Retry</span>.backoff(<span class="n">2</span>,
                     <span class="t">Duration</span>.ofMillis(<span class="n">200</span>)));
     }
+}
+
+<span class="a">@Configuration</span>
+<span class="k">class</span> <span class="t">MdcPropagationConfig</span> {
+    <span class="k">static</span> <span class="k">final</span> <span class="t">String</span> <span class="t">KEY</span> = <span class="s">"paymentId"</span>;
+
+    <span class="c">// ключ Reactor Context ↔ MDC: Reactor</span>
+    <span class="c">// выставляет его перед каждым оператором</span>
+    <span class="k">static</span> {
+        <span class="t">ContextRegistry</span>.getInstance()
+            .registerThreadLocalAccessor(<span class="t">KEY</span>,
+                () -&gt; <span class="t">MDC</span>.get(<span class="t">KEY</span>),
+                v -&gt; <span class="t">MDC</span>.put(<span class="t">KEY</span>, v),
+                () -&gt; <span class="t">MDC</span>.remove(<span class="t">KEY</span>));
+    }
 }</pre>
 <pre># application.yml
 # пул <span class="t">R2DBC</span>: без r2dbc-pool на classpath
@@ -8007,7 +8054,18 @@ spring:
   r2dbc:
     url: r2dbc:postgresql:<span class="c">//db:5432/payments</span>
     pool:
-      max-size: <span class="n">20</span></pre>
+      max-size: <span class="n">20</span>
+  reactor:
+    # <span class="t">Boot</span> <span class="n">3.2</span>+: <span class="t">Reactor</span> <span class="t">Context</span> → <span class="t">MDC</span>
+    # на каждом шаге цепочки
+    context-propagation: auto</pre>
+      <p>MDC — это ThreadLocal, а шаги цепочки выполняются на разных потоках: строки из БД приходят на потоке драйвера R2DBC, ответ антифрода — на потоке WebClient. Поэтому <code>paymentId</code> кладут в <b>Reactor Context</b> (<code>contextWrite</code> в контроллере — его видят все операторы выше по цепочке), а <code>context-propagation: auto</code> с зарегистрированным ключом копирует его в MDC перед каждым оператором и убирает после. <code>traceId</code> и <code>spanId</code> Micrometer Tracing переносит так же, без своей регистрации.</p>
+<pre class="wide"><span class="t">INFO</span> [reactor-tcp-nio-<span class="n">2</span>]  paymentId=<span class="n">42</span> <span class="t">PaymentService</span> : <span class="t">Payment</span> loaded: status=<span class="t">NEW</span>
+<span class="t">INFO</span> [reactor-http-nio-<span class="n">5</span>] paymentId=<span class="n">42</span> <span class="t">PaymentService</span> : <span class="t">Antifraud</span>: approved=<span class="k">true</span>
+<span class="t">INFO</span> [reactor-tcp-nio-<span class="n">2</span>]  paymentId=<span class="n">42</span> <span class="t">PaymentService</span> : <span class="t">Payment</span> saved: status=<span class="t">APPROVED</span></pre>
+<pre class="narrow">[tcp-nio<span class="n">-2</span>]  paymentId=<span class="n">42</span> Payment loaded
+[http-nio<span class="n">-5</span>] paymentId=<span class="n">42</span> Antifraud: approved
+[tcp-nio<span class="n">-2</span>]  paymentId=<span class="n">42</span> Payment saved</pre>
       <p>Что происходит с потоками:</p>
       <ol>
         <li>Поток event loop (<code>reactor-http-nio-<span class="t">N</span></code>) вызывает контроллер. Тот только <b>собирает</b> цепочку и возвращает Mono — ни один запрос ещё не ушёл.</li>
@@ -8025,6 +8083,7 @@ spring:
         <tr><td>Нет <code>switchIfEmpty</code></td><td>для несуществующего id — 200 с пустым телом вместо 404</td></tr>
         <tr><td>Нет <code>timeout</code> у WebClient</td><td>зависший сосед держит запрос и соединение сколько угодно</td></tr>
         <tr><td>MDC и SecurityContext в ThreadLocal</td><td>в цепочке теряются: шаги выполняются на разных потоках. Нужны Reactor Context, <code><span class="t">ReactiveSecurityContextHolder</span></code>, context-propagation для логов</td></tr>
+        <tr><td><code><span class="t">MDC</span>.put</code> внутри цепочки</td><td>значение остаётся на потоке event loop и попадает в логи чужих запросов, которые этот поток обслужит следом</td></tr>
       </table></div>
       <p>Ошибки — те же сигналы цепочки: <code><span class="t">NotFoundException</span></code> или <code><span class="t">WebClientResponseException</span></code> доходят до <code><span class="a">@RestControllerAdvice</span></code>, как в MVC. Локально их обрабатывают <code>onErrorResume</code> (запасное значение) и <code>onErrorMap</code> (свой тип исключения).</p>
 <p class="follow"><b>Как сходить в БД и во внешний сервис параллельно?</b>Если шаги не зависят друг от друга — <code><span class="t">Mono</span>.zip(payments.findById(id), rates.current(currency))</code>: оба запроса уходят сразу, результат придёт, когда завершатся оба (время — максимум из двух, а не сумма). Если хотя бы один пустой или с ошибкой, пустым или с ошибкой будет и zip.</p>
