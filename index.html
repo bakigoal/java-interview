@@ -30,7 +30,7 @@
   --head-bg: rgba(234, 234, 235, .88); --shadow: 0 1px 2px rgba(56, 58, 66, .06); --tag-fg: #855a00;
   --edge: rgba(0, 0, 0, .22); --tag-bg: rgba(193, 132, 1, .13); --mark: rgba(193, 132, 1, .24); --code-fg: #c43a2e;
   /* цвета Atom One Light, затемнённые до контраста 4.5:1 на фоне кода */
-  --hl-k: #a626a4; --hl-s: #387a37; --hl-c: #696c77; --hl-n: #a0490c; --hl-a: #2f68d8; --hl-t: #8a5f00;
+  --hl-k: #a626a4; --hl-s: #387a37; --hl-c: #696c77; --hl-n: #a0490c; --hl-a: #2f68d8; --hl-t: #8a5f00; --hl-p: #c43a2e;
   /* тренажёр: статусы различаются и яркостью, и формой значка — не только цветом */
   --known: #2c62cf; --partial: #e0a33a; --partial-ico: #986801; --unknown: #b5481c; --unmarked: #d4d4d6; --unmarked-line: #9a9ca3;
   --primary: #2c62cf; --primary-press: #234fa8; --on-primary: #fff; --link: #2c62cf; --seg: #fafafa;
@@ -43,7 +43,7 @@
     --chip-pressed: #3e4452; --accent: #61afef; --accent-soft: rgba(97, 175, 239, .13);
     --code-bg: #21252b; --head-bg: rgba(33, 37, 43, .88); --shadow: none; --tag-fg: #e5c07b; --tag-bg: rgba(229, 192, 123, .16); --edge: rgba(0, 0, 0, .6);
     --mark: rgba(229, 192, 123, .35); --code-fg: #e06c75;
-    --hl-k: #c678dd; --hl-s: #98c379; --hl-c: #9198a4; --hl-n: #d19a66; --hl-a: #61afef; --hl-t: #e5c07b;
+    --hl-k: #c678dd; --hl-s: #98c379; --hl-c: #9198a4; --hl-n: #d19a66; --hl-a: #61afef; --hl-t: #e5c07b; --hl-p: #e06c75;
     --known: #61afef; --partial: #e5c07b; --partial-ico: #e5c07b; --unknown: #c8643c; --unmarked: #3e4452; --unmarked-line: #6b7280;
     --primary: #2f6ad0; --primary-press: #2559b5; --on-primary: #fff; --link: #61afef; --seg: #3e4452;
     color-scheme: dark;
@@ -54,7 +54,7 @@
   --chip-pressed: #3e4452; --accent: #61afef; --accent-soft: rgba(97, 175, 239, .13);
   --code-bg: #21252b; --head-bg: rgba(33, 37, 43, .88); --shadow: none; --tag-fg: #e5c07b; --tag-bg: rgba(229, 192, 123, .16); --edge: rgba(0, 0, 0, .6);
   --mark: rgba(229, 192, 123, .35); --code-fg: #e06c75;
-  --hl-k: #c678dd; --hl-s: #98c379; --hl-c: #9198a4; --hl-n: #d19a66; --hl-a: #61afef; --hl-t: #e5c07b;
+  --hl-k: #c678dd; --hl-s: #98c379; --hl-c: #9198a4; --hl-n: #d19a66; --hl-a: #61afef; --hl-t: #e5c07b; --hl-p: #e06c75;
   --known: #61afef; --partial: #e5c07b; --partial-ico: #e5c07b; --unknown: #c8643c; --unmarked: #3e4452; --unmarked-line: #6b7280;
   --primary: #2f6ad0; --primary-press: #2559b5; --on-primary: #fff; --link: #61afef; --seg: #3e4452;
   color-scheme: dark;
@@ -181,7 +181,7 @@ td:first-child { background: var(--surface); }
 ::highlight(search) { background: var(--mark); color: inherit; }
 /* подсветка кода — цвета темы GitHub light */
 .k { color: var(--hl-k); } .s { color: var(--hl-s); } .c { color: var(--hl-c); font-style: italic; }
-.n { color: var(--hl-n); } .a { color: var(--hl-a); } .t { color: var(--hl-t); }
+.n { color: var(--hl-n); } .a { color: var(--hl-a); } .t { color: var(--hl-t); } .p { color: var(--hl-p); }
 
 /* узкий телефон: код и таблицы — во всю ширину экрана */
 @media (max-width: 599px) {
@@ -6799,6 +6799,27 @@ txTemplate.executeWithoutResult(status -&gt; {
         ex.setAwaitTerminationSeconds(<span class="n">30</span>);
         <span class="k">return</span> ex;
     }
+
+    <span class="a">@Bean</span>
+    <span class="t">TaskDecorator</span> mdcDecorator() {
+        <span class="k">return</span> task -&gt; {
+            <span class="k">var</span> ctx = <span class="t">MDC</span>.getCopyOfContextMap();          <span class="c">// снимок в потоке вызывающего</span>
+            <span class="k">return</span> () -&gt; {
+                <span class="k">var</span> prev = <span class="t">MDC</span>.getCopyOfContextMap();     <span class="c">// CallerRunsPolicy: это может быть поток вызывающего</span>
+                setMdc(ctx);
+                <span class="k">try</span> {
+                    task.run();
+                } <span class="k">finally</span> {
+                    setMdc(prev);                         <span class="c">// не оставить чужой MDC потоку пула</span>
+                }
+            };
+        };
+    }
+
+    <span class="k">private</span> <span class="k">static</span> <span class="k">void</span> setMdc(<span class="t">Map</span>&lt;<span class="t">String</span>, <span class="t">String</span>&gt; ctx) {
+        <span class="k">if</span> (ctx == <span class="k">null</span>) <span class="t">MDC</span>.clear();
+        <span class="k">else</span> <span class="t">MDC</span>.setContextMap(ctx);
+    }
 }
 
 <span class="a">@Async</span>(<span class="s">"notificationExecutor"</span>)
@@ -6824,6 +6845,32 @@ txTemplate.executeWithoutResult(status -&gt; {
                 <span class="k">true</span>);
         e.setAwaitTerminationSeconds(<span class="n">30</span>);
         <span class="k">return</span> e;
+    }
+
+    <span class="a">@Bean</span>
+    <span class="t">TaskDecorator</span> mdcDecorator() {
+        <span class="k">return</span> task -&gt; {
+            <span class="c">// снимок в потоке вызывающего</span>
+            <span class="k">var</span> ctx = <span class="t">MDC</span>.getCopyOfContextMap();
+            <span class="k">return</span> () -&gt; {
+                <span class="c">// CallerRunsPolicy: это может</span>
+                <span class="c">// быть поток вызывающего</span>
+                <span class="k">var</span> prev = <span class="t">MDC</span>.getCopyOfContextMap();
+                setMdc(ctx);
+                <span class="k">try</span> {
+                    task.run();
+                } <span class="k">finally</span> {
+                    <span class="c">// не оставить чужой MDC</span>
+                    setMdc(prev);
+                }
+            };
+        };
+    }
+
+    <span class="k">private</span> <span class="k">static</span> <span class="k">void</span> setMdc(
+            <span class="t">Map</span>&lt;<span class="t">String</span>, <span class="t">String</span>&gt; ctx) {
+        <span class="k">if</span> (ctx == <span class="k">null</span>) <span class="t">MDC</span>.clear();
+        <span class="k">else</span> <span class="t">MDC</span>.setContextMap(ctx);
     }
 }
 
@@ -6965,6 +7012,109 @@ spring.cache.caffeine.spec:
         <tr><td>Сквозная логика бизнес-методов</td><td>AOP-аспект на сервисах</td></tr>
         <tr><td>Преобразование тела запроса/ответа</td><td>RequestBodyAdvice / ResponseBodyAdvice, свой HttpMessageConverter</td></tr>
       </table></div>
+<pre class="wide"><span class="a">@Component</span>                                               <span class="c">// бин-фильтр Boot сам вешает на все URL</span>
+<span class="k">class</span> <span class="t">RequestIdFilter</span> <span class="k">extends</span> <span class="t">OncePerRequestFilter</span> {     <span class="c">// один раз на запрос, и при error/async-диспатче</span>
+    <span class="a">@Override</span>
+    <span class="k">protected</span> <span class="k">void</span> doFilterInternal(<span class="t">HttpServletRequest</span> req, <span class="t">HttpServletResponse</span> res, <span class="t">FilterChain</span> chain)
+            <span class="k">throws</span> <span class="t">ServletException</span>, <span class="t">IOException</span> {
+        <span class="k">var</span> id = <span class="t">UUID</span>.randomUUID().toString();
+        <span class="t">MDC</span>.put(<span class="s">"requestId"</span>, id);
+        res.setHeader(<span class="s">"X-Request-Id"</span>, id);
+        <span class="k">try</span> {
+            chain.doFilter(req, res);                    <span class="c">// не вызвать — запрос дальше не пойдёт</span>
+        } <span class="k">finally</span> {
+            <span class="t">MDC</span>.remove(<span class="s">"requestId"</span>);                     <span class="c">// поток Tomcat вернётся в пул</span>
+        }
+    }
+}
+
+<span class="k">class</span> <span class="t">TimingInterceptor</span> <span class="k">implements</span> <span class="t">HandlerInterceptor</span> {
+    <span class="a">@Override</span>
+    <span class="k">public</span> <span class="k">boolean</span> preHandle(<span class="t">HttpServletRequest</span> req, <span class="t">HttpServletResponse</span> res, <span class="t">Object</span> handler) {
+        req.setAttribute(<span class="s">"start"</span>, <span class="t">System</span>.nanoTime());
+        <span class="k">return</span> <span class="k">true</span>;                                     <span class="c">// false — контроллер не вызовется</span>
+    }
+
+    <span class="a">@Override</span>
+    <span class="k">public</span> <span class="k">void</span> afterCompletion(<span class="t">HttpServletRequest</span> req, <span class="t">HttpServletResponse</span> res, <span class="t">Object</span> handler, <span class="t">Exception</span> ex) {
+        <span class="k">if</span> (handler <span class="k">instanceof</span> <span class="t">HandlerMethod</span> hm) {       <span class="c">// знает, какой метод контроллера отработал</span>
+            <span class="k">long</span> ms = (<span class="t">System</span>.nanoTime() - (<span class="k">long</span>) req.getAttribute(<span class="s">"start"</span>)) / <span class="n">1_000_000</span>;
+            log.info(<span class="s">"{}.{} {} ms"</span>, hm.getBeanType().getSimpleName(), hm.getMethod().getName(), ms);
+        }
+    }
+}
+
+<span class="a">@Configuration</span>
+<span class="k">class</span> <span class="t">WebConfig</span> <span class="k">implements</span> <span class="t">WebMvcConfigurer</span> {
+    <span class="a">@Override</span>
+    <span class="k">public</span> <span class="k">void</span> addInterceptors(<span class="t">InterceptorRegistry</span> registry) {
+        registry.addInterceptor(<span class="k">new</span> <span class="t">TimingInterceptor</span>()).addPathPatterns(<span class="s">"/api/**"</span>);
+    }
+}</pre>
+<pre class="narrow"><span class="c">// бин-фильтр Boot сам вешает на все URL;</span>
+<span class="c">// OncePerRequestFilter — один раз на запрос</span>
+<span class="a">@Component</span>
+<span class="k">class</span> <span class="t">RequestIdFilter</span>
+        <span class="k">extends</span> <span class="t">OncePerRequestFilter</span> {
+    <span class="a">@Override</span>
+    <span class="k">protected</span> <span class="k">void</span> doFilterInternal(
+            <span class="t">HttpServletRequest</span> req,
+            <span class="t">HttpServletResponse</span> res,
+            <span class="t">FilterChain</span> chain)
+            <span class="k">throws</span> <span class="t">ServletException</span>, <span class="t">IOException</span> {
+        <span class="k">var</span> id = <span class="t">UUID</span>.randomUUID().toString();
+        <span class="t">MDC</span>.put(<span class="s">"requestId"</span>, id);
+        res.setHeader(<span class="s">"X-Request-Id"</span>, id);
+        <span class="k">try</span> {
+            <span class="c">// не вызвать — запрос дальше не пойдёт</span>
+            chain.doFilter(req, res);
+        } <span class="k">finally</span> {
+            <span class="c">// поток Tomcat вернётся в пул</span>
+            <span class="t">MDC</span>.remove(<span class="s">"requestId"</span>);
+        }
+    }
+}
+
+<span class="k">class</span> <span class="t">TimingInterceptor</span>
+        <span class="k">implements</span> <span class="t">HandlerInterceptor</span> {
+    <span class="a">@Override</span>
+    <span class="k">public</span> <span class="k">boolean</span> preHandle(
+            <span class="t">HttpServletRequest</span> req,
+            <span class="t">HttpServletResponse</span> res,
+            <span class="t">Object</span> handler) {
+        req.setAttribute(<span class="s">"start"</span>,
+                <span class="t">System</span>.nanoTime());
+        <span class="c">// false — контроллер не вызовется</span>
+        <span class="k">return</span> <span class="k">true</span>;
+    }
+
+    <span class="a">@Override</span>
+    <span class="k">public</span> <span class="k">void</span> afterCompletion(
+            <span class="t">HttpServletRequest</span> req,
+            <span class="t">HttpServletResponse</span> res,
+            <span class="t">Object</span> handler, <span class="t">Exception</span> ex) {
+        <span class="c">// знает, какой метод контроллера</span>
+        <span class="k">if</span> (handler <span class="k">instanceof</span> <span class="t">HandlerMethod</span> hm) {
+            <span class="k">long</span> ms = (<span class="t">System</span>.nanoTime()
+                    - (<span class="k">long</span>) req.getAttribute(<span class="s">"start"</span>))
+                    / <span class="n">1_000_000</span>;
+            log.info(<span class="s">"{}.{} {} ms"</span>,
+                    hm.getBeanType().getSimpleName(),
+                    hm.getMethod().getName(), ms);
+        }
+    }
+}
+
+<span class="a">@Configuration</span>
+<span class="k">class</span> <span class="t">WebConfig</span> <span class="k">implements</span> <span class="t">WebMvcConfigurer</span> {
+    <span class="a">@Override</span>
+    <span class="k">public</span> <span class="k">void</span> addInterceptors(
+            <span class="t">InterceptorRegistry</span> registry) {
+        registry.addInterceptor(
+                        <span class="k">new</span> <span class="t">TimingInterceptor</span>())
+                .addPathPatterns(<span class="s">"/api/**"</span>);
+    }
+}</pre>
       <p>Ошибку из фильтра (например, невалидный JWT) обрабатывают внутри цепочки безопасности — <code><span class="t">AuthenticationEntryPoint</span></code> и <code><span class="t">AccessDeniedHandler</span></code>, а не @ControllerAdvice.</p>
     </div></div></article>
 <article id="q143" hidden><div class="crumbs">Spring</div><h2 tabindex="-1">143. Обработка ошибок и валидация в REST</h2><div class="answer" hidden><div class="short"><ul><li><b>Формат и обязательность</b> полей — Bean Validation на DTO и <code><span class="a">@Valid</span></code> → 400.</li><li><b>Бизнес-правила</b> — в сервисе, своими доменными исключениями.</li><li>Всё превращает в ответ один <b>@RestControllerAdvice</b> в формате <b>ProblemDetail</b> (RFC 9457).</li><li>Коды: <b>404</b> нет ресурса, <b>409</b> конфликт состояния, <b>422</b> нарушено бизнес-правило.</li></ul>
@@ -7038,6 +7188,24 @@ spring.cache.caffeine.spec:
         pd.setDetail(<span class="s">"Not enough money"</span>);
         <span class="k">return</span> pd;
     }
+}</pre>
+      <p>Ответ на <code><span class="t">POST</span> /payments</code> с <code>amount: -<span class="n">5</span></code> и <code>currency: <span class="s">"usd"</span></code>: статус 400, <code><span class="t">Content</span>-<span class="t">Type</span>: application/problem+json</code>. Поля из <code>setProperty</code> Jackson кладёт на верхний уровень, <code>instance</code> Spring заполняет путём запроса сам.</p>
+<pre>{
+  <span class="p">"type"</span>: <span class="s">"about:blank"</span>,
+  <span class="p">"title"</span>: <span class="s">"Bad Request"</span>,
+  <span class="p">"status"</span>: <span class="n">400</span>,
+  <span class="p">"detail"</span>: <span class="s">"Invalid request"</span>,
+  <span class="p">"instance"</span>: <span class="s">"/payments"</span>,
+  <span class="p">"errors"</span>: [
+    {
+      <span class="p">"field"</span>: <span class="s">"amount"</span>,
+      <span class="p">"message"</span>: <span class="s">"must be greater than 0"</span>
+    },
+    {
+      <span class="p">"field"</span>: <span class="s">"currency"</span>,
+      <span class="p">"message"</span>: <span class="s">"must match \"[A-Z]{3}\""</span>
+    }
+  ]
 }</pre>
       <div class="table-wrap"><table>
         <tr><th>Ситуация</th><th>Код</th></tr>
@@ -10266,7 +10434,7 @@ kafkaTemplate.send(<span class="s">"payments"</span>, key, event);
 <p>Процесс: консюмеры отправляют координатору группы (один из брокеров) JoinGroup; один консюмер становится лидером группы и по выбранной стратегии считает распределение; координатор раздаёт его остальным через SyncGroup. В новом протоколе KIP-848 распределение считает брокер.</p>
       <div class="table-wrap"><table>
         <tr><th>Стратегия</th><th>Как делит</th><th>Особенность</th></tr>
-        <tr><td>RangeAssignor (фактически по умолчанию: с Kafka 3.0 дефолт — <code>[<span class="t">RangeAssignor</span>, <span class="t">CooperativeStickyAssignor</span>]</code>, и группа берёт первый, который поддерживают все)</td><td>по каждому топику отдельно — непрерывными диапазонами</td><td>при нескольких топиках первые консюмеры получают больше</td></tr>
+        <tr><td>RangeAssignor (фактически по умолчанию: с Kafka 3.0 дефолт — <code>[RangeAssignor, CooperativeStickyAssignor]</code>, и группа берёт первый, который поддерживают все)</td><td>по каждому топику отдельно — непрерывными диапазонами</td><td>при нескольких топиках первые консюмеры получают больше</td></tr>
         <tr><td>RoundRobinAssignor</td><td>по кругу все партиции всех топиков</td><td>равномерно, но всё перетасовывает при изменении</td></tr>
         <tr><td>StickyAssignor</td><td>равномерно и минимум переездов</td><td>eager-протокол</td></tr>
         <tr><td>CooperativeStickyAssignor</td><td>то же, кооперативно</td><td>рекомендуемый для классического протокола</td></tr>
@@ -10814,20 +10982,20 @@ kafka-topics.sh --create \
       </table></div>
       <p>Режимы совместимости Schema Registry: <b>BACKWARD</b> (по умолчанию) — новая схема читает данные, записанные предыдущей; обновлять сначала консюмеров. <b>FORWARD</b> — предыдущая схема читает данные новой; обновлять сначала продюсеров. <b>FULL</b> — оба направления. <b>*_TRANSITIVE</b> — относительно всех прошлых версий, а не только последней (важно, если в топике лежат старые сообщения за долгий retention).</p>
 <pre class="wide">{
-  <span class="s">"eventId"</span>: <span class="s">"6a1f…"</span>,            <span class="c">// для идемпотентности</span>
-  <span class="s">"eventType"</span>: <span class="s">"PaymentCompleted"</span>,
-  <span class="s">"schemaVersion"</span>: <span class="n">2</span>,
-  <span class="s">"occurredAt"</span>: <span class="s">"2026-10-22T10:15:03Z"</span>,
-  <span class="s">"aggregateId"</span>: <span class="s">"acc-42"</span>,
-  <span class="s">"payload"</span>: { ... }
+  <span class="p">"eventId"</span>: <span class="s">"6a1f…"</span>,            <span class="c">// для идемпотентности</span>
+  <span class="p">"eventType"</span>: <span class="s">"PaymentCompleted"</span>,
+  <span class="p">"schemaVersion"</span>: <span class="n">2</span>,
+  <span class="p">"occurredAt"</span>: <span class="s">"2026-10-22T10:15:03Z"</span>,
+  <span class="p">"aggregateId"</span>: <span class="s">"acc-42"</span>,
+  <span class="p">"payload"</span>: { ... }
 }</pre>
 <pre class="narrow">{
-  <span class="s">"eventId"</span>: <span class="s">"6a1f…"</span>,  <span class="c">// для идемпотентности</span>
-  <span class="s">"eventType"</span>: <span class="s">"PaymentCompleted"</span>,
-  <span class="s">"schemaVersion"</span>: <span class="n">2</span>,
-  <span class="s">"occurredAt"</span>: <span class="s">"2026-10-22T10:15:03Z"</span>,
-  <span class="s">"aggregateId"</span>: <span class="s">"acc-42"</span>,
-  <span class="s">"payload"</span>: { ... }
+  <span class="p">"eventId"</span>: <span class="s">"6a1f…"</span>,  <span class="c">// для идемпотентности</span>
+  <span class="p">"eventType"</span>: <span class="s">"PaymentCompleted"</span>,
+  <span class="p">"schemaVersion"</span>: <span class="n">2</span>,
+  <span class="p">"occurredAt"</span>: <span class="s">"2026-10-22T10:15:03Z"</span>,
+  <span class="p">"aggregateId"</span>: <span class="s">"acc-42"</span>,
+  <span class="p">"payload"</span>: { ... }
 }</pre>
       <p>Ломающее изменение, если без него никак: новый тип события или новый топик (<code>payments.v2</code>), продюсер какое-то время пишет в оба, консюмеры переезжают, старый топик выводится. Никогда — «переделать формат в том же топике и задеплоить всех одновременно»: в топике ещё лежат старые сообщения, а консюмеры деплоятся не атомарно.</p>
       <p>Contract-тесты (Spring Cloud Contract, Pact для сообщений) и проверка совместимости схем в CI ловят ломающие изменения до деплоя.</p>
@@ -10925,40 +11093,40 @@ public void publishBatch() {
       <li>Outbox + Debezium: сервис пишет в таблицу outbox, коннектор доставляет в Kafka — без своего поллера.</li>
     </ul>
 <pre class="wide">{
-  <span class="s">"name"</span>: <span class="s">"payments-outbox"</span>,
-  <span class="s">"config"</span>: {
-    <span class="s">"connector.class"</span>: <span class="s">"io.debezium.connector.postgresql.PostgresConnector"</span>,
-    <span class="s">"database.hostname"</span>: <span class="s">"pg"</span>, <span class="s">"database.dbname"</span>: <span class="s">"payments"</span>,
-    <span class="s">"database.user"</span>: <span class="s">"${secrets:debezium/user}"</span>, <span class="s">"database.password"</span>: <span class="s">"${secrets:debezium/password}"</span>,
-    <span class="s">"plugin.name"</span>: <span class="s">"pgoutput"</span>,
-    <span class="s">"slot.name"</span>: <span class="s">"payments_outbox"</span>,
-    <span class="s">"table.include.list"</span>: <span class="s">"public.outbox"</span>,
-    <span class="s">"transforms"</span>: <span class="s">"outbox"</span>,
-    <span class="s">"transforms.outbox.type"</span>: <span class="s">"io.debezium.transforms.outbox.EventRouter"</span>,
-    <span class="s">"transforms.outbox.route.by.field"</span>: <span class="s">"aggregate_type"</span>,
-    <span class="s">"transforms.outbox.table.field.event.key"</span>: <span class="s">"aggregate_id"</span>
+  <span class="p">"name"</span>: <span class="s">"payments-outbox"</span>,
+  <span class="p">"config"</span>: {
+    <span class="p">"connector.class"</span>: <span class="s">"io.debezium.connector.postgresql.PostgresConnector"</span>,
+    <span class="p">"database.hostname"</span>: <span class="s">"pg"</span>, <span class="p">"database.dbname"</span>: <span class="s">"payments"</span>,
+    <span class="p">"database.user"</span>: <span class="s">"${secrets:debezium/user}"</span>, <span class="p">"database.password"</span>: <span class="s">"${secrets:debezium/password}"</span>,
+    <span class="p">"plugin.name"</span>: <span class="s">"pgoutput"</span>,
+    <span class="p">"slot.name"</span>: <span class="s">"payments_outbox"</span>,
+    <span class="p">"table.include.list"</span>: <span class="s">"public.outbox"</span>,
+    <span class="p">"transforms"</span>: <span class="s">"outbox"</span>,
+    <span class="p">"transforms.outbox.type"</span>: <span class="s">"io.debezium.transforms.outbox.EventRouter"</span>,
+    <span class="p">"transforms.outbox.route.by.field"</span>: <span class="s">"aggregate_type"</span>,
+    <span class="p">"transforms.outbox.table.field.event.key"</span>: <span class="s">"aggregate_id"</span>
   }
 }</pre>
 <pre class="narrow">{
-  <span class="s">"name"</span>: <span class="s">"payments-outbox"</span>,
-  <span class="s">"config"</span>: {
-    <span class="s">"connector.class"</span>: "io.debezium.connector
-        .postgresql.<span class="t">PostgresConnector</span>",
-    <span class="s">"database.hostname"</span>: <span class="s">"pg"</span>,
-    <span class="s">"database.dbname"</span>: <span class="s">"payments"</span>,
-    <span class="s">"database.user"</span>:
+  <span class="p">"name"</span>: <span class="s">"payments-outbox"</span>,
+  <span class="p">"config"</span>: {
+    <span class="p">"connector.class"</span>: "io.debezium.connector
+        .postgresql.PostgresConnector",
+    <span class="p">"database.hostname"</span>: <span class="s">"pg"</span>,
+    <span class="p">"database.dbname"</span>: <span class="s">"payments"</span>,
+    <span class="p">"database.user"</span>:
         <span class="s">"${secrets:debezium/user}"</span>,
-    <span class="s">"database.password"</span>:
+    <span class="p">"database.password"</span>:
         <span class="s">"${secrets:debezium/password}"</span>,
-    <span class="s">"plugin.name"</span>: <span class="s">"pgoutput"</span>,
-    <span class="s">"slot.name"</span>: <span class="s">"payments_outbox"</span>,
-    <span class="s">"table.include.list"</span>: <span class="s">"public.outbox"</span>,
-    <span class="s">"transforms"</span>: <span class="s">"outbox"</span>,
-    <span class="s">"transforms.outbox.type"</span>: "io.debezium
-        .transforms.outbox.<span class="t">EventRouter</span>",
-    <span class="s">"transforms.outbox.route.by.field"</span>:
+    <span class="p">"plugin.name"</span>: <span class="s">"pgoutput"</span>,
+    <span class="p">"slot.name"</span>: <span class="s">"payments_outbox"</span>,
+    <span class="p">"table.include.list"</span>: <span class="s">"public.outbox"</span>,
+    <span class="p">"transforms"</span>: <span class="s">"outbox"</span>,
+    <span class="p">"transforms.outbox.type"</span>: "io.debezium
+        .transforms.outbox.EventRouter",
+    <span class="p">"transforms.outbox.route.by.field"</span>:
         <span class="s">"aggregate_type"</span>,
-    <span class="s">"transforms.outbox.table.field.event.key"</span>:
+    <span class="p">"transforms.outbox.table.field.event.key"</span>:
         <span class="s">"aggregate_id"</span>
   }
 }</pre>
@@ -11768,7 +11936,7 @@ logging:
     root: info
     ru.bank.payments: info
     org.hibernate.<span class="t">SQL</span>: warn</pre>
-      <p class="follow"><b>Как поменять уровень логирования в проде без перезапуска?</b>Через Actuator: <code><span class="t">POST</span> /actuator/loggers/ru.bank.payments</code> с <code>{<span class="s">"configuredLevel"</span>: <span class="s">"DEBUG"</span>}</code>. Эндпоинт должен быть закрыт от внешнего доступа, а уровень потом нужно вернуть обратно.</p>
+      <p class="follow"><b>Как поменять уровень логирования в проде без перезапуска?</b>Через Actuator: <code><span class="t">POST</span> /actuator/loggers/ru.bank.payments</code> с <code>{<span class="p">"configuredLevel"</span>: <span class="s">"DEBUG"</span>}</code>. Эндпоинт должен быть закрыт от внешнего доступа, а уровень потом нужно вернуть обратно.</p>
     </div></div></article>
 <article id="q244" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">244. Безопасность сервисов <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li><b>Пользователи</b> — OIDC с Authorization Code и <b>PKCE</b>, сервисы проверяют JWT.</li><li><b>Между сервисами</b> — client credentials или <b>mTLS</b>, без доверия «потому что внутри сети».</li><li><b>Секреты</b> — в Vault, никогда в git и логах.</li></ul>
 <p>Частые дыры: <b>IDOR</b> (нет проверки владельца), <b>SQL-инъекции</b>, <b>SSRF</b> (сервис ходит по URL из запроса), приём сущностей вместо DTO (<b>mass assignment</b>).</p></div>
@@ -16064,7 +16232,7 @@ emitter.send(<span class="t">SseEmitter</span>.event()
         <tr><th>Угроза</th><th>Как выглядит</th><th>Защита</th></tr>
         <tr><td>Инъекция</td><td><code><span class="s">"... where name = '"</span> + name + <span class="s">"'"</span></code></td><td>параметры (<code>?</code>, <code>:name</code>), allowlist для имён колонок сортировки</td></tr>
         <tr><td>IDOR</td><td>подставил чужой id в URL</td><td>проверка владельца в запросе к БД, 404 вместо 403</td></tr>
-        <tr><td>Mass assignment</td><td><code>{<span class="s">"amount"</span>: <span class="n">1</span>, <span class="s">"status"</span>: <span class="s">"APPROVED"</span>}</code></td><td>отдельный DTO запроса только с разрешёнными полями</td></tr>
+        <tr><td>Mass assignment</td><td><code>{<span class="p">"amount"</span>: <span class="n">1</span>, <span class="p">"status"</span>: <span class="s">"APPROVED"</span>}</code></td><td>отдельный DTO запроса только с разрешёнными полями</td></tr>
         <tr><td>SSRF</td><td>webhook на <code>http:<span class="c">//169.254.169.254/</span></code></td><td>allowlist хостов, запрет приватных адресов, отдельный egress</td></tr>
         <tr><td>Утечки</td><td>стектрейс и SQL в ответе, токен в логе</td><td><code><span class="t">ProblemDetail</span></code> без деталей, маскирование в логах</td></tr>
         <tr><td>Зависимости</td><td>Log4Shell, уязвимый Jackson</td><td>OWASP Dependency-Check / Dependabot в CI, быстрое обновление</td></tr>
