@@ -7453,13 +7453,15 @@ spring.cache.caffeine.spec:
 <p class="follow"><b>Почему «email уже занят» не проверяют в ConstraintValidator?</b>Проверка через SELECT не защищает от гонки: два запроса одновременно увидят, что email свободен. Надёжно — уникальный индекс в БД и перевод нарушения в 409; а валидатор с запросом в базу ещё и замедляет каждую проверку DTO.</p>
     </div></div></article>
 <article id="q145" hidden><div class="crumbs">Spring</div><h2 tabindex="-1">145. Jackson: неизвестные поля, даты, BigDecimal, полиморфная десериализация</h2><div class="answer" hidden><div class="short"><p>Boot настраивает общий <b>ObjectMapper</b>: неизвестные поля игнорируются, java.time пишется строками ISO-8601, модули для records и Optional подключены. Настройки — через <code>spring.jackson.*</code> или customizer, а <b>не new ObjectMapper()</b>: он дорогой и теряет настройки Boot.</p>
-<ul><li>Деньги — <b>BigDecimal</b>, лучше строкой (JavaScript теряет точность).</li><li>Полиморфизм по имени класса (<code>use = <span class="t">CLASS</span></code>, default typing) — <b>уязвимость RCE</b>; типы перечисляют явно через <code><span class="t">Id</span>.<span class="t">NAME</span></code> и @JsonSubTypes.</li></ul></div>
+<ul><li>Деньги — <b>BigDecimal</b>, лучше строкой (JavaScript теряет точность).</li><li>Полиморфизм по имени класса (<code>use = <span class="t">CLASS</span></code>, default typing) — <b>уязвимость RCE</b>; типы перечисляют явно через <code><span class="t">Id</span>.<span class="t">NAME</span></code> и @JsonSubTypes.</li><li>Нужна другая настройка под одну задачу — неизменяемый <b>ObjectWriter / ObjectReader</b> от общего mapper-а, а не <code>configure()</code> на нём.</li></ul></div>
     <div class="more">
 <ul>
       <li><code><span class="t">FAIL_ON_UNKNOWN_PROPERTIES</span></code> выключен в Boot ради совместимости: новое поле от партнёра не ломает клиента. Для строгой валидации входящих запросов его включают точечно.</li>
       <li><code><span class="t">Instant</span></code> пишется в UTC с <code><span class="t">Z</span></code>, <code><span class="t">LocalDateTime</span></code> — без зоны. Для моментов времени в API — <code><span class="t">Instant</span></code> или <code><span class="t">OffsetDateTime</span></code>.</li>
       <li><code><span class="k">double</span></code> из JSON теряет точность: для денег — <code><span class="t">BigDecimal</span></code> и <code><span class="t">USE_BIG_DECIMAL_FOR_FLOATS</span></code>, если тип поля <code><span class="t">Object</span></code>.</li>
       <li>Ошибка «No serializer found» или бесконечная рекурсия — признак, что наружу отдают JPA-сущность вместо DTO.</li>
+      <li><code>configure()</code> на общем mapper-е после старта меняет все REST-ответы приложения и не потокобезопасен. Для pretty print, <code><span class="a">@JsonView</span></code> или отдельной фичи берут <code>objectMapper.writer…()</code> / <code>reader…()</code>: они неизменяемые, делят кеш сериализаторов с mapper-ом, создаются дёшево, их держат в поле. <code>writerFor</code> / <code>readerFor</code> с <code><span class="t">TypeReference</span></code> сохраняют дженерик-тип.</li>
+      <li>В Jackson 3 (Spring Boot 4, пакет <code>tools.jackson</code>) <code><span class="t">ObjectMapper</span></code> сам неизменяемый: настройки — через <code><span class="t">JsonMapper</span>.builder()</code>, вариант — <code>mapper.rebuild()</code>.</li>
     </ul>
 <pre># application.yml
 spring:
@@ -7485,6 +7487,22 @@ spring:
         <span class="a">@JsonFormat</span>(shape = <span class="t">STRING</span>)
         <span class="t">BigDecimal</span> amount,
         <span class="t">String</span> currency) {}</pre>
+<pre><span class="c">// pretty print только здесь: REST-ответы</span>
+<span class="c">// остаются компактными</span>
+<span class="t">ObjectWriter</span> pretty = objectMapper
+        .writerWithDefaultPrettyPrinter();
+<span class="t">String</span> body = pretty.writeValueAsString(dto);
+
+<span class="c">// свой вариант, общий mapper не тронут</span>
+<span class="t">ObjectWriter</span> logWriter = objectMapper
+        .writerFor(<span class="t">OrderLogView</span>.<span class="k">class</span>)
+        .withView(<span class="t">Views</span>.<span class="t">Log</span>.<span class="k">class</span>);
+
+<span class="c">// дженерик не теряется при стирании типов</span>
+<span class="t">List</span>&lt;<span class="t">OrderDto</span>&gt; orders = objectMapper
+        .readerFor(<span class="k">new</span> <span class="t">TypeReference</span>&lt;
+                <span class="t">List</span>&lt;<span class="t">OrderDto</span>&gt;&gt;() {})
+        .readValue(json);</pre>
       <p class="follow"><b>Почему нельзя создавать ObjectMapper в каждом вызове?</b>Он потокобезопасен после настройки, но его создание дорогое: интроспекция классов, кеши сериализаторов. К тому же новый экземпляр не получит настройки Boot (модули, формат дат). Его создают один раз и внедряют как бин.</p>
     </div></div></article>
 <article id="q146" hidden><div class="crumbs">Spring</div><h2 tabindex="-1">146. HTTP-клиенты в Spring: RestTemplate, RestClient, WebClient, Feign</h2><div class="answer" hidden><div class="short"><ul><li><b>RestTemplate</b> — старый синхронный, только поддерживается.</li><li><b>RestClient</b> (Spring 6.1) — его замена с fluent API, блокирующий, хорош на виртуальных потоках.</li><li><b>WebClient</b> — неблокирующий: WebFlux и параллельный fan-out.</li><li><b>@HttpExchange</b> и <b>OpenFeign</b> — декларативные интерфейсы.</li></ul>
