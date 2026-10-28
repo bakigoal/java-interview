@@ -8721,20 +8721,7 @@ paymentRepository.findByStatus(<span class="t">NEW</span>);
       <li>Два fetch-а List-коллекций → MultipleBagFetchException; правильнее отдельные запросы.</li>
       <li>@ManyToOne по умолчанию EAGER — ставьте LAZY. Ловить в тестах — счётчиком запросов (datasource-proxy).</li>
     </ul>
-<pre class="wide"><span class="a">@Query</span>(<span class="s">"select o from Order o join fetch o.items where o.status = :s"</span>)
-<span class="t">List</span>&lt;<span class="t">Order</span>&gt; findWithItems(<span class="a">@Param</span>(<span class="s">"s"</span>) <span class="t">Status</span> s);
-
-<span class="a">@EntityGraph</span>(attributePaths = <span class="s">"items"</span>)
-<span class="t">List</span>&lt;<span class="t">Order</span>&gt; findByStatus(<span class="t">Status</span> s);</pre>
-<pre class="narrow"><span class="a">@Query</span>(<span class="s">"""
-        select o from Order o
-          join fetch o.items
-         where o.status = :s"""</span>)
-<span class="t">List</span>&lt;<span class="t">Order</span>&gt; findWithItems(
-        <span class="a">@Param</span>(<span class="s">"s"</span>) <span class="t">Status</span> s);
-
-<span class="a">@EntityGraph</span>(attributePaths = <span class="s">"items"</span>)
-<span class="t">List</span>&lt;<span class="t">Order</span>&gt; findByStatus(<span class="t">Status</span> s);</pre>
+      <p>Как возникает: заказы читаются одним запросом, а позиции каждого — отдельным при первом обращении.</p>
 <pre class="wide"><span class="t">List</span>&lt;<span class="t">Order</span>&gt; orders = orderRepository.findByStatus(<span class="t">NEW</span>);    <span class="c">// 1 запрос: select * from orders where status = ?</span>
 <span class="k">for</span> (<span class="t">Order</span> o : orders) {
     total += o.getItems().size();                           <span class="c">// + N запросов: select * from order_item where order_id = ?</span>
@@ -8751,6 +8738,23 @@ paymentRepository.findByStatus(<span class="t">NEW</span>);
 }
 <span class="c">// 100 заказов = 101 запрос; каждый быстрый,</span>
 <span class="c">// но сетевые round-trip’ы складываются</span></pre>
+      <p>Решение — загрузить позиции тем же запросом:</p>
+<pre class="wide"><span class="a">@Query</span>(<span class="s">"select o from Order o join fetch o.items where o.status = :s"</span>)
+<span class="t">List</span>&lt;<span class="t">Order</span>&gt; findWithItems(<span class="a">@Param</span>(<span class="s">"s"</span>) <span class="t">Status</span> s);
+
+<span class="a">@EntityGraph</span>(attributePaths = <span class="s">"items"</span>)    <span class="c">// то же без JPQL</span>
+<span class="t">List</span>&lt;<span class="t">Order</span>&gt; findWithItemsByStatus(<span class="t">Status</span> s);</pre>
+<pre class="narrow"><span class="a">@Query</span>(<span class="s">"""
+        select o from Order o
+          join fetch o.items
+         where o.status = :s"""</span>)
+<span class="t">List</span>&lt;<span class="t">Order</span>&gt; findWithItems(
+        <span class="a">@Param</span>(<span class="s">"s"</span>) <span class="t">Status</span> s);
+
+<span class="c">// то же без JPQL</span>
+<span class="a">@EntityGraph</span>(attributePaths = <span class="s">"items"</span>)
+<span class="t">List</span>&lt;<span class="t">Order</span>&gt; findWithItemsByStatus(
+        <span class="t">Status</span> s);</pre>
       <div class="table-wrap"><table>
         <tr><th>Способ</th><th>Сколько запросов</th><th>Когда</th></tr>
         <tr><td>JOIN FETCH / @EntityGraph</td><td>1</td><td>одна коллекция, нет пагинации; строки родителя дублируются по числу детей</td></tr>
