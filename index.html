@@ -10671,10 +10671,10 @@ client(id, name, city, region)
 <span class="k">SELECT</span> d.* <span class="k">FROM</span> department d
  <span class="k">WHERE</span> <span class="k">NOT</span> <span class="k">EXISTS</span> (<span class="k">SELECT</span> <span class="n">1</span> <span class="k">FROM</span> employee e <span class="k">WHERE</span> e.department_id = d.id);
 
-<span class="c">-- 2. сотрудники богаче руководителя: self-join, m — та же таблица в роли руководителя</span>
-<span class="k">SELECT</span> e.name, e.salary, m.name <span class="k">AS</span> manager
-  <span class="k">FROM</span> employee e <span class="k">JOIN</span> employee m <span class="k">ON</span> m.id = e.manager_id   <span class="c">-- у кого нет руководителя — выпадают</span>
- <span class="k">WHERE</span> e.salary &gt; m.salary;</pre>
+<span class="c">-- то же через LEFT JOIN: у отдела без сотрудников все колонки e — NULL</span>
+<span class="k">SELECT</span> d.* <span class="k">FROM</span> department d
+  <span class="k">LEFT</span> <span class="k">JOIN</span> employee e <span class="k">ON</span> e.department_id = d.id
+ <span class="k">WHERE</span> e.id <span class="k">IS</span> <span class="k">NULL</span>;</pre>
 <pre class="narrow"><span class="c">-- 1. отделы без сотрудников: anti-join —</span>
 <span class="c">-- отдел, для которого не нашлось ни одной</span>
 <span class="c">-- строки в employee</span>
@@ -10683,7 +10683,17 @@ client(id, name, city, region)
        <span class="k">SELECT</span> <span class="n">1</span> <span class="k">FROM</span> employee e
         <span class="k">WHERE</span> e.department_id = d.id);
 
-<span class="c">-- 2. сотрудники богаче руководителя:</span>
+<span class="c">-- то же через LEFT JOIN: у отдела без</span>
+<span class="c">-- сотрудников все колонки e — NULL</span>
+<span class="k">SELECT</span> d.* <span class="k">FROM</span> department d
+  <span class="k">LEFT</span> <span class="k">JOIN</span> employee e
+         <span class="k">ON</span> e.department_id = d.id
+ <span class="k">WHERE</span> e.id <span class="k">IS</span> <span class="k">NULL</span>;</pre>
+<pre class="wide"><span class="c">-- 2. сотрудники богаче руководителя: self-join, m — та же таблица в роли руководителя</span>
+<span class="k">SELECT</span> e.name, e.salary, m.name <span class="k">AS</span> manager
+  <span class="k">FROM</span> employee e <span class="k">JOIN</span> employee m <span class="k">ON</span> m.id = e.manager_id   <span class="c">-- у кого нет руководителя — выпадают</span>
+ <span class="k">WHERE</span> e.salary &gt; m.salary;</pre>
+<pre class="narrow"><span class="c">-- 2. сотрудники богаче руководителя:</span>
 <span class="c">-- self-join, m — та же таблица в роли</span>
 <span class="c">-- руководителя; у кого его нет — выпадают</span>
 <span class="k">SELECT</span> e.name, e.salary, m.name <span class="k">AS</span> manager
