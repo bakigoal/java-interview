@@ -10556,73 +10556,37 @@ client(id, name, city, region)
 <article id="q192" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">192. SQL-задача: нарастающий итог и баланс на дату</h2><div class="answer" hidden><div class="short"><p><b>Нарастающий итог</b> — оконная <b>SUM с ORDER BY</b>: для каждой строки сумма от начала до неё. Порядок должен быть <b>уникальным</b> (дата + id), иначе строки с одинаковым временем получат одинаковый итог.</p>
 <p><b>Баланс на дату</b> — сумма проводок до даты. Для частых запросов по длинной истории хранят <b>ежедневные снимки остатков</b> и досчитывают обороты за день — так устроены банковские системы.</p></div>
     <div class="more">
-<pre class="wide"><span class="k">SELECT</span> account_id, created_at, amount,
-       sum(amount) <span class="k">OVER</span> (<span class="k">PARTITION</span> <span class="k">BY</span> account_id
-                         <span class="k">ORDER</span> <span class="k">BY</span> created_at, id) <span class="k">AS</span> balance
+<pre class="wide"><span class="c">-- 1. нарастающий итог: у каждой проводки — баланс счёта после неё</span>
+<span class="k">SELECT</span> account_id, created_at, amount,
+       sum(amount) <span class="k">OVER</span> (<span class="k">PARTITION</span> <span class="k">BY</span> account_id      <span class="c">-- отдельный итог на каждый счёт</span>
+                         <span class="k">ORDER</span> <span class="k">BY</span> created_at, id)     <span class="c">-- id — тай-брейк для одинакового времени</span>
+           <span class="k">AS</span> balance
   <span class="k">FROM</span> ledger_entry;
 
+<span class="c">-- 2. баланс на дату: сумма всех проводок до неё</span>
 <span class="k">SELECT</span> account_id, sum(amount) <span class="k">AS</span> balance
   <span class="k">FROM</span> ledger_entry
  <span class="k">WHERE</span> created_at &lt; <span class="k">date</span> <span class="s">'2026-10-01'</span>
  <span class="k">GROUP</span> <span class="k">BY</span> account_id;</pre>
-<pre class="narrow"><span class="k">SELECT</span> account_id, created_at, amount,
+<pre class="narrow"><span class="c">-- 1. нарастающий итог: у каждой проводки</span>
+<span class="c">-- баланс счёта после неё</span>
+<span class="k">SELECT</span> account_id, created_at, amount,
        sum(amount) <span class="k">OVER</span> (
+           <span class="c">-- отдельный итог на каждый счёт</span>
            <span class="k">PARTITION</span> <span class="k">BY</span> account_id
+           <span class="c">-- id — тай-брейк для одинакового</span>
+           <span class="c">-- времени</span>
            <span class="k">ORDER</span> <span class="k">BY</span> created_at, id
        ) <span class="k">AS</span> balance
   <span class="k">FROM</span> ledger_entry;
 
+<span class="c">-- 2. баланс на дату: сумма всех проводок</span>
+<span class="c">-- до неё</span>
 <span class="k">SELECT</span> account_id, sum(amount) <span class="k">AS</span> balance
   <span class="k">FROM</span> ledger_entry
  <span class="k">WHERE</span> created_at &lt; <span class="k">date</span> <span class="s">'2026-10-01'</span>
  <span class="k">GROUP</span> <span class="k">BY</span> account_id;</pre>
-    <ul><li>В ORDER BY окна нужен уникальный порядок (<code>created_at, id</code>): при равных датах рамка по умолчанию RANGE включит все «одновременные» строки сразу.</li></ul>
-<pre class="wide"><span class="c">-- баланс на конец каждого дня, включая дни без операций</span>
-<span class="k">SELECT</span> d::<span class="k">date</span> <span class="k">AS</span> day,
-       sum(coalesce(t.day_sum, <span class="n">0</span>)) <span class="k">OVER</span> (<span class="k">ORDER</span> <span class="k">BY</span> d) <span class="k">AS</span> balance
-  <span class="k">FROM</span> generate_series(<span class="k">date</span> <span class="s">'2026-10-01'</span>, <span class="k">date</span> <span class="s">'2026-10-31'</span>, <span class="k">interval</span> <span class="s">'1 day'</span>) d
-  <span class="k">LEFT</span> <span class="k">JOIN</span> (<span class="k">SELECT</span> created_at::<span class="k">date</span> <span class="k">AS</span> day, sum(amount) <span class="k">AS</span> day_sum
-               <span class="k">FROM</span> ledger_entry <span class="k">WHERE</span> account_id = :acc
-              <span class="k">GROUP</span> <span class="k">BY</span> <span class="n">1</span>) t <span class="k">ON</span> t.day = d::<span class="k">date</span>;
-<span class="c">-- если были операции до 1 октября — прибавить начальный остаток (сумма всех проводок до этой даты)</span>
-
-<span class="c">-- минимальный остаток за месяц — уходил ли счёт в минус</span>
-<span class="k">SELECT</span> min(balance) <span class="k">FROM</span> (
-    <span class="k">SELECT</span> sum(amount) <span class="k">OVER</span> (<span class="k">ORDER</span> <span class="k">BY</span> created_at, id) <span class="k">AS</span> balance
-      <span class="k">FROM</span> ledger_entry <span class="k">WHERE</span> account_id = :acc) t;</pre>
-<pre class="narrow"><span class="c">-- баланс на конец каждого дня,</span>
-<span class="c">-- включая дни без операций</span>
-<span class="k">SELECT</span> d::<span class="k">date</span> <span class="k">AS</span> day,
-       sum(coalesce(t.day_sum, <span class="n">0</span>))
-           <span class="k">OVER</span> (<span class="k">ORDER</span> <span class="k">BY</span> d) <span class="k">AS</span> balance
-  <span class="k">FROM</span> generate_series(<span class="k">date</span> <span class="s">'2026-10-01'</span>,
-                       <span class="k">date</span> <span class="s">'2026-10-31'</span>,
-                       <span class="k">interval</span> <span class="s">'1 day'</span>) d
-  <span class="k">LEFT</span> <span class="k">JOIN</span> (<span class="k">SELECT</span> created_at::<span class="k">date</span> <span class="k">AS</span> day,
-                    sum(amount) <span class="k">AS</span> day_sum
-               <span class="k">FROM</span> ledger_entry
-              <span class="k">WHERE</span> account_id = :acc
-              <span class="k">GROUP</span> <span class="k">BY</span> <span class="n">1</span>) t
-         <span class="k">ON</span> t.day = d::<span class="k">date</span>;
-<span class="c">-- если были операции до 1 октября —</span>
-<span class="c">-- прибавить начальный остаток (сумма всех</span>
-<span class="c">-- проводок до этой даты)</span>
-
-<span class="c">-- минимальный остаток за месяц —</span>
-<span class="c">-- уходил ли счёт в минус</span>
-<span class="k">SELECT</span> min(balance) <span class="k">FROM</span> (
-    <span class="k">SELECT</span> sum(amount) <span class="k">OVER</span> (
-               <span class="k">ORDER</span> <span class="k">BY</span> created_at, id
-           ) <span class="k">AS</span> balance
-      <span class="k">FROM</span> ledger_entry
-     <span class="k">WHERE</span> account_id = :acc) t;</pre>
-      <p>Производительность на больших объёмах: нарастающий итог по всей истории счёта с миллионами проводок — дорого на каждый запрос. Стандартное решение — ежедневные снимки остатков (<code>balance_snapshot(account_id, day, balance)</code>), которые строит ночная задача или триггер при закрытии дня; баланс на дату = снимок на начало дня + проводки за этот день. Это и есть классика банковских систем: остаток на начало операционного дня + обороты.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Рамка окна</th><th>Нарастающий итог при одинаковом created_at</th></tr>
-        <tr><td>по умолчанию (RANGE … CURRENT ROW)</td><td>все строки с этим временем получают одинаковый итог (включая друг друга)</td></tr>
-        <tr><td><code><span class="t">ROWS</span> <span class="t">BETWEEN</span> <span class="t">UNBOUNDED</span> <span class="t">PRECEDING</span> <span class="t">AND</span> <span class="t">CURRENT</span> <span class="t">ROW</span></code></td><td>построчный итог в порядке сортировки</td></tr>
-        <tr><td>ORDER BY created_at, id</td><td>уникальный порядок — RANGE и ROWS совпадают</td></tr>
-      </table></div>
+    <ul><li>Без <code>id</code> в ORDER BY рамка по умолчанию (RANGE) включит все проводки с тем же <code>created_at</code> сразу — у них будет одинаковый баланс.</li><li>Нарастающий итог по истории с миллионами проводок дорог на каждый запрос: хранят снимок остатка на начало дня и прибавляют обороты за день.</li></ul>
     </div></div></article>
 <article id="q193" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">193. SQL-задача: условная агрегация и отчёт по дням</h2><div class="answer" hidden><div class="short"><p>Несколько счётчиков за один проход — <b>условная агрегация</b>: в PostgreSQL агрегат с <b>FILTER</b>, переносимо — <code>sum(<span class="k">case</span> when ... then <span class="n">1</span> <span class="k">else</span> <span class="n">0</span> end)</code>. HAVING фильтрует уже посчитанные группы.</p>
 <ul><li>Дни без данных в GROUP BY не появятся — <b>generate_series</b> и LEFT JOIN.</li><li><b>Целочисленное деление</b> при подсчёте процентов.</li><li>Граница суток — в нужном <b>часовом поясе</b>.</li></ul></div>
