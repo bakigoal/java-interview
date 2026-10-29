@@ -10496,17 +10496,27 @@ client(id, name, city, region)
 <article id="q190" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">190. SQL-задача: найти и удалить дубликаты</h2><div class="answer" hidden><div class="short"><ul><li><b>Найти</b>: GROUP BY по полям, определяющим дубль, + <code><span class="t">HAVING</span> count(*) &gt; <span class="n">1</span></code>.</li><li><b>Удалить</b>, оставив одну: <b>row_number()</b> внутри группы и удалить номера больше одного.</li><li>После очистки — <b>уникальный индекс</b>, иначе дубли вернутся.</li></ul>
 <p>Уточнить у интервьюера, какую запись оставлять.</p></div>
     <div class="more">
-<pre class="wide"><span class="k">SELECT</span> email, count(*) <span class="k">FROM</span> client <span class="k">GROUP</span> <span class="k">BY</span> email <span class="k">HAVING</span> count(*) &gt; <span class="n">1</span>;
+<pre class="wide"><span class="c">-- 1. найти: email, которые встречаются больше одного раза</span>
+<span class="k">SELECT</span> email, count(*) <span class="k">FROM</span> client <span class="k">GROUP</span> <span class="k">BY</span> email <span class="k">HAVING</span> count(*) &gt; <span class="n">1</span>;
 
+<span class="c">-- 2. удалить: внутри каждого email пронумеровать строки по id, всё кроме первой — дубли</span>
 <span class="k">DELETE</span> <span class="k">FROM</span> client <span class="k">WHERE</span> id <span class="k">IN</span> (
     <span class="k">SELECT</span> id <span class="k">FROM</span> (
         <span class="k">SELECT</span> id, row_number() <span class="k">OVER</span> (<span class="k">PARTITION</span> <span class="k">BY</span> email <span class="k">ORDER</span> <span class="k">BY</span> id) <span class="k">AS</span> rn
           <span class="k">FROM</span> client) t
-     <span class="k">WHERE</span> rn &gt; <span class="n">1</span>);
+     <span class="k">WHERE</span> rn &gt; <span class="n">1</span>);   <span class="c">-- остаётся минимальный id</span>
+
+<span class="c">-- 3. не дать дублям вернуться; CONCURRENTLY — без блокировки записи в таблицу на время построения</span>
 <span class="k">CREATE</span> <span class="k">UNIQUE</span> <span class="k">INDEX</span> <span class="k">CONCURRENTLY</span> ux_client_email <span class="k">ON</span> client (email);</pre>
-<pre class="narrow"><span class="k">SELECT</span> email, count(*) <span class="k">FROM</span> client
+<pre class="narrow"><span class="c">-- 1. найти: email, которые встречаются</span>
+<span class="c">-- больше одного раза</span>
+<span class="k">SELECT</span> email, count(*) <span class="k">FROM</span> client
  <span class="k">GROUP</span> <span class="k">BY</span> email <span class="k">HAVING</span> count(*) &gt; <span class="n">1</span>;
 
+<span class="c">-- 2. удалить: внутри каждого email</span>
+<span class="c">-- пронумеровать строки по id,</span>
+<span class="c">-- всё кроме первой — дубли</span>
+<span class="c">-- остаётся минимальный id</span>
 <span class="k">DELETE</span> <span class="k">FROM</span> client <span class="k">WHERE</span> id <span class="k">IN</span> (
     <span class="k">SELECT</span> id <span class="k">FROM</span> (
         <span class="k">SELECT</span> id, row_number() <span class="k">OVER</span> (
@@ -10514,6 +10524,10 @@ client(id, name, city, region)
                    <span class="k">ORDER</span> <span class="k">BY</span> id) <span class="k">AS</span> rn
           <span class="k">FROM</span> client) t
      <span class="k">WHERE</span> rn &gt; <span class="n">1</span>);
+
+<span class="c">-- 3. не дать дублям вернуться;</span>
+<span class="c">-- CONCURRENTLY — без блокировки записи</span>
+<span class="c">-- в таблицу на время построения</span>
 <span class="k">CREATE</span> <span class="k">UNIQUE</span> <span class="k">INDEX</span> <span class="k">CONCURRENTLY</span>
     ux_client_email <span class="k">ON</span> client (email);</pre>
     <ul><li><code><span class="t">ORDER</span> <span class="t">BY</span></code> в окне решает, какая запись останется: <code>id</code> — самая ранняя, <code>id <span class="t">DESC</span></code> — самая свежая.</li><li>Если на дубли ссылаются другие таблицы (FK) — сначала перевесить ссылки на оставляемую запись, потом удалять.</li></ul>
