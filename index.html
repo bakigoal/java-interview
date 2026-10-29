@@ -607,7 +607,7 @@ kbd { min-width: 20px; height: 20px; box-sizing: border-box; display: inline-fle
 <a href="#q186" data-k="58f09552ce" data-ci="7"><span class="num">186</span><span class="q">JOIN и ловушки с NULL</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q187" data-k="f46584af13" data-ci="7"><span class="num">187</span><span class="q">Оконные функции: как работают, ранжирование, LAG/LEAD, рамки, топ-N в группе</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q188" data-k="93bca01e89" data-ci="7"><span class="num">188</span><span class="q">CTE (WITH): что это, материализация, CTE с INSERT/UPDATE/DELETE</span><i class="st ico none"></i><span class="sr st-t"></span></a>
-<a href="#q189" data-k="72416b0354" data-ci="7"><span class="num">189</span><span class="q">Рекурсивный CTE: обойти дерево подразделений</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q189" data-k="79cfec75b3" data-ci="7"><span class="num">189</span><span class="q">Рекурсивный CTE: как выполняется, обход дерева вниз и вверх, циклы</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q190" data-k="9610ec6680" data-ci="7"><span class="num">190</span><span class="q">SQL-задача: найти и удалить дубликаты</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q191" data-k="0d265ec696" data-ci="7"><span class="num">191</span><span class="q">SQL-задача: последний платёж каждого клиента</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q192" data-k="26f57fccc6" data-ci="7"><span class="num">192</span><span class="q">SQL-задача: нарастающий итог и баланс на дату</span><i class="st ico none"></i><span class="sr st-t"></span></a>
@@ -10267,95 +10267,231 @@ client(id, name, city, region)
       <p>Из Java: в JPQL CTE нет, в HQL они есть с Hibernate 6.2 (включая рекурсивные); обычно пишут native query. Spring Data <code><span class="a">@Query</span>(nativeQuery = <span class="k">true</span>)</code> с DML внутри WITH требует <code><span class="a">@Modifying</span></code>, если запрос ничего не возвращает.</p>
 <p class="follow"><b>CTE быстрее подзапроса?</b> С PG 12 при одной ссылке это одно и то же; до PG 12 часто медленнее — фильтр не проталкивался внутрь. <b>Как посчитать дорогой подзапрос один раз и использовать дважды?</b> CTE с двумя ссылками или <code><span class="t">AS</span> <span class="t">MATERIALIZED</span></code>. <b>Есть ли CTE в MySQL?</b> С MySQL 8.0, включая рекурсивные, но без DML внутри WITH.</p>
     </div></div></article>
-<article id="q189" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">189. Рекурсивный CTE: обойти дерево подразделений</h2><div class="answer" hidden><div class="short"><p><b>WITH RECURSIVE</b> = стартовая часть + рекурсивная, присоединяющая следующий уровень к найденным строкам; останавливается, когда новых строк нет. Так <b>одним запросом</b> обходят дерево (все подразделения внутри заданного) вместо N запросов из приложения.</p>
-<p>Защита от циклов — ограничение глубины или <b>CYCLE</b> (PostgreSQL 14+). Альтернативы для деревьев — <b>materialized path</b> (ltree) и <b>closure table</b>.</p></div>
+<article id="q189" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">189. Рекурсивный CTE: как выполняется, обход дерева вниз и вверх, циклы</h2><div class="answer" hidden><div class="short"><p><b>WITH RECURSIVE</b> = <b>стартовая часть</b> + <code><span class="t">UNION</span> <span class="t">ALL</span></code> + <b>рекурсивная часть</b>, которая присоединяет следующий уровень к строкам, найденным на прошлом шаге. Останавливается, когда шаг не вернул ни одной строки. Так <b>одним запросом</b> обходят дерево (все подразделения внутри заданного, цепочку до корня) вместо N запросов из приложения.</p>
+<ul><li>Рекурсивная часть видит <b>только строки прошлой итерации</b>, а не весь накопленный результат.</li><li>Цикл в данных (A → B → A) — бесконечный запрос. Защита: <b>CYCLE</b> (PostgreSQL 14+), массив пройденных id или ограничение глубины.</li><li>Альтернативные модели деревьев — <b>materialized path</b> (ltree) и <b>closure table</b>.</li></ul></div>
     <div class="more">
+      <p>Примеры — на дереве подразделений <code>department(id, parent_id, name)</code>:</p>
+<div class="table-wrap"><table>
+        <tr><th>id</th><th>parent_id</th><th>name</th></tr>
+        <tr><td>1</td><td>NULL</td><td>Компания</td></tr>
+        <tr><td>2</td><td>1</td><td>IT</td></tr>
+        <tr><td>3</td><td>1</td><td>HR</td></tr>
+        <tr><td>4</td><td>2</td><td>Backend</td></tr>
+        <tr><td>5</td><td>2</td><td>Frontend</td></tr>
+        <tr><td>6</td><td>4</td><td>Платежи</td></tr>
+      </table></div>
+<pre>Компания
+├── <span class="t">IT</span>
+│   ├── <span class="t">Backend</span>
+│   │   └── Платежи
+│   └── <span class="t">Frontend</span>
+└── <span class="t">HR</span></pre>
+      <p><b>1. Устройство на простейшем примере.</b> Числа от 1 до 5:</p>
+<pre><span class="k">WITH</span> <span class="k">RECURSIVE</span> n <span class="k">AS</span> (
+  <span class="k">SELECT</span> <span class="n">1</span> <span class="k">AS</span> x            <span class="c">-- старт</span>
+  <span class="k">UNION</span> <span class="k">ALL</span>
+  <span class="k">SELECT</span> x + <span class="n">1</span> <span class="k">FROM</span> n      <span class="c">-- шаг</span>
+   <span class="k">WHERE</span> x &lt; <span class="n">5</span>             <span class="c">-- остановка</span>
+)
+<span class="k">SELECT</span> x <span class="k">FROM</span> n;</pre>
+      <p>Результат — 1, 2, 3, 4, 5. Как это выполняется:</p>
+<ul>
+      <li>стартовая часть даёт первую <b>рабочую таблицу</b> (<code>x = <span class="n">1</span></code>) и попадает в результат;</li>
+      <li>рекурсивная часть выполняется над рабочей таблицей: <code>n</code> внутри неё означает «строки прошлой итерации», а не весь результат;</li>
+      <li>её строки добавляются в результат и становятся новой рабочей таблицей;</li>
+      <li>шаг вернул 0 строк (при <code>x = <span class="n">5</span></code> условие ложно) — конец.</li>
+    </ul>
+      <p><b>2. Вниз по дереву: всё внутри IT.</b> Стартовая часть — сам узел, шаг — дети узлов, найденных на прошлой итерации:</p>
 <pre class="wide"><span class="k">WITH</span> <span class="k">RECURSIVE</span> sub <span class="k">AS</span> (
-    <span class="k">SELECT</span> id, parent_id, name, <span class="n">1</span> <span class="k">AS</span> depth <span class="k">FROM</span> department <span class="k">WHERE</span> id = :root
+  <span class="k">SELECT</span> id, name, <span class="n">1</span> <span class="k">AS</span> depth <span class="k">FROM</span> department <span class="k">WHERE</span> id = <span class="n">2</span>
   <span class="k">UNION</span> <span class="k">ALL</span>
-    <span class="k">SELECT</span> d.id, d.parent_id, d.name, s.depth + <span class="n">1</span>
-      <span class="k">FROM</span> department d <span class="k">JOIN</span> sub s <span class="k">ON</span> d.parent_id = s.id
+  <span class="k">SELECT</span> d.id, d.name, s.depth + <span class="n">1</span>
+    <span class="k">FROM</span> department d <span class="k">JOIN</span> sub s <span class="k">ON</span> d.parent_id = s.id
 )
-<span class="k">SELECT</span> * <span class="k">FROM</span> sub <span class="k">ORDER</span> <span class="k">BY</span> depth;</pre>
+<span class="k">SELECT</span> * <span class="k">FROM</span> sub;</pre>
 <pre class="narrow"><span class="k">WITH</span> <span class="k">RECURSIVE</span> sub <span class="k">AS</span> (
-    <span class="k">SELECT</span> id, parent_id, name, <span class="n">1</span> <span class="k">AS</span> depth
-      <span class="k">FROM</span> department
-     <span class="k">WHERE</span> id = :root
+  <span class="k">SELECT</span> id, name, <span class="n">1</span> <span class="k">AS</span> depth
+    <span class="k">FROM</span> department
+   <span class="k">WHERE</span> id = <span class="n">2</span>
   <span class="k">UNION</span> <span class="k">ALL</span>
-    <span class="k">SELECT</span> d.id, d.parent_id, d.name,
-           s.depth + <span class="n">1</span>
-      <span class="k">FROM</span> department d
-      <span class="k">JOIN</span> sub s <span class="k">ON</span> d.parent_id = s.id
+  <span class="k">SELECT</span> d.id, d.name, s.depth + <span class="n">1</span>
+    <span class="k">FROM</span> department d
+    <span class="k">JOIN</span> sub s <span class="k">ON</span> d.parent_id = s.id
 )
-<span class="k">SELECT</span> * <span class="k">FROM</span> sub <span class="k">ORDER</span> <span class="k">BY</span> depth;</pre>
-    <ul><li>При циклах в данных запрос не остановится — ограничивайте глубину или CYCLE (PostgreSQL 14+).</li></ul>
-<pre class="wide"><span class="c">-- путь от подразделения до корня и защита от циклов (PG 14+)</span>
-<span class="k">WITH</span> <span class="k">RECURSIVE</span> up <span class="k">AS</span> (
-    <span class="k">SELECT</span> id, parent_id, name <span class="k">FROM</span> department <span class="k">WHERE</span> id = :id
+<span class="k">SELECT</span> * <span class="k">FROM</span> sub;</pre>
+<div class="table-wrap"><table>
+        <tr><th>id</th><th>name</th><th>depth</th></tr>
+        <tr><td>2</td><td>IT</td><td>1</td></tr>
+        <tr><td>4</td><td>Backend</td><td>2</td></tr>
+        <tr><td>5</td><td>Frontend</td><td>2</td></tr>
+        <tr><td>6</td><td>Платежи</td><td>3</td></tr>
+      </table></div>
+      <p>По итерациям:</p>
+<div class="table-wrap"><table>
+        <tr><th>Итерация</th><th>Рабочая таблица</th></tr>
+        <tr><td>старт</td><td>IT</td></tr>
+        <tr><td>1</td><td>Backend, Frontend — дети IT</td></tr>
+        <tr><td>2</td><td>Платежи — дети Backend и Frontend</td></tr>
+        <tr><td>3</td><td>пусто — стоп</td></tr>
+      </table></div>
+      <p>Обход получается в ширину, но порядок строк без <code><span class="t">ORDER</span> <span class="t">BY</span></code> не гарантирован: нужна сортировка — добавьте <code><span class="t">ORDER</span> <span class="t">BY</span> depth</code> или путь (раздел 4).</p>
+      <p><b>3. Вверх: цепочка до корня</b> (хлебные крошки, «все руководители сотрудника»). Отличается только условие соединения — ищем не детей, а родителя:</p>
+<pre class="wide"><span class="k">WITH</span> <span class="k">RECURSIVE</span> up <span class="k">AS</span> (
+  <span class="k">SELECT</span> id, parent_id, name <span class="k">FROM</span> department <span class="k">WHERE</span> id = <span class="n">6</span>
   <span class="k">UNION</span> <span class="k">ALL</span>
-    <span class="k">SELECT</span> d.id, d.parent_id, d.name
-      <span class="k">FROM</span> department d <span class="k">JOIN</span> up <span class="k">ON</span> d.id = up.parent_id
-) CYCLE id <span class="k">SET</span> is_cycle <span class="k">USING</span> path
-<span class="k">SELECT</span> name <span class="k">FROM</span> up <span class="k">WHERE</span> <span class="k">NOT</span> is_cycle;
-
-<span class="c">-- до PG 14 — путь массивом и проверка вручную</span>
-<span class="k">WITH</span> <span class="k">RECURSIVE</span> sub <span class="k">AS</span> (
-    <span class="k">SELECT</span> id, parent_id, ARRAY[id] <span class="k">AS</span> path <span class="k">FROM</span> department <span class="k">WHERE</span> parent_id <span class="k">IS</span> <span class="k">NULL</span>
-  <span class="k">UNION</span> <span class="k">ALL</span>
-    <span class="k">SELECT</span> d.id, d.parent_id, s.path || d.id
-      <span class="k">FROM</span> department d <span class="k">JOIN</span> sub s <span class="k">ON</span> d.parent_id = s.id
-     <span class="k">WHERE</span> d.id &lt;&gt; <span class="k">ALL</span> (s.path)          <span class="c">-- не заходить в уже пройденный узел</span>
+  <span class="k">SELECT</span> d.id, d.parent_id, d.name
+    <span class="k">FROM</span> department d <span class="k">JOIN</span> up u <span class="k">ON</span> d.id = u.parent_id
 )
-<span class="k">SELECT</span> * <span class="k">FROM</span> sub;
-
-<span class="c">-- сумма зарплат по поддереву каждого подразделения</span>
-<span class="k">WITH</span> <span class="k">RECURSIVE</span> tree <span class="k">AS</span> (
-    <span class="k">SELECT</span> id <span class="k">AS</span> root, id <span class="k">FROM</span> department
+<span class="k">SELECT</span> * <span class="k">FROM</span> up;</pre>
+<pre class="narrow"><span class="k">WITH</span> <span class="k">RECURSIVE</span> up <span class="k">AS</span> (
+  <span class="k">SELECT</span> id, parent_id, name
+    <span class="k">FROM</span> department
+   <span class="k">WHERE</span> id = <span class="n">6</span>
   <span class="k">UNION</span> <span class="k">ALL</span>
-    <span class="k">SELECT</span> t.root, d.id <span class="k">FROM</span> department d <span class="k">JOIN</span> tree t <span class="k">ON</span> d.parent_id = t.id
+  <span class="k">SELECT</span> d.id, d.parent_id, d.name
+    <span class="k">FROM</span> department d
+    <span class="k">JOIN</span> up u <span class="k">ON</span> d.id = u.parent_id
 )
-<span class="k">SELECT</span> t.root, sum(e.salary) <span class="k">FROM</span> tree t <span class="k">JOIN</span> employee e <span class="k">ON</span> e.department_id = t.id <span class="k">GROUP</span> <span class="k">BY</span> t.root;</pre>
-<pre class="narrow"><span class="c">-- путь от подразделения до корня</span>
-<span class="c">-- и защита от циклов (PG 14+)</span>
-<span class="k">WITH</span> <span class="k">RECURSIVE</span> up <span class="k">AS</span> (
-    <span class="k">SELECT</span> id, parent_id, name
-      <span class="k">FROM</span> department <span class="k">WHERE</span> id = :id
+<span class="k">SELECT</span> * <span class="k">FROM</span> up;</pre>
+<div class="table-wrap"><table>
+        <tr><th>id</th><th>parent_id</th><th>name</th></tr>
+        <tr><td>6</td><td>4</td><td>Платежи</td></tr>
+        <tr><td>4</td><td>2</td><td>Backend</td></tr>
+        <tr><td>2</td><td>1</td><td>IT</td></tr>
+        <tr><td>1</td><td>NULL</td><td>Компания</td></tr>
+      </table></div>
+      <p>У корня <code>parent_id = <span class="t">NULL</span></code>, соединение ничего не находит — рекурсия останавливается сама.</p>
+      <p><b>4. Путь от корня.</b> В шаге можно накапливать значение — строку пути или массив id. Сортировка по пути выводит дерево в привычном порядке:</p>
+<pre class="wide"><span class="k">WITH</span> <span class="k">RECURSIVE</span> t <span class="k">AS</span> (
+  <span class="k">SELECT</span> id, name, name <span class="k">AS</span> path <span class="k">FROM</span> department <span class="k">WHERE</span> parent_id <span class="k">IS</span> <span class="k">NULL</span>
   <span class="k">UNION</span> <span class="k">ALL</span>
-    <span class="k">SELECT</span> d.id, d.parent_id, d.name
-      <span class="k">FROM</span> department d
-      <span class="k">JOIN</span> up <span class="k">ON</span> d.id = up.parent_id
-) CYCLE id <span class="k">SET</span> is_cycle <span class="k">USING</span> path
-<span class="k">SELECT</span> name <span class="k">FROM</span> up <span class="k">WHERE</span> <span class="k">NOT</span> is_cycle;
-
-<span class="c">-- до PG 14 — путь массивом и проверка вручную</span>
-<span class="k">WITH</span> <span class="k">RECURSIVE</span> sub <span class="k">AS</span> (
-    <span class="k">SELECT</span> id, parent_id, ARRAY[id] <span class="k">AS</span> path
-      <span class="k">FROM</span> department
-     <span class="k">WHERE</span> parent_id <span class="k">IS</span> <span class="k">NULL</span>
-  <span class="k">UNION</span> <span class="k">ALL</span>
-    <span class="k">SELECT</span> d.id, d.parent_id, s.path || d.id
-      <span class="k">FROM</span> department d
-      <span class="k">JOIN</span> sub s <span class="k">ON</span> d.parent_id = s.id
-     <span class="c">-- не заходить в уже пройденный узел</span>
-     <span class="k">WHERE</span> d.id &lt;&gt; <span class="k">ALL</span> (s.path)
+  <span class="k">SELECT</span> d.id, d.name, t.path || <span class="s">' / '</span> || d.name
+    <span class="k">FROM</span> department d <span class="k">JOIN</span> t <span class="k">ON</span> d.parent_id = t.id
 )
-<span class="k">SELECT</span> * <span class="k">FROM</span> sub;
-
-<span class="c">-- сумма зарплат по поддереву каждого</span>
-<span class="c">-- подразделения</span>
-<span class="k">WITH</span> <span class="k">RECURSIVE</span> tree <span class="k">AS</span> (
-    <span class="k">SELECT</span> id <span class="k">AS</span> root, id <span class="k">FROM</span> department
+<span class="k">SELECT</span> id, path <span class="k">FROM</span> t <span class="k">ORDER</span> <span class="k">BY</span> path;</pre>
+<pre class="narrow"><span class="k">WITH</span> <span class="k">RECURSIVE</span> t <span class="k">AS</span> (
+  <span class="k">SELECT</span> id, name, name <span class="k">AS</span> path
+    <span class="k">FROM</span> department
+   <span class="k">WHERE</span> parent_id <span class="k">IS</span> <span class="k">NULL</span>
   <span class="k">UNION</span> <span class="k">ALL</span>
-    <span class="k">SELECT</span> t.root, d.id
-      <span class="k">FROM</span> department d
-      <span class="k">JOIN</span> tree t <span class="k">ON</span> d.parent_id = t.id
+  <span class="k">SELECT</span> d.id, d.name,
+         t.path || <span class="s">' / '</span> || d.name
+    <span class="k">FROM</span> department d
+    <span class="k">JOIN</span> t <span class="k">ON</span> d.parent_id = t.id
 )
-<span class="k">SELECT</span> t.root, sum(e.salary)
+<span class="k">SELECT</span> id, path <span class="k">FROM</span> t <span class="k">ORDER</span> <span class="k">BY</span> path;</pre>
+<div class="table-wrap"><table>
+        <tr><th>id</th><th>path</th></tr>
+        <tr><td>1</td><td>Компания</td></tr>
+        <tr><td>3</td><td>Компания / HR</td></tr>
+        <tr><td>2</td><td>Компания / IT</td></tr>
+        <tr><td>4</td><td>Компания / IT / Backend</td></tr>
+        <tr><td>6</td><td>Компания / IT / Backend / Платежи</td></tr>
+        <tr><td>5</td><td>Компания / IT / Frontend</td></tr>
+      </table></div>
+      <p><b>5. Агрегат по поддереву:</b> фонд оплаты труда каждого подразделения вместе со всеми вложенными. Сотрудники — <code>employee(name, department_id, salary)</code>: Анна (Backend, 300), Борис (Frontend, 200), Вера (Платежи, 250), Глеб (HR, 100). Рекурсия строит пары «корень поддерева — узел внутри него», дальше обычный <code><span class="t">GROUP</span> <span class="t">BY</span></code>:</p>
+<pre class="wide"><span class="k">WITH</span> <span class="k">RECURSIVE</span> tree <span class="k">AS</span> (
+  <span class="k">SELECT</span> id <span class="k">AS</span> root, id <span class="k">FROM</span> department
+  <span class="k">UNION</span> <span class="k">ALL</span>
+  <span class="k">SELECT</span> t.root, d.id <span class="k">FROM</span> department d <span class="k">JOIN</span> tree t <span class="k">ON</span> d.parent_id = t.id
+)
+<span class="k">SELECT</span> r.name, sum(e.salary) <span class="k">AS</span> total
   <span class="k">FROM</span> tree t
+  <span class="k">JOIN</span> department r <span class="k">ON</span> r.id = t.root
   <span class="k">JOIN</span> employee e <span class="k">ON</span> e.department_id = t.id
- <span class="k">GROUP</span> <span class="k">BY</span> t.root;</pre>
-      <p>Как выполняется: стартовая часть даёт рабочую таблицу; рекурсивная часть выполняется над рабочей таблицей предыдущего шага, результат добавляется к итогу и становится новой рабочей таблицей; когда шаг ничего не вернул — конец. <code><span class="t">UNION</span></code> вместо <code><span class="t">UNION</span> <span class="t">ALL</span></code> удаляет дубликаты и тоже спасает от зацикливания, но дороже.</p>
-      <p>Альтернативные модели деревьев, о которых спрашивают: materialized path (<code>ltree</code> в PostgreSQL: <code>'<span class="n">1.5</span>.<span class="n">12</span>'</code>, поиск поддерева — по префиксу с GiST-индексом), nested sets (быстрое чтение поддерева, дорогие вставки), closure table (все пары предок–потомок — быстрые запросы, больше места). Adjacency list + рекурсивный CTE — самая простая и обычно достаточная.</p>
+ <span class="k">GROUP</span> <span class="k">BY</span> r.id, r.name
+ <span class="k">ORDER</span> <span class="k">BY</span> r.id;</pre>
+<pre class="narrow"><span class="k">WITH</span> <span class="k">RECURSIVE</span> tree <span class="k">AS</span> (
+  <span class="k">SELECT</span> id <span class="k">AS</span> root, id <span class="k">FROM</span> department
+  <span class="k">UNION</span> <span class="k">ALL</span>
+  <span class="k">SELECT</span> t.root, d.id
+    <span class="k">FROM</span> department d
+    <span class="k">JOIN</span> tree t <span class="k">ON</span> d.parent_id = t.id
+)
+<span class="k">SELECT</span> r.name, sum(e.salary) <span class="k">AS</span> total
+  <span class="k">FROM</span> tree t
+  <span class="k">JOIN</span> department r <span class="k">ON</span> r.id = t.root
+  <span class="k">JOIN</span> employee e
+    <span class="k">ON</span> e.department_id = t.id
+ <span class="k">GROUP</span> <span class="k">BY</span> r.id, r.name
+ <span class="k">ORDER</span> <span class="k">BY</span> r.id;</pre>
+<div class="table-wrap"><table>
+        <tr><th>name</th><th>total</th></tr>
+        <tr><td>Компания</td><td>850</td></tr>
+        <tr><td>IT</td><td>750</td></tr>
+        <tr><td>HR</td><td>100</td></tr>
+        <tr><td>Backend</td><td>550</td></tr>
+        <tr><td>Frontend</td><td>200</td></tr>
+        <tr><td>Платежи</td><td>250</td></tr>
+      </table></div>
+      <p>Агрегат — снаружи: в самой рекурсивной части агрегатные функции запрещены (<code>aggregate functions are not allowed in a recursive query's recursive term</code>).</p>
+      <p><b>6. Циклы.</b> Испортим данные: <code><span class="k">UPDATE</span> department <span class="k">SET</span> parent_id = <span class="n">6</span> <span class="k">WHERE</span> id = <span class="n">2</span></code> — теперь IT вложен в Платежи, а Платежи в IT. Запрос из раздела 2 больше не завершится: IT → Backend → Платежи → IT → … Защита в PostgreSQL 14+ — <code><span class="t">CYCLE</span></code>: он сам ведёт путь и помечает строку, которая вернулась в уже пройденный узел, и дальше её не раскрывает:</p>
+<pre class="wide"><span class="k">WITH</span> <span class="k">RECURSIVE</span> sub <span class="k">AS</span> (
+  <span class="k">SELECT</span> id, name <span class="k">FROM</span> department <span class="k">WHERE</span> id = <span class="n">2</span>
+  <span class="k">UNION</span> <span class="k">ALL</span>
+  <span class="k">SELECT</span> d.id, d.name <span class="k">FROM</span> department d <span class="k">JOIN</span> sub s <span class="k">ON</span> d.parent_id = s.id
+) CYCLE id <span class="k">SET</span> is_cycle <span class="k">USING</span> path
+<span class="k">SELECT</span> id, name, is_cycle, path <span class="k">FROM</span> sub;</pre>
+<pre class="narrow"><span class="k">WITH</span> <span class="k">RECURSIVE</span> sub <span class="k">AS</span> (
+  <span class="k">SELECT</span> id, name
+    <span class="k">FROM</span> department
+   <span class="k">WHERE</span> id = <span class="n">2</span>
+  <span class="k">UNION</span> <span class="k">ALL</span>
+  <span class="k">SELECT</span> d.id, d.name
+    <span class="k">FROM</span> department d
+    <span class="k">JOIN</span> sub s <span class="k">ON</span> d.parent_id = s.id
+) CYCLE id <span class="k">SET</span> is_cycle <span class="k">USING</span> path
+<span class="k">SELECT</span> id, name, is_cycle, path <span class="k">FROM</span> sub;</pre>
+<div class="table-wrap"><table>
+        <tr><th>id</th><th>name</th><th>is_cycle</th><th>path</th></tr>
+        <tr><td>2</td><td>IT</td><td>false</td><td>{(2)}</td></tr>
+        <tr><td>4</td><td>Backend</td><td>false</td><td>{(2),(4)}</td></tr>
+        <tr><td>5</td><td>Frontend</td><td>false</td><td>{(2),(5)}</td></tr>
+        <tr><td>6</td><td>Платежи</td><td>false</td><td>{(2),(4),(6)}</td></tr>
+        <tr><td>2</td><td>IT</td><td><b>true</b></td><td>{(2),(4),(6),(2)}</td></tr>
+      </table></div>
+      <p>До PG 14 — то же вручную: путь массивом и условие «не заходить в пройденный узел». Строки с повтором вообще не появляются:</p>
+<pre class="wide"><span class="k">WITH</span> <span class="k">RECURSIVE</span> sub <span class="k">AS</span> (
+  <span class="k">SELECT</span> id, name, ARRAY[id] <span class="k">AS</span> path <span class="k">FROM</span> department <span class="k">WHERE</span> id = <span class="n">2</span>
+  <span class="k">UNION</span> <span class="k">ALL</span>
+  <span class="k">SELECT</span> d.id, d.name, s.path || d.id
+    <span class="k">FROM</span> department d <span class="k">JOIN</span> sub s <span class="k">ON</span> d.parent_id = s.id
+   <span class="k">WHERE</span> d.id &lt;&gt; <span class="k">ALL</span> (s.path)
+)
+<span class="k">SELECT</span> * <span class="k">FROM</span> sub;</pre>
+<pre class="narrow"><span class="k">WITH</span> <span class="k">RECURSIVE</span> sub <span class="k">AS</span> (
+  <span class="k">SELECT</span> id, name, ARRAY[id] <span class="k">AS</span> path
+    <span class="k">FROM</span> department
+   <span class="k">WHERE</span> id = <span class="n">2</span>
+  <span class="k">UNION</span> <span class="k">ALL</span>
+  <span class="k">SELECT</span> d.id, d.name, s.path || d.id
+    <span class="k">FROM</span> department d
+    <span class="k">JOIN</span> sub s <span class="k">ON</span> d.parent_id = s.id
+   <span class="c">-- не заходить в пройденный узел</span>
+   <span class="k">WHERE</span> d.id &lt;&gt; <span class="k">ALL</span> (s.path)
+)
+<span class="k">SELECT</span> * <span class="k">FROM</span> sub;</pre>
+<div class="table-wrap"><table>
+        <tr><th>id</th><th>name</th><th>path</th></tr>
+        <tr><td>2</td><td>IT</td><td>{2}</td></tr>
+        <tr><td>4</td><td>Backend</td><td>{2,4}</td></tr>
+        <tr><td>5</td><td>Frontend</td><td>{2,5}</td></tr>
+        <tr><td>6</td><td>Платежи</td><td>{2,4,6}</td></tr>
+      </table></div>
+<ul>
+      <li><b>Ограничение глубины</b> (<code><span class="t">WHERE</span> s.depth &lt; <span class="n">100</span></code> в шаге) — самая грубая защита: запрос остановится, но строки цикла повторятся до лимита.</li>
+      <li><b><code><span class="t">UNION</span></code> вместо <code><span class="t">UNION</span> <span class="t">ALL</span></code></b> отбрасывает строки, которые уже есть в результате, и тоже останавливает цикл — но только если строка повторяется <b>целиком</b>. С колонкой <code>depth</code> строки «IT, 1» и «IT, 4» разные, и запрос из раздела 2 с UNION на зацикленных данных так и не завершится. К тому же UNION дороже: ищет дубликаты на каждом шаге.</li>
+    </ul>
+      <p><b>7. Производительность и альтернативы.</b> Каждый шаг — соединение рабочей таблицы с <code>department</code> по <code>parent_id</code>, поэтому нужен <b>индекс на parent_id</b>, иначе каждый уровень — полный проход по таблице. Модель «у строки есть parent_id» (adjacency list) + рекурсивный CTE — самая простая и обычно достаточная. Если дерево большое и читается намного чаще, чем меняется:</p>
+<div class="table-wrap"><table>
+        <tr><th>Модель</th><th>Как хранится</th><th>Чтение поддерева</th><th>Цена</th></tr>
+        <tr><td>Adjacency list</td><td><code>parent_id</code></td><td>рекурсивный CTE</td><td>перенос узла — один UPDATE</td></tr>
+        <tr><td>Materialized path</td><td>путь в строке: <code>'<span class="n">1.2</span>.<span class="n">4</span>'</code> (<code>ltree</code> в PostgreSQL)</td><td>по префиксу, GiST-индекс</td><td>перенос узла переписывает пути всего поддерева</td></tr>
+        <tr><td>Closure table</td><td>отдельная таблица всех пар «предок — потомок» с глубиной</td><td>обычный JOIN</td><td>место O(n·глубина), вставка добавляет пары со всеми предками</td></tr>
+        <tr><td>Nested sets</td><td>границы <code>lft</code>/<code>rgt</code></td><td><code><span class="t">BETWEEN</span></code></td><td>вставка сдвигает границы половины таблицы</td></tr>
+      </table></div>
+      <p>Из Java: в JPQL рекурсии нет, в HQL она есть с Hibernate 6.2; обычно пишут native query. Загружать дерево по уровням через ленивые <code><span class="a">@OneToMany</span> children</code> — это N+1 запросов: один рекурсивный CTE и сборка дерева в памяти по <code>parent_id</code> дешевле.</p>
+<p class="follow"><b>Порядок обхода?</b> Без ORDER BY не гарантирован; сортируют по depth (в ширину) или по пути (в глубину), в PG 14+ есть <code><span class="t">SEARCH</span> <span class="t">DEPTH</span> <span class="t">FIRST</span> <span class="t">BY</span> id <span class="t">SET</span> ord</code>. <b>Есть ли в MySQL?</b> С 8.0, <code><span class="t">CYCLE</span></code> нет — путь и проверка вручную. <b>Можно ли ссылаться на CTE в рекурсивной части дважды?</b> Нет — ровно одна ссылка, и не в агрегате и не в подзапросе.</p>
     </div></div></article>
 <article id="q190" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">190. SQL-задача: найти и удалить дубликаты</h2><div class="answer" hidden><div class="short"><ul><li><b>Найти</b>: GROUP BY по полям, определяющим дубль, + <code><span class="t">HAVING</span> count(*) &gt; <span class="n">1</span></code>.</li><li><b>Удалить</b>, оставив одну: <b>row_number()</b> внутри группы и удалить номера больше одного, или удалить строки, у которых есть дубль с меньшим id.</li><li>После очистки — <b>уникальный индекс</b>, иначе дубли вернутся.</li></ul>
 <p>Уточнить у интервьюера, какую запись оставлять.</p></div>
