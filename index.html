@@ -12348,7 +12348,7 @@ spring.jpa.properties.hibernate.order_updates=
 <article id="q214" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">214. Репликация и чтение с реплик <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li><b>Асинхронная</b> (по умолчанию) — реплика отстаёт, при переключении теряются последние транзакции.</li><li><b>Синхронная</b> — коммит есть на реплике, но каждый коммит ждёт её ответа.</li><li><b>Логическая</b> — выбранные таблицы, между версиями: миграции, CDC.</li></ul>
 <p>Ловушка чтения с реплик — <b>read-your-writes</b>: пользователь создал запись и сразу её не видит. «Свои» свежие данные читают <b>с мастера</b>.</p></div>
     <div class="more">
-<ul><li>Чтение с реплики сразу после записи — пользователь не видит своё изменение: «свои» данные читают с мастера. Failover — Patroni; в JDBC несколько хостов и <code>targetServerType=primary</code>. В Spring — маршрутизация по <code><span class="a">@Transactional</span>(readOnly = <span class="k">true</span>)</code> через AbstractRoutingDataSource.</li></ul>
+<ul><li>Чтение с реплики сразу после записи — пользователь не видит своё изменение: «свои» данные читают с мастера. Failover — Patroni; в JDBC несколько хостов и <code>targetServerType=primary</code>. В Spring — readOnly-транзакции на реплику через <code><span class="t">LazyConnectionDataSourceProxy</span></code> (пример ниже).</li></ul>
 <div class="table-wrap"><table>
         <tr><th>Вид</th><th>Как</th><th>Плюсы</th><th>Минусы</th></tr>
         <tr><td>Физическая потоковая (async)</td><td>реплика проигрывает WAL мастера, байт в байт</td><td>просто, реплика для чтения и failover</td><td>лаг; при failover теряются последние транзакции (RPO &gt; 0)</td></tr>
@@ -12366,6 +12366,137 @@ jdbc:postgresql:<span class="c">//pg1,pg2,pg3/app</span>
 # для чтения:
 #   targetServerType=preferSecondary
 #   &amp;loadBalanceHosts=<span class="k">true</span></pre>
+      <p><b>Spring Data JPA: запись на мастер, readOnly-транзакции на реплику.</b> Два пула и <code><span class="t">LazyConnectionDataSourceProxy</span></code> поверх них (Spring 6.1.2+): если транзакция помечена <code>readOnly</code>, соединение берётся из пула реплик.</p>
+<pre class="wide"><span class="p">app</span>:
+  <span class="p">datasource</span>:
+    <span class="p">primary</span>:
+      <span class="p">jdbc-url</span>: jdbc:postgresql://pg-primary:5432/app
+      <span class="p">username</span>: app
+      <span class="p">password</span>: ${DB_PASSWORD}
+      <span class="p">maximum-pool-size</span>: 20
+    <span class="p">replica</span>:
+      <span class="c"># несколько реплик — драйвер раскидает соединения; нет живой реплики — уйдёт на мастер</span>
+      <span class="p">jdbc-url</span>: jdbc:postgresql://pg-replica1:5432,pg-replica2:5432/app?targetServerType=preferSecondary&amp;loadBalanceHosts=<span class="k">true</span>
+      <span class="p">username</span>: app
+      <span class="p">password</span>: ${DB_PASSWORD}
+      <span class="p">maximum-pool-size</span>: 40
+      <span class="p">read-only</span>: <span class="k">true</span></pre>
+<pre class="narrow"><span class="p">app</span>:
+  <span class="p">datasource</span>:
+    <span class="p">primary</span>:
+      <span class="p">jdbc-url</span>: jdbc:postgresql://pg1/app
+      <span class="p">username</span>: app
+      <span class="p">password</span>: ${DB_PASSWORD}
+      <span class="p">maximum-pool-size</span>: 20
+    <span class="p">replica</span>:
+      <span class="c"># несколько реплик — драйвер раскидает</span>
+      <span class="c"># соединения; нет живой реплики —</span>
+      <span class="c"># уйдёт на мастер</span>
+      <span class="p">jdbc-url</span>: jdbc:postgresql://pg-replica1,pg-replica2/app?targetServerType=preferSecondary&amp;loadBalanceHosts=<span class="k">true</span>
+      <span class="p">username</span>: app
+      <span class="p">password</span>: ${DB_PASSWORD}
+      <span class="p">maximum-pool-size</span>: 40
+      <span class="p">read-only</span>: <span class="k">true</span></pre>
+<pre class="wide"><span class="a">@Configuration</span>
+<span class="k">public</span> <span class="k">class</span> <span class="t">DataSourceConfig</span> {
+
+    <span class="a">@Bean</span>
+    <span class="a">@ConfigurationProperties</span>(<span class="s">"app.datasource.primary"</span>)
+    <span class="k">public</span> <span class="t">HikariDataSource</span> primary() {
+        <span class="k">return</span> <span class="k">new</span> <span class="t">HikariDataSource</span>();
+    }
+
+    <span class="a">@Bean</span>
+    <span class="a">@ConfigurationProperties</span>(<span class="s">"app.datasource.replica"</span>)
+    <span class="k">public</span> <span class="t">HikariDataSource</span> replica() {
+        <span class="k">return</span> <span class="k">new</span> <span class="t">HikariDataSource</span>();
+    }
+
+    <span class="c">// этот DataSource получают JPA, Liquibase и JdbcTemplate</span>
+    <span class="a">@Bean</span>
+    <span class="a">@Primary</span>
+    <span class="k">public</span> <span class="t">DataSource</span> dataSource() {
+        <span class="t">LazyConnectionDataSourceProxy</span> dataSource = <span class="k">new</span> <span class="t">LazyConnectionDataSourceProxy</span>(primary());
+        dataSource.setReadOnlyDataSource(replica());
+        <span class="k">return</span> dataSource;
+    }
+}</pre>
+<pre class="narrow"><span class="a">@Configuration</span>
+<span class="k">public</span> <span class="k">class</span> <span class="t">DataSourceConfig</span> {
+
+    <span class="a">@Bean</span>
+    <span class="a">@ConfigurationProperties</span>(
+            <span class="s">"app.datasource.primary"</span>)
+    <span class="k">public</span> <span class="t">HikariDataSource</span> primary() {
+        <span class="k">return</span> <span class="k">new</span> <span class="t">HikariDataSource</span>();
+    }
+
+    <span class="a">@Bean</span>
+    <span class="a">@ConfigurationProperties</span>(
+            <span class="s">"app.datasource.replica"</span>)
+    <span class="k">public</span> <span class="t">HikariDataSource</span> replica() {
+        <span class="k">return</span> <span class="k">new</span> <span class="t">HikariDataSource</span>();
+    }
+
+    <span class="c">// этот DataSource получают JPA,</span>
+    <span class="c">// Liquibase и JdbcTemplate</span>
+    <span class="a">@Bean</span>
+    <span class="a">@Primary</span>
+    <span class="k">public</span> <span class="t">DataSource</span> dataSource() {
+        <span class="k">var</span> dataSource =
+            <span class="k">new</span> <span class="t">LazyConnectionDataSourceProxy</span>(
+                    primary());
+        dataSource.setReadOnlyDataSource(
+                replica());
+        <span class="k">return</span> dataSource;
+    }
+}</pre>
+<pre class="wide"><span class="a">@Transactional</span>(readOnly = <span class="k">true</span>)   <span class="c">// реплика: история может отставать на доли секунды</span>
+<span class="k">public</span> <span class="t">Page</span>&lt;<span class="t">PaymentView</span>&gt; history(<span class="k">long</span> clientId, <span class="t">Pageable</span> page) {
+    <span class="k">return</span> paymentRepository.findByClientId(clientId, page);
+}
+
+<span class="a">@Transactional</span>                    <span class="c">// мастер</span>
+<span class="k">public</span> <span class="t">PaymentView</span> create(<span class="t">CreatePayment</span> command) {
+    <span class="k">return</span> <span class="t">PaymentView</span>.of(paymentRepository.save(<span class="t">Payment</span>.from(command)));
+}
+
+<span class="a">@Transactional</span>                    <span class="c">// мастер: пользователь ждёт увидеть только что созданный платёж</span>
+<span class="k">public</span> <span class="t">PaymentView</span> get(<span class="k">long</span> id) {
+    <span class="k">return</span> <span class="t">PaymentView</span>.of(paymentRepository.findById(id).orElseThrow());
+}</pre>
+<pre class="narrow"><span class="c">// реплика: история может отставать</span>
+<span class="c">// на доли секунды</span>
+<span class="a">@Transactional</span>(readOnly = <span class="k">true</span>)
+<span class="k">public</span> <span class="t">Page</span>&lt;<span class="t">PaymentView</span>&gt; history(
+        <span class="k">long</span> clientId, <span class="t">Pageable</span> page) {
+    <span class="k">return</span> paymentRepository
+            .findByClientId(clientId, page);
+}
+
+<span class="c">// мастер</span>
+<span class="a">@Transactional</span>
+<span class="k">public</span> <span class="t">PaymentView</span> create(
+        <span class="t">CreatePayment</span> command) {
+    <span class="k">return</span> <span class="t">PaymentView</span>.of(paymentRepository
+            .save(<span class="t">Payment</span>.from(command)));
+}
+
+<span class="c">// мастер: пользователь ждёт увидеть только</span>
+<span class="c">// что созданный платёж</span>
+<span class="a">@Transactional</span>
+<span class="k">public</span> <span class="t">PaymentView</span> get(<span class="k">long</span> id) {
+    <span class="k">return</span> <span class="t">PaymentView</span>.of(paymentRepository
+            .findById(id).orElseThrow());
+}</pre>
+      <p>Ловушки:</p>
+      <ul>
+        <li><b>Без ленивого прокси всё уходит на мастер.</b> Самописный <code><span class="t">AbstractRoutingDataSource</span></code> по <code><span class="t">TransactionSynchronizationManager</span>.isCurrentTransactionReadOnly()</code> выбирает пул в момент взятия соединения, а <code><span class="t">JpaTransactionManager</span></code> берёт его в начале транзакции — до того, как флаг readOnly выставлен. Поэтому роутинг оборачивают в <code><span class="t">LazyConnectionDataSourceProxy</span></code>: соединение берётся на первом SQL. До Spring 6.1.2 так и делали; теперь хватает <code>setReadOnlyDataSource</code>.</li>
+        <li><b>Методы репозитория сами readOnly.</b> <code><span class="t">SimpleJpaRepository</span></code> помечен <code><span class="a">@Transactional</span>(readOnly = <span class="k">true</span>)</code>: <code>findById</code>, вызванный вне сервисной транзакции, пойдёт на реплику — и может не найти то, что только что сохранили. Чтение «своих» данных — внутри транзакции без readOnly.</li>
+        <li><b>Вложенный вызов</b> readOnly-метода из пишущей транзакции присоединяется к ней и читает с мастера — так и нужно.</li>
+        <li><b>Запросы вне транзакции</b> (open-in-view, ленивые связи при сериализации) не readOnly — уходят на мастер.</li>
+        <li><b>Liquibase</b> получает <code><span class="a">@Primary</span></code> DataSource и ходит на мастер, как и должен.</li>
+      </ul>
       <p>Долгие запросы на реплике конфликтуют с применением WAL (VACUUM на мастере удалил версии, которые читает запрос): запрос отменяется («canceling statement due to conflict with recovery») или, с <code>hot_standby_feedback = on</code>, мастер придерживает очистку — растёт bloat на мастере. Для тяжёлой аналитики — отдельная реплика с другими настройками или выгрузка в аналитическое хранилище.</p>
     </div></div></article>
 <article id="q215" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">215. Партиционирование и шардирование <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li><b>Партиционирование</b> — одна база, таблица разбита на секции (обычно по дате): запросы читают только нужные секции, старые данные удаляются мгновенно <b>DROP секции</b>, индексы меньше.</li><li><b>Шардирование</b> — данные на разных серверах по ключу (client_id): масштабирует запись и объём, но межшардовые запросы, решардинг и эксплуатация сложны.</li></ul>
