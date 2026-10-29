@@ -10493,7 +10493,7 @@ client(id, name, city, region)
       <p>Из Java: в JPQL рекурсии нет, в HQL она есть с Hibernate 6.2; обычно пишут native query. Загружать дерево по уровням через ленивые <code><span class="a">@OneToMany</span> children</code> — это N+1 запросов: один рекурсивный CTE и сборка дерева в памяти по <code>parent_id</code> дешевле.</p>
 <p class="follow"><b>Порядок обхода?</b> Без ORDER BY не гарантирован; сортируют по depth (в ширину) или по пути (в глубину), в PG 14+ есть <code><span class="t">SEARCH</span> <span class="t">DEPTH</span> <span class="t">FIRST</span> <span class="t">BY</span> id <span class="t">SET</span> ord</code>. <b>Есть ли в MySQL?</b> С 8.0, <code><span class="t">CYCLE</span></code> нет — путь и проверка вручную. <b>Можно ли ссылаться на CTE в рекурсивной части дважды?</b> Нет — ровно одна ссылка, и не в агрегате и не в подзапросе.</p>
     </div></div></article>
-<article id="q190" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">190. SQL-задача: найти и удалить дубликаты</h2><div class="answer" hidden><div class="short"><ul><li><b>Найти</b>: GROUP BY по полям, определяющим дубль, + <code><span class="t">HAVING</span> count(*) &gt; <span class="n">1</span></code>.</li><li><b>Удалить</b>, оставив одну: <b>row_number()</b> внутри группы и удалить номера больше одного, или удалить строки, у которых есть дубль с меньшим id.</li><li>После очистки — <b>уникальный индекс</b>, иначе дубли вернутся.</li></ul>
+<article id="q190" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">190. SQL-задача: найти и удалить дубликаты</h2><div class="answer" hidden><div class="short"><ul><li><b>Найти</b>: GROUP BY по полям, определяющим дубль, + <code><span class="t">HAVING</span> count(*) &gt; <span class="n">1</span></code>.</li><li><b>Удалить</b>, оставив одну: <b>row_number()</b> внутри группы и удалить номера больше одного.</li><li>После очистки — <b>уникальный индекс</b>, иначе дубли вернутся.</li></ul>
 <p>Уточнить у интервьюера, какую запись оставлять.</p></div>
     <div class="more">
 <pre class="wide"><span class="k">SELECT</span> email, count(*) <span class="k">FROM</span> client <span class="k">GROUP</span> <span class="k">BY</span> email <span class="k">HAVING</span> count(*) &gt; <span class="n">1</span>;
@@ -10516,120 +10516,27 @@ client(id, name, city, region)
      <span class="k">WHERE</span> rn &gt; <span class="n">1</span>);
 <span class="k">CREATE</span> <span class="k">UNIQUE</span> <span class="k">INDEX</span> <span class="k">CONCURRENTLY</span>
     ux_client_email <span class="k">ON</span> client (email);</pre>
-<pre class="wide"><span class="c">-- вариант без row_number: оставить минимальный id в группе</span>
-<span class="k">DELETE</span> <span class="k">FROM</span> client c
- <span class="k">USING</span> client d
- <span class="k">WHERE</span> c.email = d.email
-   <span class="k">AND</span> c.id &gt; d.id;                       <span class="c">-- удаляется каждая строка, у которой есть «старший» дубль</span>
-
-<span class="c">-- дубликаты по нескольким полям, с учётом регистра и пробелов</span>
-<span class="k">SELECT</span> lower(trim(email)) <span class="k">AS</span> norm, count(*), array_agg(id <span class="k">ORDER</span> <span class="k">BY</span> id)
-  <span class="k">FROM</span> client <span class="k">GROUP</span> <span class="k">BY</span> <span class="n">1</span> <span class="k">HAVING</span> count(*) &gt; <span class="n">1</span>;
-
-<span class="c">-- на большой таблице — удалять пачками, чтобы не держать долгую транзакцию</span>
-<span class="k">WITH</span> dup <span class="k">AS</span> (
-    <span class="k">SELECT</span> id <span class="k">FROM</span> (
-        <span class="k">SELECT</span> id, row_number() <span class="k">OVER</span> (<span class="k">PARTITION</span> <span class="k">BY</span> email <span class="k">ORDER</span> <span class="k">BY</span> id) <span class="k">AS</span> rn <span class="k">FROM</span> client) t
-     <span class="k">WHERE</span> rn &gt; <span class="n">1</span> <span class="k">LIMIT</span> <span class="n">10000</span>)
-<span class="k">DELETE</span> <span class="k">FROM</span> client <span class="k">WHERE</span> id <span class="k">IN</span> (<span class="k">SELECT</span> id <span class="k">FROM</span> dup);   <span class="c">-- повторять, пока удаляется &gt; 0</span></pre>
-<pre class="narrow"><span class="c">-- вариант без row_number: оставить</span>
-<span class="c">-- минимальный id в группе</span>
-<span class="k">DELETE</span> <span class="k">FROM</span> client c
- <span class="k">USING</span> client d
- <span class="k">WHERE</span> c.email = d.email
-   <span class="k">AND</span> c.id &gt; d.id;
-<span class="c">-- удаляется каждая строка, у которой есть</span>
-<span class="c">-- «старший» дубль</span>
-
-<span class="c">-- дубликаты с учётом регистра и пробелов</span>
-<span class="k">SELECT</span> lower(trim(email)) <span class="k">AS</span> norm, count(*),
-       array_agg(id <span class="k">ORDER</span> <span class="k">BY</span> id)
-  <span class="k">FROM</span> client
- <span class="k">GROUP</span> <span class="k">BY</span> <span class="n">1</span> <span class="k">HAVING</span> count(*) &gt; <span class="n">1</span>;
-
-<span class="c">-- на большой таблице — удалять пачками,</span>
-<span class="c">-- чтобы не держать долгую транзакцию</span>
-<span class="k">WITH</span> dup <span class="k">AS</span> (
-    <span class="k">SELECT</span> id <span class="k">FROM</span> (
-        <span class="k">SELECT</span> id, row_number() <span class="k">OVER</span> (
-                   <span class="k">PARTITION</span> <span class="k">BY</span> email
-                   <span class="k">ORDER</span> <span class="k">BY</span> id) <span class="k">AS</span> rn
-          <span class="k">FROM</span> client) t
-     <span class="k">WHERE</span> rn &gt; <span class="n">1</span> <span class="k">LIMIT</span> <span class="n">10000</span>)
-<span class="k">DELETE</span> <span class="k">FROM</span> client
- <span class="k">WHERE</span> id <span class="k">IN</span> (<span class="k">SELECT</span> id <span class="k">FROM</span> dup);
-<span class="c">-- повторять, пока удаляется &gt; 0</span></pre>
-      <p>Что обсудить перед удалением: на дубликаты могут ссылаться другие таблицы (FK) — сначала перевесить ссылки на оставляемую запись (UPDATE … SET client_id = keep_id), затем удалять; какие данные из удаляемых записей нужно слить в оставляемую (телефон есть только у дубля); сделать резервную копию удаляемого (<code><span class="k">CREATE</span> <span class="k">TABLE</span> client_dup_backup <span class="k">AS</span> ...</code>).</p>
-      <p>Профилактика важнее чистки: уникальный индекс (частичный, если есть мягкое удаление; по выражению <code>lower(email)</code>, если регистр не важен) и <code><span class="k">INSERT</span> … <span class="k">ON</span> CONFLICT</code> в коде. <code><span class="k">CREATE</span> <span class="k">UNIQUE</span> <span class="k">INDEX</span> <span class="k">CONCURRENTLY</span></code> упадёт и оставит INVALID-индекс, если дубли появились во время построения — его нужно удалить, дочистить и создать снова.</p>
+    <ul><li><code><span class="t">ORDER</span> <span class="t">BY</span></code> в окне решает, какая запись останется: <code>id</code> — самая ранняя, <code>id <span class="t">DESC</span></code> — самая свежая.</li><li>Если на дубли ссылаются другие таблицы (FK) — сначала перевесить ссылки на оставляемую запись, потом удалять.</li></ul>
 <p class="follow"><b>Какую запись оставить?</b> Решает бизнес: самую раннюю, самую свежую или наиболее заполненную — это и ждут как уточняющий вопрос.</p>
     </div></div></article>
-<article id="q191" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">191. SQL-задача: последний платёж каждого клиента</h2><div class="answer" hidden><div class="short"><p>Классика «запись с максимумом в группе»:</p>
-<ul><li>переносимо — <b>row_number()</b> с PARTITION BY клиенту и сортировкой по дате по убыванию, фильтр по номеру 1;</li><li>в PostgreSQL короче — <b>DISTINCT ON</b>;</li><li>клиентов мало, платежей очень много — <b>LATERAL с LIMIT 1</b>: один короткий спуск по индексу на клиента.</li></ul>
-<p>В любом случае нужен <b>индекс по клиенту и дате</b>.</p></div>
+<article id="q191" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">191. SQL-задача: последний платёж каждого клиента</h2><div class="answer" hidden><div class="short"><p>Классика «запись с максимумом в группе»: <b>row_number()</b> с <code><span class="t">PARTITION</span> <span class="t">BY</span> client_id</code> и сортировкой по дате по убыванию, во внешнем запросе — фильтр по номеру 1.</p>
+<ul><li>Во второй ключ сортировки — <b>id</b>, иначе при равных датах результат недетерминирован.</li><li>Нужен <b>индекс</b> <code>(client_id, created_at <span class="t">DESC</span>)</code>.</li></ul></div>
     <div class="more">
-<pre class="wide"><span class="k">SELECT</span> <span class="k">DISTINCT</span> <span class="k">ON</span> (client_id) *
-  <span class="k">FROM</span> payment
- <span class="k">ORDER</span> <span class="k">BY</span> client_id, created_at <span class="k">DESC</span>;      <span class="c">-- ORDER BY начинается с полей DISTINCT ON</span>
-
-<span class="k">SELECT</span> c.id, p.*
-  <span class="k">FROM</span> client c
-  <span class="k">CROSS</span> <span class="k">JOIN</span> <span class="k">LATERAL</span> (<span class="k">SELECT</span> * <span class="k">FROM</span> payment p
-                       <span class="k">WHERE</span> p.client_id = c.id
-                       <span class="k">ORDER</span> <span class="k">BY</span> created_at <span class="k">DESC</span> <span class="k">LIMIT</span> <span class="n">3</span>) p;</pre>
-<pre class="narrow"><span class="k">SELECT</span> <span class="k">DISTINCT</span> <span class="k">ON</span> (client_id) *
-  <span class="k">FROM</span> payment
- <span class="k">ORDER</span> <span class="k">BY</span> client_id, created_at <span class="k">DESC</span>;
-<span class="c">-- ORDER BY начинается с полей DISTINCT ON</span>
-
-<span class="c">-- три последних</span>
-<span class="k">SELECT</span> c.id, p.*
-  <span class="k">FROM</span> client c
-  <span class="k">CROSS</span> <span class="k">JOIN</span> <span class="k">LATERAL</span> (
-        <span class="k">SELECT</span> * <span class="k">FROM</span> payment p
-         <span class="k">WHERE</span> p.client_id = c.id
-         <span class="k">ORDER</span> <span class="k">BY</span> created_at <span class="k">DESC</span>
-         <span class="k">LIMIT</span> <span class="n">3</span>) p;</pre>
-    <ul><li>Обоим вариантам нужен индекс <code>(client_id, created_at <span class="t">DESC</span>)</code>. <code><span class="t">WHERE</span> created_at = (<span class="t">SELECT</span> max(...))</code> вернёт несколько строк при равных датах.</li></ul>
-<pre class="wide"><span class="c">-- переносимый вариант через оконную функцию</span>
-<span class="k">SELECT</span> * <span class="k">FROM</span> (
+<pre class="wide"><span class="k">SELECT</span> * <span class="k">FROM</span> (
     <span class="k">SELECT</span> p.*, row_number() <span class="k">OVER</span> (<span class="k">PARTITION</span> <span class="k">BY</span> client_id <span class="k">ORDER</span> <span class="k">BY</span> created_at <span class="k">DESC</span>, id <span class="k">DESC</span>) <span class="k">AS</span> rn
       <span class="k">FROM</span> payment p) t
- <span class="k">WHERE</span> rn = <span class="n">1</span>;
-
-<span class="c">-- последние платежи всех клиентов, включая тех, у кого платежей нет</span>
-<span class="k">SELECT</span> c.id, p.id <span class="k">AS</span> payment_id, p.amount
-  <span class="k">FROM</span> client c
-  <span class="k">LEFT</span> <span class="k">JOIN</span> <span class="k">LATERAL</span> (<span class="k">SELECT</span> id, amount <span class="k">FROM</span> payment
-                      <span class="k">WHERE</span> client_id = c.id
-                      <span class="k">ORDER</span> <span class="k">BY</span> created_at <span class="k">DESC</span> <span class="k">LIMIT</span> <span class="n">1</span>) p <span class="k">ON</span> <span class="k">true</span>;</pre>
-<pre class="narrow"><span class="c">-- переносимый вариант через оконную функцию</span>
-<span class="k">SELECT</span> * <span class="k">FROM</span> (
+ <span class="k">WHERE</span> rn = <span class="n">1</span>;</pre>
+<pre class="narrow"><span class="k">SELECT</span> * <span class="k">FROM</span> (
     <span class="k">SELECT</span> p.*, row_number() <span class="k">OVER</span> (
                <span class="k">PARTITION</span> <span class="k">BY</span> client_id
                <span class="k">ORDER</span> <span class="k">BY</span> created_at <span class="k">DESC</span>,
                         id <span class="k">DESC</span>
            ) <span class="k">AS</span> rn
       <span class="k">FROM</span> payment p) t
- <span class="k">WHERE</span> rn = <span class="n">1</span>;
-
-<span class="c">-- последние платежи всех клиентов,</span>
-<span class="c">-- включая тех, у кого платежей нет</span>
-<span class="k">SELECT</span> c.id, p.id <span class="k">AS</span> payment_id, p.amount
-  <span class="k">FROM</span> client c
-  <span class="k">LEFT</span> <span class="k">JOIN</span> <span class="k">LATERAL</span> (
-        <span class="k">SELECT</span> id, amount <span class="k">FROM</span> payment
-         <span class="k">WHERE</span> client_id = c.id
-         <span class="k">ORDER</span> <span class="k">BY</span> created_at <span class="k">DESC</span>
-         <span class="k">LIMIT</span> <span class="n">1</span>) p <span class="k">ON</span> <span class="k">true</span>;</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Вариант</th><th>Когда эффективен</th></tr>
-        <tr><td><code><span class="t">DISTINCT</span> <span class="t">ON</span></code></td><td>коротко, PostgreSQL; сканирует все строки (по индексу — упорядоченно)</td></tr>
-        <tr><td><code>row_number()</code></td><td>переносимо; нужны все строки и сортировка (или индекс)</td></tr>
-        <tr><td><code><span class="t">LATERAL</span> … <span class="t">LIMIT</span> <span class="n">1</span></code></td><td>клиентов немного относительно платежей: на каждого клиента — один короткий спуск по индексу (client_id, created_at DESC)</td></tr>
-        <tr><td>Денормализация: <code>client.last_payment_id</code></td><td>запрос нужен постоянно и быстро — поле обновляется в той же транзакции, что и вставка платежа</td></tr>
-      </table></div>
+ <span class="k">WHERE</span> rn = <span class="n">1</span>;</pre>
+    <ul><li>Фильтр — только во внешнем запросе: оконные функции считаются после WHERE.</li><li><code><span class="t">WHERE</span> created_at = (<span class="t">SELECT</span> max(...))</code> вернёт несколько строк при равных датах.</li></ul>
       <p>Почему важен <code>id</code> во втором ключе сортировки: два платежа с одинаковым <code>created_at</code> (пачечная вставка, точность до миллисекунд) — без детерминированного тай-брейка результат может меняться от запуска к запуску.</p>
-      <p>Обобщение «top-N в группе» — тот же <code>row_number() ... <span class="t">WHERE</span> rn &lt;= <span class="t">N</span></code> или <code><span class="t">LATERAL</span> ... <span class="t">LIMIT</span> <span class="t">N</span></code>. Если нужны все при равенстве («все платежи на максимальную сумму») — <code>rank()</code> вместо <code>row_number()</code>.</p>
+      <p>Обобщение «top-N в группе» — тот же <code>row_number() ... <span class="t">WHERE</span> rn &lt;= <span class="t">N</span></code>. Если нужны все при равенстве («все платежи на максимальную сумму») — <code>rank()</code> вместо <code>row_number()</code>.</p>
     </div></div></article>
 <article id="q192" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">192. SQL-задача: нарастающий итог и баланс на дату</h2><div class="answer" hidden><div class="short"><p><b>Нарастающий итог</b> — оконная <b>SUM с ORDER BY</b>: для каждой строки сумма от начала до неё. Порядок должен быть <b>уникальным</b> (дата + id), иначе строки с одинаковым временем получат одинаковый итог.</p>
 <p><b>Баланс на дату</b> — сумма проводок до даты. Для частых запросов по длинной истории хранят <b>ежедневные снимки остатков</b> и досчитывают обороты за день — так устроены банковские системы.</p></div>
