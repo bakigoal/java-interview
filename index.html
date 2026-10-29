@@ -605,7 +605,7 @@ kbd { min-width: 20px; height: 20px; box-sizing: border-box; display: inline-fle
 <a href="#q184" data-k="f25d3ef427" data-ci="7"><span class="num">184</span><span class="q">Нормализация и когда денормализовать</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q185" data-k="a660edab09" data-ci="7"><span class="num">185</span><span class="q">Порядок выполнения SELECT. WHERE или HAVING, UNION или UNION ALL, DELETE, TRUNCATE или DROP</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q186" data-k="58f09552ce" data-ci="7"><span class="num">186</span><span class="q">JOIN и ловушки с NULL</span><i class="st ico none"></i><span class="sr st-t"></span></a>
-<a href="#q187" data-k="6de5dd119b" data-ci="7"><span class="num">187</span><span class="q">Оконные функции: топ-3 зарплаты в каждом отделе</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q187" data-k="f46584af13" data-ci="7"><span class="num">187</span><span class="q">Оконные функции: как работают, ранжирование, LAG/LEAD, рамки, топ-N в группе</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q188" data-k="72416b0354" data-ci="7"><span class="num">188</span><span class="q">Рекурсивный CTE: обойти дерево подразделений</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q189" data-k="9610ec6680" data-ci="7"><span class="num">189</span><span class="q">SQL-задача: найти и удалить дубликаты</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q190" data-k="0d265ec696" data-ci="7"><span class="num">190</span><span class="q">SQL-задача: последний платёж каждого клиента</span><i class="st ico none"></i><span class="sr st-t"></span></a>
@@ -9915,54 +9915,175 @@ client(id, name, city, region)
       </table></div>
 <p class="follow"><b>LEFT JOIN дал «задвоенные» суммы?</b> На одну строку слева пришлось несколько совпадений справа.</p>
     </div></div></article>
-<article id="q187" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">187. Оконные функции: топ-3 зарплаты в каждом отделе</h2><div class="answer" hidden><div class="short"><p>Оконная функция считает значение по группе строк, но, в отличие от GROUP BY, <b>не схлопывает их</b>. <b>PARTITION BY</b> — группа, <b>ORDER BY</b> — порядок внутри.</p>
-<ul><li><b>ROW_NUMBER</b> — 1, 2, 3, 4; <b>RANK</b> — 1, 1, 3; <b>DENSE_RANK</b> — 1, 1, 2.</li><li>Топ-3 по отделу — DENSE_RANK по отделу с сортировкой по зарплате и <b>фильтр во внешнем запросе</b>.</li><li>Ещё <b>LAG/LEAD</b> для соседних строк и <b>SUM</b> для нарастающего итога.</li></ul></div>
+<article id="q187" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">187. Оконные функции: как работают, ранжирование, LAG/LEAD, рамки, топ-N в группе</h2><div class="answer" hidden><div class="short"><p>Оконная функция считает значение для <b>каждой строки</b> по набору связанных с ней строк — окну. В отличие от GROUP BY, она <b>не схлопывает строки</b>: сколько пришло, столько и вернётся, плюс новый столбец.</p>
+<ul><li>Окно задаёт <code><span class="t">OVER</span> (...)</code>: <b>PARTITION BY</b> — на какие группы делить, <b>ORDER BY</b> — порядок внутри группы, <b>рамка</b> (<code><span class="t">ROWS</span></code>/<code><span class="t">RANGE</span></code>) — какие соседние строки видит функция.</li><li>Ранжирование на зарплатах 300, 200, 200, 100: <b>ROW_NUMBER</b> — 1, 2, 3, 4; <b>RANK</b> — 1, 2, 2, 4; <b>DENSE_RANK</b> — 1, 2, 2, 3.</li><li><b>LAG/LEAD</b> — значение из предыдущей/следующей строки, <b>SUM … OVER (ORDER BY …)</b> — нарастающий итог.</li><li>Окна считаются <b>после WHERE и GROUP BY</b>, поэтому топ-N в группе — подзапрос с окном и <b>фильтр во внешнем запросе</b>.</li><li>Ловушка: с ORDER BY рамка по умолчанию — от начала группы <b>до текущей строки включая равные</b> ей, отсюда «прыгающий» итог и неверный <code>last_value</code>.</li></ul></div>
     <div class="more">
-<pre class="wide"><span class="k">SELECT</span> * <span class="k">FROM</span> (
-  <span class="k">SELECT</span> e.*, DENSE_RANK() <span class="k">OVER</span> (<span class="k">PARTITION</span> <span class="k">BY</span> dept_id <span class="k">ORDER</span> <span class="k">BY</span> salary <span class="k">DESC</span>) <span class="k">AS</span> rnk
-    <span class="k">FROM</span> employee e
-) t <span class="k">WHERE</span> rnk &lt;= <span class="n">3</span>;</pre>
-<pre class="narrow"><span class="k">SELECT</span> * <span class="k">FROM</span> (
+      <p>Все примеры — на одной таблице <code>employee</code>:</p>
+<div class="table-wrap"><table>
+        <tr><th>id</th><th>dept</th><th>name</th><th>salary</th></tr>
+        <tr><td>1</td><td>IT</td><td>Анна</td><td>300</td></tr>
+        <tr><td>2</td><td>IT</td><td>Борис</td><td>200</td></tr>
+        <tr><td>3</td><td>IT</td><td>Вера</td><td>200</td></tr>
+        <tr><td>4</td><td>IT</td><td>Глеб</td><td>100</td></tr>
+        <tr><td>5</td><td>HR</td><td>Дина</td><td>150</td></tr>
+        <tr><td>6</td><td>HR</td><td>Егор</td><td>120</td></tr>
+      </table></div>
+      <p><b>1. GROUP BY и окно.</b> GROUP BY отдаёт одну строку на отдел, и имя сотрудника рядом уже не вывести:</p>
+<pre><span class="k">SELECT</span> dept, avg(salary) <span class="k">AS</span> avg
+  <span class="k">FROM</span> employee
+ <span class="k">GROUP</span> <span class="k">BY</span> dept;</pre>
+<div class="table-wrap"><table>
+        <tr><th>dept</th><th>avg</th></tr>
+        <tr><td>IT</td><td>200</td></tr>
+        <tr><td>HR</td><td>135</td></tr>
+      </table></div>
+      <p>Тот же агрегат как окно: строки на месте, у каждой появились значения по её отделу. <code><span class="t">OVER</span> ()</code> без аргументов — окно на всю выборку.</p>
+<pre><span class="k">SELECT</span> name, dept, salary,
+       avg(salary) <span class="k">OVER</span> (<span class="k">PARTITION</span> <span class="k">BY</span> dept)
+           <span class="k">AS</span> dept_avg,
+       round(<span class="n">100.0</span> * salary / sum(salary)
+           <span class="k">OVER</span> (<span class="k">PARTITION</span> <span class="k">BY</span> dept)) <span class="k">AS</span> pct,
+       sum(salary) <span class="k">OVER</span> () <span class="k">AS</span> total
+  <span class="k">FROM</span> employee
+ <span class="k">ORDER</span> <span class="k">BY</span> id;</pre>
+<div class="table-wrap"><table>
+        <tr><th>name</th><th>dept</th><th>salary</th><th>dept_avg</th><th>pct</th><th>total</th></tr>
+        <tr><td>Анна</td><td>IT</td><td>300</td><td>200</td><td>38</td><td>1070</td></tr>
+        <tr><td>Борис</td><td>IT</td><td>200</td><td>200</td><td>25</td><td>1070</td></tr>
+        <tr><td>Вера</td><td>IT</td><td>200</td><td>200</td><td>25</td><td>1070</td></tr>
+        <tr><td>Глеб</td><td>IT</td><td>100</td><td>200</td><td>13</td><td>1070</td></tr>
+        <tr><td>Дина</td><td>HR</td><td>150</td><td>135</td><td>56</td><td>1070</td></tr>
+        <tr><td>Егор</td><td>HR</td><td>120</td><td>135</td><td>44</td><td>1070</td></tr>
+      </table></div>
+      <p><b>2. Ранжирование.</b> Три функции различаются только поведением на равных значениях (Борис и Вера):</p>
+<pre><span class="k">SELECT</span> name, salary,
+       row_number() <span class="k">OVER</span> w <span class="k">AS</span> rn,
+       rank()       <span class="k">OVER</span> w <span class="k">AS</span> rnk,
+       dense_rank() <span class="k">OVER</span> w <span class="k">AS</span> drnk
+  <span class="k">FROM</span> employee
+ <span class="k">WHERE</span> dept = <span class="s">'IT'</span>
+<span class="k">WINDOW</span> w <span class="k">AS</span> (<span class="k">ORDER</span> <span class="k">BY</span> salary <span class="k">DESC</span>);</pre>
+<div class="table-wrap"><table>
+        <tr><th>name</th><th>salary</th><th>rn</th><th>rnk</th><th>drnk</th></tr>
+        <tr><td>Анна</td><td>300</td><td>1</td><td>1</td><td>1</td></tr>
+        <tr><td>Борис</td><td>200</td><td>2</td><td>2</td><td>2</td></tr>
+        <tr><td>Вера</td><td>200</td><td>3</td><td>2</td><td>2</td></tr>
+        <tr><td>Глеб</td><td>100</td><td>4</td><td>4</td><td>3</td></tr>
+      </table></div>
+<ul>
+      <li><code>row_number</code> — номера без повторов. Кто из равных получит 2, а кто 3, не определено: без тай-брейкера (<code><span class="t">ORDER</span> <span class="t">BY</span> salary <span class="t">DESC</span>, id</code>) результат может меняться между запусками.</li>
+      <li><code>rank</code> — равные делят место, следующее место пропускается (после двух вторых — четвёртое).</li>
+      <li><code>dense_rank</code> — равные делят место, пропусков нет.</li>
+      <li><code><span class="t">WINDOW</span> w <span class="t">AS</span> (...)</code> — именованное окно, чтобы не повторять одно и то же <code><span class="t">OVER</span> (...)</code>.</li>
+    </ul>
+      <p><b>3. Топ-N в каждом отделе.</b> В WHERE окно использовать нельзя (оно ещё не посчитано), поэтому фильтр выносят во внешний запрос:</p>
+<pre><span class="k">SELECT</span> * <span class="k">FROM</span> (
   <span class="k">SELECT</span> e.*,
-         DENSE_RANK() <span class="k">OVER</span> (
-             <span class="k">PARTITION</span> <span class="k">BY</span> dept_id
-             <span class="k">ORDER</span> <span class="k">BY</span> salary <span class="k">DESC</span>) <span class="k">AS</span> rnk
+         dense_rank() <span class="k">OVER</span> (
+             <span class="k">PARTITION</span> <span class="k">BY</span> dept
+             <span class="k">ORDER</span> <span class="k">BY</span> salary <span class="k">DESC</span>) <span class="k">AS</span> r
     <span class="k">FROM</span> employee e
-) t <span class="k">WHERE</span> rnk &lt;= <span class="n">3</span>;</pre>
-<pre class="wide"><span class="k">SELECT</span> id, client_id, created_at, amount,
-       row_number()  <span class="k">OVER</span> w                     <span class="k">AS</span> n_in_client,       <span class="c">-- порядковый номер</span>
-       sum(amount)   <span class="k">OVER</span> w                     <span class="k">AS</span> running_total,     <span class="c">-- нарастающий итог</span>
-       lag(amount)   <span class="k">OVER</span> w                     <span class="k">AS</span> prev_amount,       <span class="c">-- предыдущий платёж</span>
-       amount - avg(amount) <span class="k">OVER</span> (<span class="k">PARTITION</span> <span class="k">BY</span> client_id) <span class="k">AS</span> diff_from_avg,
-       sum(amount)   <span class="k">OVER</span> (<span class="k">PARTITION</span> <span class="k">BY</span> client_id <span class="k">ORDER</span> <span class="k">BY</span> created_at
-                           <span class="k">ROWS</span> <span class="k">BETWEEN</span> <span class="n">6</span> PRECEDING <span class="k">AND</span> CURRENT ROW) <span class="k">AS</span> last7_sum   <span class="c">-- скользящее окно</span>
-  <span class="k">FROM</span> payment
-<span class="k">WINDOW</span> w <span class="k">AS</span> (<span class="k">PARTITION</span> <span class="k">BY</span> client_id <span class="k">ORDER</span> <span class="k">BY</span> created_at, id);</pre>
-<pre class="narrow"><span class="k">SELECT</span> id, client_id, created_at, amount,
-       <span class="c">-- порядковый номер</span>
-       row_number() <span class="k">OVER</span> w <span class="k">AS</span> n_in_client,
-       <span class="c">-- нарастающий итог</span>
-       sum(amount) <span class="k">OVER</span> w <span class="k">AS</span> running_total,
-       <span class="c">-- предыдущий платёж</span>
-       lag(amount) <span class="k">OVER</span> w <span class="k">AS</span> prev_amount,
-       amount - avg(amount) <span class="k">OVER</span> (
-           <span class="k">PARTITION</span> <span class="k">BY</span> client_id
-       ) <span class="k">AS</span> diff_from_avg,
-       <span class="c">-- скользящее окно</span>
-       sum(amount) <span class="k">OVER</span> (
-           <span class="k">PARTITION</span> <span class="k">BY</span> client_id
-           <span class="k">ORDER</span> <span class="k">BY</span> created_at
-           <span class="k">ROWS</span> <span class="k">BETWEEN</span> <span class="n">6</span> PRECEDING
-                    <span class="k">AND</span> CURRENT ROW
-       ) <span class="k">AS</span> last7_sum
-  <span class="k">FROM</span> payment
-<span class="k">WINDOW</span> w <span class="k">AS</span> (<span class="k">PARTITION</span> <span class="k">BY</span> client_id
-             <span class="k">ORDER</span> <span class="k">BY</span> created_at, id);</pre>
-      <p>Анатомия окна: <code><span class="t">PARTITION</span> <span class="t">BY</span></code> — на какие группы делить (как GROUP BY, но строки не схлопываются), <code><span class="t">ORDER</span> <span class="t">BY</span></code> — порядок внутри группы, рамка (<code><span class="t">ROWS</span></code>/<code><span class="t">RANGE</span></code>/<code><span class="t">GROUPS</span> <span class="t">BETWEEN</span> ...</code>) — какие строки группы видит функция для текущей строки.</p>
-      <p>Тонкость с рамкой по умолчанию: если есть ORDER BY, рамка — <code><span class="t">RANGE</span> <span class="t">BETWEEN</span> <span class="t">UNBOUNDED</span> <span class="t">PRECEDING</span> <span class="t">AND</span> <span class="t">CURRENT</span> <span class="t">ROW</span></code>, а RANGE включает все строки с тем же значением ключа сортировки («пиры»). Две записи с одинаковым created_at получат одинаковый нарастающий итог. <code>last_value()</code> с рамкой по умолчанию вернёт текущую строку, а не последнюю в группе — нужна рамка <code><span class="t">ROWS</span> <span class="t">BETWEEN</span> <span class="t">UNBOUNDED</span> <span class="t">PRECEDING</span> <span class="t">AND</span> <span class="t">UNBOUNDED</span> <span class="t">FOLLOWING</span></code>.</p>
-      <p>Типовые задачи на собеседовании: топ-N в группе, дубликаты (row_number &gt; 1), разница с предыдущим значением (lag), пропуски последовательностей и «острова» (разность row_number и значения), доля от итога (<code>amount / sum(amount) <span class="t">OVER</span> (<span class="t">PARTITION</span> <span class="t">BY</span> ...)</code>), медиана (<code>percentile_cont(<span class="n">0.5</span>) <span class="t">WITHIN</span> <span class="t">GROUP</span> (<span class="t">ORDER</span> <span class="t">BY</span> ...)</code> — это агрегат, не окно).</p>
-      <p>Оконные функции вычисляются после WHERE и GROUP BY, поэтому фильтровать по их результату можно только во внешнем запросе (подзапрос или CTE), как в примере с rnk &lt;= 3. В PostgreSQL 18 этого ещё нет, в других СУБД есть <code><span class="t">QUALIFY</span></code>.</p>
-<p class="follow"><b>Вторая по величине зарплата?</b> <code><span class="t">DENSE_RANK</span>() = <span class="n">2</span></code> или <code><span class="k">SELECT</span> <span class="k">DISTINCT</span> salary … <span class="k">ORDER</span> <span class="k">BY</span> salary <span class="k">DESC</span> <span class="k">OFFSET</span> <span class="n">1</span> <span class="k">LIMIT</span> <span class="n">1</span></code>.</p>
+) t
+<span class="k">WHERE</span> r &lt;= <span class="n">3</span>;</pre>
+<div class="table-wrap"><table>
+        <tr><th>id</th><th>dept</th><th>name</th><th>salary</th><th>r</th></tr>
+        <tr><td>5</td><td>HR</td><td>Дина</td><td>150</td><td>1</td></tr>
+        <tr><td>6</td><td>HR</td><td>Егор</td><td>120</td><td>2</td></tr>
+        <tr><td>1</td><td>IT</td><td>Анна</td><td>300</td><td>1</td></tr>
+        <tr><td>2</td><td>IT</td><td>Борис</td><td>200</td><td>2</td></tr>
+        <tr><td>3</td><td>IT</td><td>Вера</td><td>200</td><td>2</td></tr>
+        <tr><td>4</td><td>IT</td><td>Глеб</td><td>100</td><td>3</td></tr>
+      </table></div>
+      <p>Выбор функции меняет ответ, поэтому формулировку стоит уточнить у интервьюера:</p>
+<div class="table-wrap"><table>
+        <tr><th>Условие</th><th>Что вернёт по IT</th><th>Когда нужно</th></tr>
+        <tr><td><code>row_number() &lt;= <span class="n">3</span></code></td><td>Анна, Борис, Вера — ровно 3</td><td>«3 человека», равных на границе обрезать; нужен тай-брейкер</td></tr>
+        <tr><td><code>rank() &lt;= <span class="n">3</span></code></td><td>Анна, Борис, Вера (у Глеба ранг 4)</td><td>«3 человека», но равных на границе не отрезать</td></tr>
+        <tr><td><code>dense_rank() &lt;= <span class="n">3</span></code></td><td>все четверо</td><td>«все, у кого одна из 3 самых высоких зарплат» (LeetCode 185)</td></tr>
+      </table></div>
+      <p>Тем же приёмом ищут дубликаты: <code>row_number() <span class="t">OVER</span> (<span class="t">PARTITION</span> <span class="t">BY</span> email <span class="t">ORDER</span> <span class="t">BY</span> id)</code>, всё с <code>rn &gt; <span class="n">1</span></code> — лишние копии.</p>
+      <p><b>4. LAG и LEAD</b> — значение из строки на N позиций назад/вперёд в том же окне. У крайних строк соседа нет — NULL (или значение по умолчанию: <code>lag(salary, <span class="n">1</span>, <span class="n">0</span>)</code>).</p>
+<pre><span class="k">SELECT</span> name, salary,
+       lag(salary)  <span class="k">OVER</span> w <span class="k">AS</span> prev,
+       lead(salary) <span class="k">OVER</span> w <span class="k">AS</span> next,
+       salary - lag(salary) <span class="k">OVER</span> w <span class="k">AS</span> diff
+  <span class="k">FROM</span> employee
+ <span class="k">WHERE</span> dept = <span class="s">'IT'</span>
+<span class="k">WINDOW</span> w <span class="k">AS</span> (<span class="k">ORDER</span> <span class="k">BY</span> salary <span class="k">DESC</span>, id);</pre>
+<div class="table-wrap"><table>
+        <tr><th>name</th><th>salary</th><th>prev</th><th>next</th><th>diff</th></tr>
+        <tr><td>Анна</td><td>300</td><td>NULL</td><td>200</td><td>NULL</td></tr>
+        <tr><td>Борис</td><td>200</td><td>300</td><td>200</td><td>−100</td></tr>
+        <tr><td>Вера</td><td>200</td><td>200</td><td>100</td><td>0</td></tr>
+        <tr><td>Глеб</td><td>100</td><td>200</td><td>NULL</td><td>−100</td></tr>
+      </table></div>
+      <p>Типичные задачи: изменение к прошлому дню/месяцу, интервал между событиями пользователя (<code>created_at - lag(created_at)</code>), поиск разрывов в последовательности.</p>
+      <p><b>5. Нарастающий итог и рамка.</b> Рамка — какие строки группы видит функция для текущей строки. Для примера — платежи:</p>
+<div class="table-wrap"><table>
+        <tr><th>id</th><th>paid_on</th><th>amount</th></tr>
+        <tr><td>1</td><td>01.10</td><td>100</td></tr>
+        <tr><td>2</td><td>01.10</td><td>50</td></tr>
+        <tr><td>3</td><td>02.10</td><td>30</td></tr>
+        <tr><td>4</td><td>03.10</td><td>20</td></tr>
+      </table></div>
+<pre><span class="k">SELECT</span> id, paid_on, amount,
+       sum(amount) <span class="k">OVER</span> (<span class="k">ORDER</span> <span class="k">BY</span> paid_on)
+           <span class="k">AS</span> by_range,
+       sum(amount) <span class="k">OVER</span> (<span class="k">ORDER</span> <span class="k">BY</span> paid_on, id
+           <span class="k">ROWS</span> UNBOUNDED PRECEDING)
+           <span class="k">AS</span> by_rows,
+       avg(amount) <span class="k">OVER</span> (<span class="k">ORDER</span> <span class="k">BY</span> paid_on, id
+           <span class="k">ROWS</span> <span class="k">BETWEEN</span> <span class="n">1</span> PRECEDING
+                    <span class="k">AND</span> CURRENT ROW) <span class="k">AS</span> avg2
+  <span class="k">FROM</span> payment;</pre>
+<div class="table-wrap"><table>
+        <tr><th>id</th><th>paid_on</th><th>amount</th><th>by_range</th><th>by_rows</th><th>avg2</th></tr>
+        <tr><td>1</td><td>01.10</td><td>100</td><td><b>150</b></td><td>100</td><td>100</td></tr>
+        <tr><td>2</td><td>01.10</td><td>50</td><td>150</td><td>150</td><td>75</td></tr>
+        <tr><td>3</td><td>02.10</td><td>30</td><td>180</td><td>180</td><td>40</td></tr>
+        <tr><td>4</td><td>03.10</td><td>20</td><td>200</td><td>200</td><td>25</td></tr>
+      </table></div>
+<ul>
+      <li><b>by_range</b> — рамка по умолчанию при ORDER BY: <code><span class="t">RANGE</span> <span class="t">BETWEEN</span> <span class="t">UNBOUNDED</span> <span class="t">PRECEDING</span> <span class="t">AND</span> <span class="t">CURRENT</span> <span class="t">ROW</span></code>. RANGE берёт строки по значению ключа, поэтому оба платежа за 01.10 («пиры») попадают в рамку сразу и получают одинаковый итог 150.</li>
+      <li><b>by_rows</b> — <code><span class="t">ROWS</span></code> считает физические строки: итог растёт построчно. Для этого порядок должен быть уникальным (<code>paid_on, id</code>).</li>
+      <li><b>avg2</b> — скользящее окно: текущая строка и одна перед ней. Так считают скользящее среднее за 7 дней (<code><span class="n">6</span> <span class="t">PRECEDING</span></code>, если строка = день).</li>
+      <li>Без ORDER BY рамка — вся группа, поэтому <code>sum(salary) <span class="t">OVER</span> (<span class="t">PARTITION</span> <span class="t">BY</span> dept)</code> в примере 1 дал сумму отдела, а не нарастающий итог.</li>
+    </ul>
+      <p>Та же рамка ломает <code>last_value</code>: с ORDER BY она кончается на текущей строке, и «последняя строка окна» — это сама текущая строка.</p>
+<pre><span class="k">SELECT</span> name, salary,
+       first_value(name) <span class="k">OVER</span> w <span class="k">AS</span> top,
+       last_value(name) <span class="k">OVER</span> w <span class="k">AS</span> wrong,
+       last_value(name) <span class="k">OVER</span> (w <span class="k">ROWS</span> <span class="k">BETWEEN</span>
+           UNBOUNDED PRECEDING
+           <span class="k">AND</span> UNBOUNDED FOLLOWING) <span class="k">AS</span> bottom
+  <span class="k">FROM</span> employee
+ <span class="k">WHERE</span> dept = <span class="s">'IT'</span>
+<span class="k">WINDOW</span> w <span class="k">AS</span> (<span class="k">ORDER</span> <span class="k">BY</span> salary <span class="k">DESC</span>, id);</pre>
+<div class="table-wrap"><table>
+        <tr><th>name</th><th>salary</th><th>top</th><th>wrong</th><th>bottom</th></tr>
+        <tr><td>Анна</td><td>300</td><td>Анна</td><td>Анна</td><td>Глеб</td></tr>
+        <tr><td>Борис</td><td>200</td><td>Анна</td><td>Борис</td><td>Глеб</td></tr>
+        <tr><td>Вера</td><td>200</td><td>Анна</td><td>Вера</td><td>Глеб</td></tr>
+        <tr><td>Глеб</td><td>100</td><td>Анна</td><td>Глеб</td><td>Глеб</td></tr>
+      </table></div>
+      <p><b>6. Где окна в порядке выполнения.</b> <code><span class="t">FROM</span> → <span class="t">WHERE</span> → <span class="t">GROUP</span> <span class="t">BY</span> → <span class="t">HAVING</span> → окна → <span class="t">SELECT</span> → <span class="t">DISTINCT</span> → <span class="t">ORDER</span> <span class="t">BY</span> → <span class="t">LIMIT</span></code>. Поэтому:</p>
+<ul>
+      <li>окно видит строки, уже отфильтрованные WHERE: в примерах 2 и 4 ранги считались только по IT;</li>
+      <li>фильтровать по окну можно только снаружи (подзапрос или CTE). В PostgreSQL 18 <code><span class="t">QUALIFY</span></code> нет, в Snowflake, BigQuery и DuckDB есть;</li>
+      <li>окно можно наложить на результат GROUP BY — агрегат внутри окна:</li>
+    </ul>
+<pre><span class="k">SELECT</span> dept, sum(salary) <span class="k">AS</span> total,
+       rank() <span class="k">OVER</span> (<span class="k">ORDER</span> <span class="k">BY</span> sum(salary) <span class="k">DESC</span>)
+           <span class="k">AS</span> r
+  <span class="k">FROM</span> employee
+ <span class="k">GROUP</span> <span class="k">BY</span> dept;</pre>
+<div class="table-wrap"><table>
+        <tr><th>dept</th><th>total</th><th>r</th></tr>
+        <tr><td>IT</td><td>800</td><td>1</td></tr>
+        <tr><td>HR</td><td>270</td><td>2</td></tr>
+      </table></div>
+      <p><b>7. Как это выполняется.</b> В плане PostgreSQL — узел <code><span class="t">WindowAgg</span></code> поверх <code><span class="t">Sort</span></code> по <code><span class="t">PARTITION</span> <span class="t">BY</span></code> + <code><span class="t">ORDER</span> <span class="t">BY</span></code>: строки сортируются один раз, затем executor идёт по потоку, следит за границей группы и сдвигает рамку. Каждое окно с другим набором PARTITION/ORDER — ещё одна сортировка; на больших таблицах она уходит на диск, если не хватает <code>work_mem</code>. Помогает индекс <code>(dept, salary <span class="t">DESC</span>)</code>: данные приходят уже отсортированными. Из Java — native query или JDBC: в JPQL окон нет, в HQL они есть с Hibernate 6.</p>
+<p class="follow"><b>Вторая по величине зарплата?</b> <code>dense_rank() = <span class="n">2</span></code> или <code><span class="k">SELECT</span> <span class="k">DISTINCT</span> salary … <span class="k">ORDER</span> <span class="k">BY</span> salary <span class="k">DESC</span> <span class="k">OFFSET</span> <span class="n">1</span> <span class="k">LIMIT</span> <span class="n">1</span></code>. <b>Разность пар соседних строк по группам?</b> <code>lag(...) <span class="t">OVER</span> (<span class="t">PARTITION</span> <span class="t">BY</span> … <span class="t">ORDER</span> <span class="t">BY</span> …)</code>. <b>Медиана?</b> <code>percentile_cont(<span class="n">0.5</span>) <span class="t">WITHIN</span> <span class="t">GROUP</span> (<span class="t">ORDER</span> <span class="t">BY</span> salary)</code> — это агрегат, не оконная функция.</p>
     </div></div></article>
 <article id="q188" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">188. Рекурсивный CTE: обойти дерево подразделений</h2><div class="answer" hidden><div class="short"><p><b>WITH RECURSIVE</b> = стартовая часть + рекурсивная, присоединяющая следующий уровень к найденным строкам; останавливается, когда новых строк нет. Так <b>одним запросом</b> обходят дерево (все подразделения внутри заданного) вместо N запросов из приложения.</p>
 <p>Защита от циклов — ограничение глубины или <b>CYCLE</b> (PostgreSQL 14+). Альтернативы для деревьев — <b>materialized path</b> (ltree) и <b>closure table</b>.</p></div>
