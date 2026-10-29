@@ -10667,78 +10667,30 @@ client(id, name, city, region)
 <article id="q194" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">194. SQL-задача: отделы без сотрудников и сотрудники богаче руководителя</h2><div class="answer" hidden><div class="short"><ul><li>«Нет связанных строк» — <b>anti-join</b>: NOT EXISTS или LEFT JOIN с IS NULL справа. <b>NOT IN</b> опасен: NULL в подзапросе даёт пустой результат.</li><li>«Сотрудник и его руководитель» — <b>self-join</b> таблицы с собой по manager_id.</li></ul>
 <p>Стоит сказать и про <b>индексы</b> под эти запросы — по department_id и manager_id.</p></div>
     <div class="more">
-<pre class="wide"><span class="k">SELECT</span> d.* <span class="k">FROM</span> department d
+<pre class="wide"><span class="c">-- 1. отделы без сотрудников: anti-join — отдел, для которого не нашлось ни одной строки в employee</span>
+<span class="k">SELECT</span> d.* <span class="k">FROM</span> department d
  <span class="k">WHERE</span> <span class="k">NOT</span> <span class="k">EXISTS</span> (<span class="k">SELECT</span> <span class="n">1</span> <span class="k">FROM</span> employee e <span class="k">WHERE</span> e.department_id = d.id);
 
+<span class="c">-- 2. сотрудники богаче руководителя: self-join, m — та же таблица в роли руководителя</span>
 <span class="k">SELECT</span> e.name, e.salary, m.name <span class="k">AS</span> manager
-  <span class="k">FROM</span> employee e <span class="k">JOIN</span> employee m <span class="k">ON</span> m.id = e.manager_id
+  <span class="k">FROM</span> employee e <span class="k">JOIN</span> employee m <span class="k">ON</span> m.id = e.manager_id   <span class="c">-- у кого нет руководителя — выпадают</span>
  <span class="k">WHERE</span> e.salary &gt; m.salary;</pre>
-<pre class="narrow"><span class="k">SELECT</span> d.* <span class="k">FROM</span> department d
+<pre class="narrow"><span class="c">-- 1. отделы без сотрудников: anti-join —</span>
+<span class="c">-- отдел, для которого не нашлось ни одной</span>
+<span class="c">-- строки в employee</span>
+<span class="k">SELECT</span> d.* <span class="k">FROM</span> department d
  <span class="k">WHERE</span> <span class="k">NOT</span> <span class="k">EXISTS</span> (
        <span class="k">SELECT</span> <span class="n">1</span> <span class="k">FROM</span> employee e
         <span class="k">WHERE</span> e.department_id = d.id);
 
+<span class="c">-- 2. сотрудники богаче руководителя:</span>
+<span class="c">-- self-join, m — та же таблица в роли</span>
+<span class="c">-- руководителя; у кого его нет — выпадают</span>
 <span class="k">SELECT</span> e.name, e.salary, m.name <span class="k">AS</span> manager
   <span class="k">FROM</span> employee e
   <span class="k">JOIN</span> employee m <span class="k">ON</span> m.id = e.manager_id
  <span class="k">WHERE</span> e.salary &gt; m.salary;</pre>
-    <ul><li>Отдел с максимальной суммой зарплат — GROUP BY + ORDER BY sum DESC LIMIT 1; при равенстве выдаст один случайный, все — через rank() = 1.</li></ul>
-<pre class="wide"><span class="c">-- LEFT JOIN … IS NULL — тот же anti join, другой синтаксис</span>
-<span class="k">SELECT</span> d.* <span class="k">FROM</span> department d
-  <span class="k">LEFT</span> <span class="k">JOIN</span> employee e <span class="k">ON</span> e.department_id = d.id
- <span class="k">WHERE</span> e.id <span class="k">IS</span> <span class="k">NULL</span>;
-
-<span class="c">-- отдел с максимальной суммой зарплат, все при равенстве</span>
-<span class="k">SELECT</span> department_id, total <span class="k">FROM</span> (
-    <span class="k">SELECT</span> department_id, sum(salary) <span class="k">AS</span> total,
-           rank() <span class="k">OVER</span> (<span class="k">ORDER</span> <span class="k">BY</span> sum(salary) <span class="k">DESC</span>) <span class="k">AS</span> r      <span class="c">-- окно поверх агрегата</span>
-      <span class="k">FROM</span> employee <span class="k">GROUP</span> <span class="k">BY</span> department_id) t
- <span class="k">WHERE</span> r = <span class="n">1</span>;
-
-<span class="c">-- сотрудники с зарплатой выше средней по своему отделу</span>
-<span class="k">SELECT</span> * <span class="k">FROM</span> (
-    <span class="k">SELECT</span> e.*, avg(salary) <span class="k">OVER</span> (<span class="k">PARTITION</span> <span class="k">BY</span> department_id) <span class="k">AS</span> dept_avg <span class="k">FROM</span> employee e) t
- <span class="k">WHERE</span> salary &gt; dept_avg;
-
-<span class="c">-- цепочка руководителей и «сколько уровней до CEO» — рекурсивный CTE</span></pre>
-<pre class="narrow"><span class="c">-- LEFT JOIN … IS NULL — тот же anti join,</span>
-<span class="c">-- другой синтаксис</span>
-<span class="k">SELECT</span> d.* <span class="k">FROM</span> department d
-  <span class="k">LEFT</span> <span class="k">JOIN</span> employee e
-         <span class="k">ON</span> e.department_id = d.id
- <span class="k">WHERE</span> e.id <span class="k">IS</span> <span class="k">NULL</span>;
-
-<span class="c">-- отдел с максимальной суммой зарплат,</span>
-<span class="c">-- все при равенстве</span>
-<span class="k">SELECT</span> department_id, total <span class="k">FROM</span> (
-    <span class="k">SELECT</span> department_id,
-           sum(salary) <span class="k">AS</span> total,
-           <span class="c">-- окно поверх агрегата</span>
-           rank() <span class="k">OVER</span> (
-               <span class="k">ORDER</span> <span class="k">BY</span> sum(salary) <span class="k">DESC</span>) <span class="k">AS</span> r
-      <span class="k">FROM</span> employee
-     <span class="k">GROUP</span> <span class="k">BY</span> department_id) t
- <span class="k">WHERE</span> r = <span class="n">1</span>;
-
-<span class="c">-- сотрудники с зарплатой выше средней</span>
-<span class="c">-- по своему отделу</span>
-<span class="k">SELECT</span> * <span class="k">FROM</span> (
-    <span class="k">SELECT</span> e.*,
-           avg(salary) <span class="k">OVER</span> (
-               <span class="k">PARTITION</span> <span class="k">BY</span> department_id
-           ) <span class="k">AS</span> dept_avg
-      <span class="k">FROM</span> employee e) t
- <span class="k">WHERE</span> salary &gt; dept_avg;
-
-<span class="c">-- цепочка руководителей и «сколько уровней</span>
-<span class="c">-- до CEO» — рекурсивный CTE</span></pre>
-      <div class="table-wrap"><table>
-        <tr><th>Запрос</th><th>Если manager_id может быть NULL</th></tr>
-        <tr><td><code><span class="t">JOIN</span> employee m <span class="t">ON</span> m.id = e.manager_id</code></td><td>сотрудники без руководителя выпадают — для «богаче руководителя» это правильно</td></tr>
-        <tr><td><code><span class="t">LEFT</span> <span class="t">JOIN</span></code> + условие в WHERE по m</td><td>превращается в INNER — классическая ошибка</td></tr>
-        <tr><td><code><span class="t">WHERE</span> id <span class="t">NOT</span> <span class="t">IN</span> (<span class="t">SELECT</span> manager_id …)</code></td><td>пусто — нужен NOT EXISTS или фильтр <code>manager_id <span class="t">IS</span> <span class="t">NOT</span> <span class="t">NULL</span></code> в подзапросе</td></tr>
-      </table></div>
-      <p>На собеседовании по SQL обычно ждут: правильный тип JOIN, понимание NULL, умение выбрать между подзапросом, JOIN и оконной функцией, и проговорить, какой индекс нужен (<code>employee(department_id)</code>, <code>employee(manager_id)</code>).</p>
+    <ul><li><code><span class="t">WHERE</span> id <span class="t">NOT</span> <span class="t">IN</span> (<span class="t">SELECT</span> department_id <span class="t">FROM</span> employee)</code> вернёт пусто, если хоть у одного сотрудника <code>department_id</code> = NULL: <code>id &lt;&gt; <span class="t">NULL</span></code> — не true. NOT EXISTS от этого не зависит.</li><li>Индексы под запросы: <code>employee(department_id)</code> и <code>employee(manager_id)</code>.</li></ul>
     </div></div></article>
 <article id="q195" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">195. Индексы: составные, когда не используются, HOT-апдейты</h2><div class="answer" hidden><div class="short"><p><b>B-tree</b> — индекс по умолчанию: равенство, диапазоны, сортировка, LIKE по префиксу. Составной <b>(a, b)</b> работает для условий по a или по a и b, но обычно не по одному b. Порядок колонок: <b>сначала равенства, потом диапазон и сортировка</b>.</p>
 <p>Индекс <b>не используется</b>: функция над колонкой, неявное приведение типов, LIKE с % в начале, низкая селективность, устаревшая статистика. Каждый индекс замедляет запись и мешает <b>HOT-обновлениям</b>.</p></div>
