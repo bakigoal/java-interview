@@ -11149,6 +11149,83 @@ COMMIT; COMMIT;
 <span class="c">-- защита: SERIALIZABLE (SSI отследит</span>
 <span class="c">-- зависимость чтение→запись) или</span>
 <span class="c">-- SELECT ... FOR UPDATE обеих строк</span></pre>
+      <p>Примеры по уровням: два psql-сеанса <code>t1</code> и <code>t2</code>, в <code>account</code> строка <code>id = <span class="n">1</span></code> с <code>balance = <span class="n">100</span></code>.</p>
+      <p><b>Read Uncommitted</b> — в PostgreSQL то же, что Read Committed: грязного чтения нет.</p>
+<pre class="wide">t1=# <span class="t">BEGIN</span>; <span class="t">UPDATE</span> account <span class="t">SET</span> balance = <span class="n">0</span> <span class="t">WHERE</span> id = <span class="n">1</span>;     -- не закоммичено
+t2=# <span class="t">BEGIN</span> <span class="t">ISOLATION</span> <span class="t">LEVEL</span> <span class="t">READ</span> <span class="t">UNCOMMITTED</span>;
+t2=# <span class="t">SELECT</span> balance <span class="t">FROM</span> account <span class="t">WHERE</span> id = <span class="n">1</span>;               -- <span class="n">100</span>, а не <span class="n">0</span>
+t1=# <span class="t">ROLLBACK</span>;</pre>
+<pre class="narrow"><span class="c">-- не закоммичено:</span>
+t1=# BEGIN;
+t1=# <span class="k">UPDATE</span> account <span class="k">SET</span> balance = <span class="n">0</span>
+      <span class="k">WHERE</span> id = <span class="n">1</span>;
+t2=# BEGIN ISOLATION LEVEL READ UNCOMMITTED;
+<span class="c">-- 100, а не 0:</span>
+t2=# <span class="k">SELECT</span> balance <span class="k">FROM</span> account
+      <span class="k">WHERE</span> id = <span class="n">1</span>;
+t1=# ROLLBACK;</pre>
+      <p><b>Read Committed</b> — снимок на каждый оператор: повторное чтение видит чужой коммит.</p>
+<pre class="wide">t1=# <span class="t">BEGIN</span>;                                                  -- <span class="t">READ</span> <span class="t">COMMITTED</span> по умолчанию
+t1=# <span class="t">SELECT</span> balance <span class="t">FROM</span> account <span class="t">WHERE</span> id = <span class="n">1</span>;               -- <span class="n">100</span>
+t2=# <span class="t">UPDATE</span> account <span class="t">SET</span> balance = <span class="n">50</span> <span class="t">WHERE</span> id = <span class="n">1</span>;           -- автокоммит
+t1=# <span class="t">SELECT</span> balance <span class="t">FROM</span> account <span class="t">WHERE</span> id = <span class="n">1</span>;               -- <span class="n">50</span>: неповторяемое чтение</pre>
+<pre class="narrow"><span class="c">-- READ COMMITTED по умолчанию</span>
+t1=# BEGIN;
+t1=# <span class="k">SELECT</span> balance <span class="k">FROM</span> account
+      <span class="k">WHERE</span> id = <span class="n">1</span>;                <span class="c">-- 100</span>
+<span class="c">-- автокоммит</span>
+t2=# <span class="k">UPDATE</span> account <span class="k">SET</span> balance = <span class="n">50</span>
+      <span class="k">WHERE</span> id = <span class="n">1</span>;
+<span class="c">-- 50: неповторяемое чтение</span>
+t1=# <span class="k">SELECT</span> balance <span class="k">FROM</span> account
+      <span class="k">WHERE</span> id = <span class="n">1</span>;</pre>
+      <p><b>Repeatable Read</b> — снимок один на транзакцию: чтение повторяется, а запись поверх чужого коммита падает.</p>
+<pre class="wide">t1=# <span class="t">BEGIN</span> <span class="t">ISOLATION</span> <span class="t">LEVEL</span> <span class="t">REPEATABLE</span> <span class="t">READ</span>;
+t1=# <span class="t">SELECT</span> balance <span class="t">FROM</span> account <span class="t">WHERE</span> id = <span class="n">1</span>;               -- <span class="n">100</span>
+t2=# <span class="t">UPDATE</span> account <span class="t">SET</span> balance = <span class="n">50</span> <span class="t">WHERE</span> id = <span class="n">1</span>;
+t1=# <span class="t">SELECT</span> balance <span class="t">FROM</span> account <span class="t">WHERE</span> id = <span class="n">1</span>;               -- <span class="n">100</span>: снимок с первого запроса
+t1=# <span class="t">UPDATE</span> account <span class="t">SET</span> balance = balance - <span class="n">10</span> <span class="t">WHERE</span> id = <span class="n">1</span>;
+<span class="t">ERROR</span>:  could not serialize access due to concurrent update  -- <span class="n">40001</span>: повторить транзакцию</pre>
+<pre class="narrow">t1=# <span class="t">BEGIN</span> <span class="t">ISOLATION</span> <span class="t">LEVEL</span> <span class="t">REPEATABLE</span> <span class="t">READ</span>;
+t1=# <span class="t">SELECT</span> balance <span class="t">FROM</span> account
+      <span class="t">WHERE</span> id = <span class="n">1</span>;                -- <span class="n">100</span>
+t2=# <span class="t">UPDATE</span> account <span class="t">SET</span> balance = <span class="n">50</span>
+      <span class="t">WHERE</span> id = <span class="n">1</span>;
+-- <span class="n">100</span>: снимок с первого запроса
+t1=# <span class="t">SELECT</span> balance <span class="t">FROM</span> account
+      <span class="t">WHERE</span> id = <span class="n">1</span>;
+t1=# <span class="t">UPDATE</span> account
+        <span class="t">SET</span> balance = balance - <span class="n">10</span>
+      <span class="t">WHERE</span> id = <span class="n">1</span>;
+-- <span class="n">40001</span>: повторить транзакцию
+<span class="t">ERROR</span>:  could not serialize access due
+        to concurrent update</pre>
+      <p><b>Serializable</b> — тот же write skew с дежурными, что выше на RR, но вторая транзакция обрывается.</p>
+<pre class="wide">t1=# <span class="t">BEGIN</span> <span class="t">ISOLATION</span> <span class="t">LEVEL</span> <span class="t">SERIALIZABLE</span>;
+t2=# <span class="t">BEGIN</span> <span class="t">ISOLATION</span> <span class="t">LEVEL</span> <span class="t">SERIALIZABLE</span>;
+t1=# <span class="t">SELECT</span> count(*) <span class="t">FROM</span> duty <span class="t">WHERE</span> shift = <span class="n">1</span> <span class="t">AND</span> on_call;  -- <span class="n">2</span>
+t2=# <span class="t">SELECT</span> count(*) <span class="t">FROM</span> duty <span class="t">WHERE</span> shift = <span class="n">1</span> <span class="t">AND</span> on_call;  -- <span class="n">2</span>
+t1=# <span class="t">UPDATE</span> duty <span class="t">SET</span> on_call = <span class="k">false</span> <span class="t">WHERE</span> doctor = <span class="s">'A'</span>;
+t2=# <span class="t">UPDATE</span> duty <span class="t">SET</span> on_call = <span class="k">false</span> <span class="t">WHERE</span> doctor = <span class="s">'B'</span>;
+t1=# <span class="t">COMMIT</span>;                                                 -- ок
+t2=# <span class="t">COMMIT</span>;
+<span class="t">ERROR</span>:  could not serialize access due to read/write dependencies among transactions  -- <span class="n">40001</span></pre>
+<pre class="narrow">t1=# <span class="t">BEGIN</span> <span class="t">ISOLATION</span> <span class="t">LEVEL</span> <span class="t">SERIALIZABLE</span>;
+t2=# <span class="t">BEGIN</span> <span class="t">ISOLATION</span> <span class="t">LEVEL</span> <span class="t">SERIALIZABLE</span>;
+t1=# <span class="t">SELECT</span> count(*) <span class="t">FROM</span> duty
+      <span class="t">WHERE</span> shift = <span class="n">1</span> <span class="t">AND</span> on_call;  -- <span class="n">2</span>
+t2=# <span class="t">SELECT</span> count(*) <span class="t">FROM</span> duty
+      <span class="t">WHERE</span> shift = <span class="n">1</span> <span class="t">AND</span> on_call;  -- <span class="n">2</span>
+t1=# <span class="t">UPDATE</span> duty <span class="t">SET</span> on_call = <span class="k">false</span>
+      <span class="t">WHERE</span> doctor = <span class="s">'A'</span>;
+t2=# <span class="t">UPDATE</span> duty <span class="t">SET</span> on_call = <span class="k">false</span>
+      <span class="t">WHERE</span> doctor = <span class="s">'B'</span>;
+t1=# <span class="t">COMMIT</span>;                        -- ок
+t2=# <span class="t">COMMIT</span>;
+-- <span class="n">40001</span>:
+<span class="t">ERROR</span>:  could not serialize access due
+        to read/write dependencies
+        among transactions</pre>
       <p>Что происходит при конкурентном UPDATE одной строки: на RC второй ждёт коммита первого, затем перечитывает строку и <i>заново проверяет WHERE</i> на новой версии (поэтому <code><span class="k">UPDATE</span> ... <span class="k">SET</span> balance = balance - <span class="n">10</span></code> на RC корректен). На RR второй после коммита первого получает «could not serialize access due to concurrent update» — снимок устарел.</p>
       <p>Serializable в PostgreSQL (SSI) не блокирует, а отслеживает зависимости чтения и записи (predicate locks) и при опасном цикле обрывает одну транзакцию. Приложение обязано уметь повторять транзакцию целиком (Spring Retry на <code><span class="t">CannotSerializeTransactionException</span></code> / SQLState 40001). Производительность хорошая при коротких транзакциях; ложные срабатывания растут при seq scan (предикатная блокировка на всю таблицу).</p>
 <p class="follow"><b>Какой уровень по умолчанию в MySQL InnoDB?</b> Repeatable Read.</p>
