@@ -11481,6 +11481,7 @@ ERROR:  could <span class="k">not</span> serialize access due
         <span class="t">BigDecimal</span> amount) {
     paymentService.pay(accountId, amount);
 }</pre>
+      <p><b>Когда лучше:</b> конфликты редкие — разные пользователи правят разные строки (профиль, карточка заказа, настройки в админке). И длинные «транзакции» через UI: форма открыта минуты, держать блокировку столько нельзя — версию отдают с формой и проверяют при сохранении, а на конфликт отвечают <code><span class="n">409</span> <span class="t">Conflict</span></code> вместо повтора. Не для горячей строки, куда пишут сотни раз в секунду.</p>
       <p><b>2. SELECT FOR UPDATE — пессимистическая.</b> Второй ждёт на чтении, пока первый не закоммитит, и читает уже новый баланс. В <code>pay()</code> меняется только чтение.</p>
 <pre class="wide"><span class="k">public</span> <span class="k">interface</span> <span class="t">AccountRepository</span> <span class="k">extends</span> <span class="t">JpaRepository</span>&lt;<span class="t">Account</span>, <span class="t">Long</span>&gt; {
 
@@ -11528,6 +11529,7 @@ ERROR:  could <span class="k">not</span> serialize access due
     <span class="c">// дальше читать и менять оба счёта —</span>
     <span class="c">// они уже заблокированы</span>
 }</pre>
+      <p><b>Когда лучше:</b> конфликты частые, а логику между чтением и записью не уложить в один UPDATE: несколько сущностей, правила, перевод между счетами. Нагрузка на одну строку умеренная — до сотен в секунду, транзакция короткая и без внешних вызовов; повторов нет — запросы просто ждут очереди.</p>
       <p><b>3. Атомарный условный UPDATE + журнал.</b> Проверка и списание — одним оператором, сущность не читается. Запись в журнал идёт первой: уникальный индекс на <code>payment_id</code> отсекает повтор того же платежа ещё до блокировки счёта.</p>
 <pre class="wide"><span class="a">@Modifying</span>
 <span class="a">@Query</span>(<span class="s">"update Account a set a.balance = a.balance - :amount where a.id = :id and a.balance &gt;= :amount"</span>)
@@ -11566,6 +11568,7 @@ ERROR:  could <span class="k">not</span> serialize access due
                 payment.accountId());
     }
 }</pre>
+      <p><b>Когда лучше:</b> изменение выражается одной формулой с условием — баланс, остаток на складе, лимит, счётчик, резерв мест. Лучший выбор для горячей строки: блокировка держится только на время самого UPDATE. Цена — правило уходит в SQL, а сущность в памяти и доменные события об изменении не знают.</p>
       <p>Ловушки:</p>
       <ul>
         <li><b>Повтор снаружи транзакции.</b> <code><span class="a">@Retryable</span></code> внутри <code><span class="a">@Transactional</span></code> повторит вызов в уже помеченной на откат транзакции — повтор в отдельном бине.</li>
@@ -11665,6 +11668,131 @@ ERROR:  could <span class="k">not</span> serialize access due
 <span class="c">-- задача в одном экземпляре: false —</span>
 <span class="c">-- уже выполняется на другом поде</span>
 <span class="k">SELECT</span> pg_try_advisory_xact_lock(<span class="n">42</span>);</pre>
+      <p>То же в Spring Data JPA.</p>
+      <p><b>1. Единый порядок захвата.</b> Перевод A→B и B→A параллельно: каждый взял свою строку и ждёт чужую. Блокируем все нужные строки одним запросом, отсортированными по id.</p>
+<pre class="wide"><span class="a">@Lock</span>(<span class="t">LockModeType</span>.<span class="t">PESSIMISTIC_WRITE</span>)
+<span class="a">@Query</span>(<span class="s">"select a from Account a where a.id in :ids order by a.id"</span>)   <span class="c">// строки блокируются по порядку</span>
+<span class="t">List</span>&lt;<span class="t">Account</span>&gt; lockAllById(<span class="a">@Param</span>(<span class="s">"ids"</span>) <span class="t">Collection</span>&lt;<span class="t">Long</span>&gt; ids);
+
+<span class="a">@Transactional</span>
+<span class="k">public</span> <span class="k">void</span> transfer(<span class="k">long</span> fromId, <span class="k">long</span> toId, <span class="t">BigDecimal</span> amount) {
+    <span class="t">Map</span>&lt;<span class="t">Long</span>, <span class="t">Account</span>&gt; accounts = accountRepository.lockAllById(<span class="t">List</span>.of(fromId, toId)).stream()
+            .collect(<span class="t">Collectors</span>.toMap(<span class="t">Account</span>::getId, <span class="t">Function</span>.identity()));
+    accounts.get(fromId).withdraw(amount);
+    accounts.get(toId).deposit(amount);
+}</pre>
+<pre class="narrow"><span class="c">// строки блокируются по порядку</span>
+<span class="a">@Lock</span>(<span class="t">LockModeType</span>.<span class="t">PESSIMISTIC_WRITE</span>)
+<span class="a">@Query</span>(<span class="s">"""
+        select a from Account a
+         where a.id in :ids
+         order by a.id"""</span>)
+<span class="t">List</span>&lt;<span class="t">Account</span>&gt; lockAllById(
+        <span class="a">@Param</span>(<span class="s">"ids"</span>) <span class="t">Collection</span>&lt;<span class="t">Long</span>&gt; ids);
+
+<span class="a">@Transactional</span>
+<span class="k">public</span> <span class="k">void</span> transfer(<span class="k">long</span> fromId, <span class="k">long</span> toId,
+        <span class="t">BigDecimal</span> amount) {
+    <span class="t">Map</span>&lt;<span class="t">Long</span>, <span class="t">Account</span>&gt; accounts =
+            accountRepository
+                .lockAllById(
+                        <span class="t">List</span>.of(fromId, toId))
+                .stream()
+                .collect(<span class="t">Collectors</span>.toMap(
+                        <span class="t">Account</span>::getId,
+                        <span class="t">Function</span>.identity()));
+    accounts.get(fromId).withdraw(amount);
+    accounts.get(toId).deposit(amount);
+}</pre>
+      <p><b>Когда:</b> транзакция меняет несколько строк одной таблицы, и другие транзакции могут взять те же строки в другом порядке — переводы, резерв товаров из корзины, массовая смена статусов.</p>
+      <p><b>2. Порядок UPDATE при flush.</b> Без явных блокировок Hibernate пишет изменённые сущности в порядке, в котором они попали в persistence context. Два пакетных обработчика загрузили одни и те же заказы в разном порядке — дедлок на коммите. Настройка сортирует UPDATE по типу сущности и id:</p>
+<pre class="wide"># application.properties
+spring.jpa.properties.hibernate.order_updates=<span class="k">true</span></pre>
+<pre class="narrow"># application.properties
+spring.jpa.properties.hibernate.order_updates=
+    <span class="k">true</span></pre>
+      <p><b>Когда:</b> пакетная обработка, где несколько потоков или подов меняют пересекающиеся наборы сущностей через dirty checking.</p>
+      <p><b>3. Повтор на 40P01.</b> Порядок не всегда можно гарантировать (внешние ключи, чужой код), поэтому оставшиеся дедлоки повторяют. Spring переводит 40P01 в <code><span class="t">CannotAcquireLockException</span></code>; повтор ставят на его родителя <code><span class="t">ConcurrencyFailureException</span></code> — под ним и ошибки optimistic lock.</p>
+<pre class="wide"><span class="c">// в другом бине, снаружи @Transactional: повторяется вся транзакция</span>
+<span class="a">@Retryable</span>(retryFor = <span class="t">ConcurrencyFailureException</span>.<span class="k">class</span>, maxAttempts = <span class="n">3</span>,
+        backoff = <span class="a">@Backoff</span>(delay = <span class="n">50</span>, random = <span class="k">true</span>))
+<span class="k">public</span> <span class="k">void</span> transfer(<span class="k">long</span> fromId, <span class="k">long</span> toId, <span class="t">BigDecimal</span> amount) {
+    transferService.transfer(fromId, toId, amount);
+}</pre>
+<pre class="narrow"><span class="c">// в другом бине, снаружи @Transactional:</span>
+<span class="c">// повторяется вся транзакция</span>
+<span class="a">@Retryable</span>(
+        retryFor =
+            <span class="t">ConcurrencyFailureException</span>.<span class="k">class</span>,
+        maxAttempts = <span class="n">3</span>,
+        backoff = <span class="a">@Backoff</span>(delay = <span class="n">50</span>,
+                random = <span class="k">true</span>))
+<span class="k">public</span> <span class="k">void</span> transfer(<span class="k">long</span> fromId, <span class="k">long</span> toId,
+        <span class="t">BigDecimal</span> amount) {
+    transferService.transfer(
+            fromId, toId, amount);
+}</pre>
+      <p><b>Когда:</b> всегда, где есть блокировки строк, — как страховка поверх единого порядка, а не вместо него.</p>
+      <p><b>4. Advisory lock по ключу.</b> Правило «не больше 5 счетов на клиента», а строки клиента в этой БД нет — блокировать нечего. Блокировка на число из ключа сериализует операции одного клиента и снимается на коммите. <code><span class="t">JdbcTemplate</span></code> внутри <code><span class="a">@Transactional</span></code> с JPA работает на том же соединении.</p>
+<pre class="wide"><span class="a">@Transactional</span>
+<span class="k">public</span> <span class="t">Account</span> openAccount(<span class="k">long</span> clientId) {
+    <span class="c">// pg_advisory_xact_lock возвращает void — вызываем во FROM, чтобы получить строку</span>
+    jdbcTemplate.queryForObject(<span class="s">"select 1 from pg_advisory_xact_lock(hashtext(?))"</span>,
+            <span class="t">Integer</span>.<span class="k">class</span>, <span class="s">"client:"</span> + clientId);
+    <span class="k">if</span> (accountRepository.countByClientId(clientId) &gt;= <span class="n">5</span>) {
+        <span class="k">throw</span> <span class="k">new</span> <span class="t">LimitExceededException</span>(clientId);
+    }
+    <span class="k">return</span> accountRepository.save(<span class="k">new</span> <span class="t">Account</span>(clientId));
+}</pre>
+<pre class="narrow"><span class="a">@Transactional</span>
+<span class="k">public</span> <span class="t">Account</span> openAccount(<span class="k">long</span> clientId) {
+    <span class="c">// функция возвращает void — вызываем</span>
+    <span class="c">// во FROM, чтобы получить строку</span>
+    jdbcTemplate.queryForObject(<span class="s">"""
+            select 1
+              from pg_advisory_xact_lock(
+                       hashtext(?))"""</span>,
+            <span class="t">Integer</span>.<span class="k">class</span>,
+            <span class="s">"client:"</span> + clientId);
+    <span class="k">if</span> (accountRepository
+            .countByClientId(clientId) &gt;= <span class="n">5</span>) {
+        <span class="k">throw</span> <span class="k">new</span> <span class="t">LimitExceededException</span>(
+                clientId);
+    }
+    <span class="k">return</span> accountRepository.save(
+            <span class="k">new</span> <span class="t">Account</span>(clientId));
+}</pre>
+      <p><b>Когда:</b> инвариант по нескольким строкам, а общей «родительской» строки для <code><span class="t">FOR</span> <span class="t">UPDATE</span></code> нет; альтернатива — SERIALIZABLE с повторами.</p>
+      <p><b>5. Задача в одном экземпляре.</b> <code><span class="a">@Scheduled</span></code> срабатывает на каждом поде; try-lock пропускает запуск, если задача уже идёт на другом.</p>
+<pre class="wide"><span class="a">@Query</span>(value = <span class="s">"select pg_try_advisory_xact_lock(:key)"</span>, nativeQuery = <span class="k">true</span>)
+<span class="k">boolean</span> tryLock(<span class="a">@Param</span>(<span class="s">"key"</span>) <span class="k">long</span> key);
+
+<span class="a">@Scheduled</span>(cron = <span class="s">"0 */5 * * * *"</span>)
+<span class="a">@Transactional</span>
+<span class="k">public</span> <span class="k">void</span> closeExpiredReservations() {
+    <span class="k">if</span> (!lockRepository.tryLock(<span class="t">CLOSE_RESERVATIONS_LOCK</span>)) {
+        <span class="k">return</span>;                                    <span class="c">// выполняется на другом поде</span>
+    }
+    reservationRepository.closeExpired();          <span class="c">// лок держится до конца транзакции</span>
+}</pre>
+<pre class="narrow"><span class="a">@Query</span>(value = <span class="s">"""
+        select pg_try_advisory_xact_lock(
+                   :key)"""</span>,
+        nativeQuery = <span class="k">true</span>)
+<span class="k">boolean</span> tryLock(<span class="a">@Param</span>(<span class="s">"key"</span>) <span class="k">long</span> key);
+
+<span class="a">@Scheduled</span>(cron = <span class="s">"0 */5 * * * *"</span>)
+<span class="a">@Transactional</span>
+<span class="k">public</span> <span class="k">void</span> closeExpiredReservations() {
+    <span class="k">if</span> (!lockRepository.tryLock(
+            <span class="t">CLOSE_RESERVATIONS_LOCK</span>)) {
+        <span class="c">// выполняется на другом поде</span>
+        <span class="k">return</span>;
+    }
+    <span class="c">// лок держится до конца транзакции</span>
+    reservationRepository.closeExpired();
+}</pre>
+      <p><b>Когда:</b> короткая задача, которая укладывается в одну транзакцию. Для долгих задач и без привязки к PostgreSQL — ShedLock (блокировка строкой в таблице с временем истечения).</p>
       <p class="follow"><b>Чем дедлок отличается от долгого ожидания блокировки?</b>При дедлоке цикл ожиданий никогда не разрешится, и Postgres разрывает его сам. При обычном ожидании транзакция ждёт, пока другая закончит, — тут помогают <code>lock_timeout</code> и поиск виновника через <code>pg_blocking_pids</code>.</p>
     </div></div></article>
 <article id="q207" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">207. Пул соединений: размер, исчерпание, PgBouncer</h2><div class="answer" hidden><div class="short"><p>Соединение дорогое, его берут <b>из пула</b>; свободных нет — поток ждёт до <b>connectionTimeout</b> и получает ошибку.</p>
