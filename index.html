@@ -11359,7 +11359,13 @@ ERROR:  could <span class="k">not</span> serialize access due
     autovacuum_vacuum_scale_factor = <span class="n">0.02</span>,
     autovacuum_analyze_scale_factor = <span class="n">0.01</span>);</pre>
     <ul><li>Мешают долгие транзакции и забытые слоты репликации; место ОС возвращают только VACUUM FULL или pg_repack.</li></ul>
-<p>Что делает VACUUM, по пунктам: 1) находит «мёртвые» версии строк, невидимые ни одной активной транзакции, и помечает их место свободным (free space map); 2) удаляет ссылки на них из индексов; 3) обновляет visibility map — страницы, где все строки видимы всем (нужно для Index Only Scan и чтобы следующий VACUUM их пропускал); 4) замораживает старые xmin, защищая от переполнения 32-битного счётчика транзакций (wraparound).</p>
+<p>Что делает VACUUM:</p>
+      <ol>
+        <li><b>Освобождает место мёртвых версий</b> — строк, которые не видит ни одна активная транзакция; их место попадает в <b>free space map</b> и переиспользуется новыми строками.</li>
+        <li><b>Чистит индексы</b> — удаляет из них ссылки на эти версии.</li>
+        <li><b>Обновляет visibility map</b> — отмечает страницы, где все строки видны всем: по ним работает Index Only Scan, а следующий VACUUM их пропускает.</li>
+        <li><b>Замораживает старые xmin</b> — защита от переполнения 32-битного счётчика транзакций (<b>wraparound</b>).</li>
+      </ol>
       <p><b>Wraparound</b> — счётчик транзакций 32-битный; если не замораживать старые строки, через ~2 млрд транзакций они «окажутся в будущем» и станут невидимы. Чтобы этого не допустить, PostgreSQL запускает агрессивный anti-wraparound autovacuum, а при приближении к пределу перестаёт принимать запись. Мониторинг: <code>age(datfrozenxid)</code>.</p>
 <pre class="wide"><span class="c">-- таблицы с наибольшим числом мёртвых строк и когда их чистили</span>
 <span class="k">SELECT</span> relname, n_live_tup, n_dead_tup, last_autovacuum, autovacuum_count
@@ -11394,16 +11400,9 @@ ERROR:  could <span class="k">not</span> serialize access due
       <p>Bloat — таблица и индексы занимают больше места, чем живые данные: VACUUM освобождает место для повторного использования внутри файла, но не уменьшает файл. Вернуть место ОС — <code><span class="t">VACUUM</span> <span class="t">FULL</span></code> (полная блокировка таблицы) или <code>pg_repack</code> (онлайн). Индексам — <code><span class="t">REINDEX</span> <span class="t">CONCURRENTLY</span></code>.</p>
     </div></div></article>
 <article id="q204" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">204. Lost update: @Version или SELECT FOR UPDATE? Что выбрать для 500 параллельных оплат? <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><p><b>Lost update</b> — две транзакции прочитали баланс, посчитали новое значение, и вторая затёрла первую.</p>
-<ul><li><b>@Version</b> хорош при редких конфликтах, но на 500 списаниях с одного счёта утонет в ретраях.</li><li><b>SELECT FOR UPDATE</b> корректен, но выстраивает очередь: при 5 мс на транзакцию — около 200 в секунду.</li><li>Короче всего держит блокировку <b>атомарный условный UPDATE</b>: списать, если баланса хватает.</li></ul>
+<ul><li><b>@Version</b> хорош при редких конфликтах, но на 500 списаниях с одного счёта утонет в ретраях.</li><li><b>SELECT FOR UPDATE</b> (<code><span class="a">@Lock</span>(<span class="t">PESSIMISTIC_WRITE</span>)</code>) корректен, но выстраивает очередь: при 5 мс на транзакцию — около 200 в секунду.</li><li>Короче всего держит блокировку <b>атомарный условный UPDATE</b> (<code><span class="a">@Modifying</span></code>): списать, если баланса хватает.</li></ul>
 <p>На масштабе — <b>очередь по счёту</b> или леджер с проводками.</p></div>
     <div class="more">
-<pre class="wide"><span class="k">UPDATE</span> account <span class="k">SET</span> balance = balance - :amount
- <span class="k">WHERE</span> id = :id <span class="k">AND</span> balance &gt;= :amount;     <span class="c">-- 0 строк = не хватает денег</span></pre>
-<pre class="narrow"><span class="k">UPDATE</span> account
-   <span class="k">SET</span> balance = balance - :amount
- <span class="k">WHERE</span> id = :id <span class="k">AND</span> balance &gt;= :amount;
-<span class="c">-- 0 строк = не хватает денег</span></pre>
-    <ul><li>Внутри транзакции с блокировкой — никаких внешних вызовов; задавайте lock_timeout. При переводе блокируйте счета в порядке id. SKIP LOCKED — очередь задач в таблице, NOWAIT — сразу ошибка.</li></ul>
 <p>Разбор задачи «500 параллельных оплат с одного счёта» — важно показать оценку, а не только выбрать механизм:</p>
       <div class="table-wrap"><table>
         <tr><th>Подход</th><th>Что будет на 500 одновременных</th><th>Пропускная способность одного счёта</th></tr>
@@ -11414,29 +11413,167 @@ ERROR:  could <span class="k">not</span> serialize access due
         <tr><td>Очередь по ключу счёта (Kafka partition key)</td><td>списания одного счёта последовательно в одном консюмере, без блокировок БД; можно батчить</td><td>высокая, но асинхронно — ответ «принято»</td></tr>
         <tr><td>Леджер: INSERT проводок, баланс агрегируется</td><td>вставки не конфликтуют; проверка остатка — отдельная задача (резервирование/лимиты)</td><td>высокая</td></tr>
       </table></div>
-<pre class="wide"><span class="c">-- атомарный условный UPDATE + журнал в одной транзакции</span>
-<span class="k">WITH</span> debit <span class="k">AS</span> (
-    <span class="k">UPDATE</span> account <span class="k">SET</span> balance = balance - :amount
-     <span class="k">WHERE</span> id = :accountId <span class="k">AND</span> balance &gt;= :amount
-     <span class="k">RETURNING</span> id
-)
-<span class="k">INSERT</span> <span class="k">INTO</span> ledger_entry (account_id, amount, payment_id)
-<span class="k">SELECT</span> id, -:amount, :paymentId <span class="k">FROM</span> debit;   <span class="c">-- 0 вставленных строк = недостаточно средств</span></pre>
-<pre class="narrow"><span class="c">-- атомарный условный UPDATE + журнал</span>
-<span class="c">-- в одной транзакции</span>
-<span class="k">WITH</span> debit <span class="k">AS</span> (
-    <span class="k">UPDATE</span> account
-       <span class="k">SET</span> balance = balance - :amount
-     <span class="k">WHERE</span> id = :accountId
-       <span class="k">AND</span> balance &gt;= :amount
-    <span class="k">RETURNING</span> id
-)
-<span class="k">INSERT</span> <span class="k">INTO</span> ledger_entry
-       (account_id, amount, payment_id)
-<span class="k">SELECT</span> id, -:amount, :paymentId <span class="k">FROM</span> debit;
-<span class="c">-- 0 вставленных строк = недостаточно средств</span></pre>
-      <p>Обязательные дополнения: идемпотентность (тот же paymentId повторно — не списывать дважды, уникальный индекс на payment_id в журнале), <code>lock_timeout</code>, порядок блокировок при переводе между двумя счетами, никаких HTTP-вызовов внутри транзакции с блокировкой.</p>
+      <p><b>Было: lost update.</b> Прочитали сущность, посчитали в Java, dirty checking записал результат. Две параллельные оплаты прочитали 100, обе записали 100 − amount — одно списание пропало.</p>
+<pre class="wide"><span class="a">@Transactional</span>
+<span class="k">public</span> <span class="k">void</span> pay(<span class="k">long</span> accountId, <span class="t">BigDecimal</span> amount) {
+    <span class="t">Account</span> account = accountRepository.findById(accountId).orElseThrow();
+    <span class="k">if</span> (account.getBalance().compareTo(amount) &lt; <span class="n">0</span>) {
+        <span class="k">throw</span> <span class="k">new</span> <span class="t">InsufficientFundsException</span>(accountId);
+    }
+    account.setBalance(account.getBalance().subtract(amount));   <span class="c">// UPDATE account SET balance = ? WHERE id = ?</span>
+}</pre>
+<pre class="narrow"><span class="a">@Transactional</span>
+<span class="k">public</span> <span class="k">void</span> pay(<span class="k">long</span> accountId,
+        <span class="t">BigDecimal</span> amount) {
+    <span class="t">Account</span> account = accountRepository
+            .findById(accountId)
+            .orElseThrow();
+    <span class="k">if</span> (account.getBalance()
+            .compareTo(amount) &lt; <span class="n">0</span>) {
+        <span class="k">throw</span> <span class="k">new</span> <span class="t">InsufficientFundsException</span>(
+                accountId);
+    }
+    <span class="c">// UPDATE account SET balance = ?</span>
+    <span class="c">//  WHERE id = ?</span>
+    account.setBalance(account.getBalance()
+            .subtract(amount));
+}</pre>
+      <p><b>1. @Version — оптимистическая блокировка.</b> Тот же <code>pay()</code>, но UPDATE проверяет версию; проигравший получает исключение и повторяет транзакцию целиком.</p>
+<pre class="wide"><span class="a">@Entity</span>
+<span class="k">public</span> <span class="k">class</span> <span class="t">Account</span> {
+    <span class="a">@Id</span>
+    <span class="k">private</span> <span class="t">Long</span> id;
+    <span class="k">private</span> <span class="t">BigDecimal</span> balance;
+    <span class="a">@Version</span>
+    <span class="k">private</span> <span class="k">long</span> version;   <span class="c">// UPDATE ... SET balance = ?, version = ? WHERE id = ? AND version = ?</span>
+}
+
+<span class="c">// повтор — в другом бине, снаружи @Transactional; random — разброс, чтобы не повторять все разом;</span>
+<span class="c">// ConcurrencyFailureException — родитель ObjectOptimisticLockingFailureException</span>
+<span class="a">@Retryable</span>(retryFor = <span class="t">ConcurrencyFailureException</span>.<span class="k">class</span>, maxAttempts = <span class="n">5</span>,
+        backoff = <span class="a">@Backoff</span>(delay = <span class="n">20</span>, multiplier = <span class="n">2</span>, random = <span class="k">true</span>))
+<span class="k">public</span> <span class="k">void</span> pay(<span class="k">long</span> accountId, <span class="t">BigDecimal</span> amount) {
+    paymentService.pay(accountId, amount);
+}</pre>
+<pre class="narrow"><span class="a">@Entity</span>
+<span class="k">public</span> <span class="k">class</span> <span class="t">Account</span> {
+    <span class="a">@Id</span>
+    <span class="k">private</span> <span class="t">Long</span> id;
+    <span class="k">private</span> <span class="t">BigDecimal</span> balance;
+    <span class="c">// UPDATE ... SET balance = ?, version = ?</span>
+    <span class="c">//  WHERE id = ? AND version = ?</span>
+    <span class="a">@Version</span>
+    <span class="k">private</span> <span class="k">long</span> version;
+}
+
+<span class="c">// повтор — в другом бине, снаружи</span>
+<span class="c">// @Transactional; random — разброс, чтобы</span>
+<span class="c">// не повторять все разом;</span>
+<span class="c">// ConcurrencyFailureException — родитель</span>
+<span class="c">// ObjectOptimisticLockingFailureException</span>
+<span class="a">@Retryable</span>(
+        retryFor =
+            <span class="t">ConcurrencyFailureException</span>.<span class="k">class</span>,
+        maxAttempts = <span class="n">5</span>,
+        backoff = <span class="a">@Backoff</span>(delay = <span class="n">20</span>,
+            multiplier = <span class="n">2</span>, random = <span class="k">true</span>))
+<span class="k">public</span> <span class="k">void</span> pay(<span class="k">long</span> accountId,
+        <span class="t">BigDecimal</span> amount) {
+    paymentService.pay(accountId, amount);
+}</pre>
+      <p><b>2. SELECT FOR UPDATE — пессимистическая.</b> Второй ждёт на чтении, пока первый не закоммитит, и читает уже новый баланс. В <code>pay()</code> меняется только чтение.</p>
+<pre class="wide"><span class="k">public</span> <span class="k">interface</span> <span class="t">AccountRepository</span> <span class="k">extends</span> <span class="t">JpaRepository</span>&lt;<span class="t">Account</span>, <span class="t">Long</span>&gt; {
+
+    <span class="a">@Lock</span>(<span class="t">LockModeType</span>.<span class="t">PESSIMISTIC_WRITE</span>)   <span class="c">// SELECT ... FOR NO KEY UPDATE</span>
+    <span class="a">@Query</span>(<span class="s">"select a from Account a where a.id = :id"</span>)
+    <span class="t">Optional</span>&lt;<span class="t">Account</span>&gt; findForUpdate(<span class="a">@Param</span>(<span class="s">"id"</span>) <span class="k">long</span> id);
+}
+
+<span class="c">// без таймаута ждать можно бесконечно — задать на соединениях:</span>
+<span class="c">// spring.datasource.hikari.connection-init-sql: SET lock_timeout = '3s'</span>
+<span class="c">// не дождался → PessimisticLockingFailureException</span></pre>
+<pre class="narrow"><span class="k">public</span> <span class="k">interface</span> <span class="t">AccountRepository</span>
+        <span class="k">extends</span> <span class="t">JpaRepository</span>&lt;<span class="t">Account</span>, <span class="t">Long</span>&gt; {
+
+    <span class="c">// SELECT ... FOR NO KEY UPDATE</span>
+    <span class="a">@Lock</span>(<span class="t">LockModeType</span>.<span class="t">PESSIMISTIC_WRITE</span>)
+    <span class="a">@Query</span>(<span class="s">"""
+            select a from Account a
+             where a.id = :id"""</span>)
+    <span class="t">Optional</span>&lt;<span class="t">Account</span>&gt; findForUpdate(
+            <span class="a">@Param</span>(<span class="s">"id"</span>) <span class="k">long</span> id);
+}
+
+<span class="c">// без таймаута ждать можно бесконечно —</span>
+<span class="c">// задать на соединениях:</span>
+<span class="c">// spring.datasource.hikari</span>
+<span class="c">//   .connection-init-sql:</span>
+<span class="c">//   SET lock_timeout = '3s'</span>
+<span class="c">// не дождался →</span>
+<span class="c">// PessimisticLockingFailureException</span></pre>
+      <p>Перевод между двумя счетами — блокировать в порядке id, иначе A→B и B→A параллельно возьмут по одной строке и упрутся друг в друга (deadlock, одна транзакция упадёт).</p>
+<pre class="wide"><span class="a">@Transactional</span>
+<span class="k">public</span> <span class="k">void</span> transfer(<span class="k">long</span> fromId, <span class="k">long</span> toId, <span class="t">BigDecimal</span> amount) {
+    accountRepository.findForUpdate(<span class="t">Math</span>.min(fromId, toId));
+    accountRepository.findForUpdate(<span class="t">Math</span>.max(fromId, toId));
+    <span class="c">// дальше читать и менять оба счёта — они уже заблокированы</span>
+}</pre>
+<pre class="narrow"><span class="a">@Transactional</span>
+<span class="k">public</span> <span class="k">void</span> transfer(<span class="k">long</span> fromId, <span class="k">long</span> toId,
+        <span class="t">BigDecimal</span> amount) {
+    accountRepository.findForUpdate(
+            <span class="t">Math</span>.min(fromId, toId));
+    accountRepository.findForUpdate(
+            <span class="t">Math</span>.max(fromId, toId));
+    <span class="c">// дальше читать и менять оба счёта —</span>
+    <span class="c">// они уже заблокированы</span>
+}</pre>
+      <p><b>3. Атомарный условный UPDATE + журнал.</b> Проверка и списание — одним оператором, сущность не читается. Запись в журнал идёт первой: уникальный индекс на <code>payment_id</code> отсекает повтор того же платежа ещё до блокировки счёта.</p>
+<pre class="wide"><span class="a">@Modifying</span>
+<span class="a">@Query</span>(<span class="s">"update Account a set a.balance = a.balance - :amount where a.id = :id and a.balance &gt;= :amount"</span>)
+<span class="k">int</span> debit(<span class="a">@Param</span>(<span class="s">"id"</span>) <span class="k">long</span> id, <span class="a">@Param</span>(<span class="s">"amount"</span>) <span class="t">BigDecimal</span> amount);   <span class="c">// 0 — денег не хватило</span>
+
+<span class="a">@Transactional</span>
+<span class="k">public</span> <span class="k">void</span> pay(<span class="t">Payment</span> payment) {
+    <span class="c">// unique(payment_id): повтор → DataIntegrityViolationException, ничего не списано</span>
+    ledgerRepository.saveAndFlush(<span class="t">LedgerEntry</span>.debit(payment));
+    <span class="k">if</span> (accountRepository.debit(payment.accountId(), payment.amount()) == <span class="n">0</span>) {
+        <span class="k">throw</span> <span class="k">new</span> <span class="t">InsufficientFundsException</span>(payment.accountId());   <span class="c">// откатит и запись в журнале</span>
+    }
+}</pre>
+<pre class="narrow"><span class="c">// 0 — денег не хватило</span>
+<span class="a">@Modifying</span>
+<span class="a">@Query</span>(<span class="s">"""
+        update Account a
+           set a.balance = a.balance - :amount
+         where a.id = :id
+           and a.balance &gt;= :amount"""</span>)
+<span class="k">int</span> debit(<span class="a">@Param</span>(<span class="s">"id"</span>) <span class="k">long</span> id,
+        <span class="a">@Param</span>(<span class="s">"amount"</span>) <span class="t">BigDecimal</span> amount);
+
+<span class="a">@Transactional</span>
+<span class="k">public</span> <span class="k">void</span> pay(<span class="t">Payment</span> payment) {
+    <span class="c">// unique(payment_id): повтор →</span>
+    <span class="c">// DataIntegrityViolationException,</span>
+    <span class="c">// ничего не списано</span>
+    ledgerRepository.saveAndFlush(
+            <span class="t">LedgerEntry</span>.debit(payment));
+    <span class="k">if</span> (accountRepository.debit(
+            payment.accountId(),
+            payment.amount()) == <span class="n">0</span>) {
+        <span class="c">// откатит и запись в журнале</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="t">InsufficientFundsException</span>(
+                payment.accountId());
+    }
+}</pre>
+      <p>Ловушки:</p>
+      <ul>
+        <li><b>Повтор снаружи транзакции.</b> <code><span class="a">@Retryable</span></code> внутри <code><span class="a">@Transactional</span></code> повторит вызов в уже помеченной на откат транзакции — повтор в отдельном бине.</li>
+        <li><b>Внутри транзакции с блокировкой — никаких HTTP-вызовов</b>: лок держится, пока ждём чужой сервис.</li>
+        <li><b><code><span class="a">@Modifying</span></code> идёт мимо persistence context</b>: загруженный в этой же транзакции <code><span class="t">Account</span></code> останется со старым балансом (<code>clearAutomatically = <span class="k">true</span></code>), а <code><span class="a">@Version</span></code> такой UPDATE не увеличивает — не смешивать два подхода на одной сущности.</li>
+      </ul>
       <p>Горячие счета (мерчант, на который приходят тысячи платежей в секунду) решают иначе: зачисления пишут как проводки без обновления баланса, баланс пересчитывают асинхронно, или счёт делят на несколько субсчетов (шардирование горячей строки) и суммируют при чтении.</p>
+<p class="follow"><b>Почему SKIP LOCKED и NOWAIT здесь не помогают?</b> SKIP LOCKED пропускает занятые строки — подходит для очереди задач в таблице, но не для списания с конкретного счёта. NOWAIT сразу падает на занятой строке — те же ретраи, что у @Version.</p>
     </div></div></article>
 <article id="q205" hidden><div class="crumbs">PostgreSQL и SQL</div><h2 tabindex="-1">205. Запрос завис на блокировке: как найти виновника</h2><div class="answer" hidden><div class="short"><ul><li><b>pg_stat_activity</b> — что делает сессия и чего ждёт (wait_event_type Lock); <b>pg_blocking_pids</b> — кто её блокирует.</li><li>Частый виновник — <b>idle in transaction</b>: приложение открыло транзакцию и не закрыло.</li><li>Снять: <b>pg_cancel_backend</b> (отменить запрос) или <b>pg_terminate_backend</b> (оборвать соединение).</li></ul>
 <p>Профилактика — <b>lock_timeout</b>, statement_timeout, idle_in_transaction_session_timeout.</p></div>
