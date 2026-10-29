@@ -10148,7 +10148,20 @@ client(id, name, city, region)
         <tr><td>Анна</td><td>IT</td><td>300</td><td>200</td></tr>
         <tr><td>Дина</td><td>HR</td><td>150</td><td>135</td></tr>
       </table></div>
-      <p>Тот же запрос можно написать с подзапросом в FROM — результат и план будут одинаковыми. CTE выигрывает читаемостью: шаги идут сверху вниз и у каждого есть имя.</p>
+      <p>Тот же запрос с подзапросом в FROM:</p>
+<pre class="wide"><span class="k">SELECT</span> e.name, e.dept, e.salary, d.avg_salary
+  <span class="k">FROM</span> employee e
+  <span class="k">JOIN</span> (<span class="k">SELECT</span> dept, avg(salary) <span class="k">AS</span> avg_salary <span class="k">FROM</span> employee <span class="k">GROUP</span> <span class="k">BY</span> dept) d <span class="k">USING</span> (dept)
+ <span class="k">WHERE</span> e.salary &gt; d.avg_salary;</pre>
+<pre class="narrow"><span class="k">SELECT</span> e.name, e.dept, e.salary,
+       d.avg_salary
+  <span class="k">FROM</span> employee e
+  <span class="k">JOIN</span> (<span class="k">SELECT</span> dept,
+               avg(salary) <span class="k">AS</span> avg_salary
+          <span class="k">FROM</span> employee
+         <span class="k">GROUP</span> <span class="k">BY</span> dept) d <span class="k">USING</span> (dept)
+ <span class="k">WHERE</span> e.salary &gt; d.avg_salary;</pre>
+      <p>Результат и план у обоих вариантов одинаковые. CTE выигрывает читаемостью: шаги идут сверху вниз и у каждого есть имя, а подзапрос приходится читать изнутри наружу.</p>
       <p><b>2. Цепочка шагов.</b> CTE через запятую, каждый может ссылаться на предыдущие. Доля отдела в фонде оплаты труда:</p>
 <pre class="wide"><span class="k">WITH</span> by_dept <span class="k">AS</span> (
        <span class="k">SELECT</span> dept, sum(salary) <span class="k">AS</span> total <span class="k">FROM</span> employee <span class="k">GROUP</span> <span class="k">BY</span> dept
