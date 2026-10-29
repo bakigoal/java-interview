@@ -10500,11 +10500,13 @@ client(id, name, city, region)
 <span class="k">SELECT</span> email, count(*) <span class="k">FROM</span> client <span class="k">GROUP</span> <span class="k">BY</span> email <span class="k">HAVING</span> count(*) &gt; <span class="n">1</span>;
 
 <span class="c">-- 2. удалить: внутри каждого email пронумеровать строки по id, всё кроме первой — дубли</span>
-<span class="k">DELETE</span> <span class="k">FROM</span> client <span class="k">WHERE</span> id <span class="k">IN</span> (
+<span class="k">WITH</span> dups <span class="k">AS</span> (
     <span class="k">SELECT</span> id <span class="k">FROM</span> (
         <span class="k">SELECT</span> id, row_number() <span class="k">OVER</span> (<span class="k">PARTITION</span> <span class="k">BY</span> email <span class="k">ORDER</span> <span class="k">BY</span> id) <span class="k">AS</span> rn
           <span class="k">FROM</span> client) t
-     <span class="k">WHERE</span> rn &gt; <span class="n">1</span>);   <span class="c">-- остаётся минимальный id</span>
+     <span class="k">WHERE</span> rn &gt; <span class="n">1</span>
+)
+<span class="k">DELETE</span> <span class="k">FROM</span> client <span class="k">WHERE</span> id <span class="k">IN</span> (<span class="k">SELECT</span> id <span class="k">FROM</span> dups);   <span class="c">-- остаётся минимальный id</span>
 
 <span class="c">-- 3. не дать дублям вернуться; CONCURRENTLY — без блокировки записи в таблицу на время построения</span>
 <span class="k">CREATE</span> <span class="k">UNIQUE</span> <span class="k">INDEX</span> <span class="k">CONCURRENTLY</span> ux_client_email <span class="k">ON</span> client (email);</pre>
@@ -10516,14 +10518,17 @@ client(id, name, city, region)
 <span class="c">-- 2. удалить: внутри каждого email</span>
 <span class="c">-- пронумеровать строки по id,</span>
 <span class="c">-- всё кроме первой — дубли</span>
-<span class="c">-- остаётся минимальный id</span>
-<span class="k">DELETE</span> <span class="k">FROM</span> client <span class="k">WHERE</span> id <span class="k">IN</span> (
+<span class="k">WITH</span> dups <span class="k">AS</span> (
     <span class="k">SELECT</span> id <span class="k">FROM</span> (
         <span class="k">SELECT</span> id, row_number() <span class="k">OVER</span> (
                    <span class="k">PARTITION</span> <span class="k">BY</span> email
                    <span class="k">ORDER</span> <span class="k">BY</span> id) <span class="k">AS</span> rn
           <span class="k">FROM</span> client) t
-     <span class="k">WHERE</span> rn &gt; <span class="n">1</span>);
+     <span class="k">WHERE</span> rn &gt; <span class="n">1</span>
+)
+<span class="c">-- остаётся минимальный id</span>
+<span class="k">DELETE</span> <span class="k">FROM</span> client
+ <span class="k">WHERE</span> id <span class="k">IN</span> (<span class="k">SELECT</span> id <span class="k">FROM</span> dups);
 
 <span class="c">-- 3. не дать дублям вернуться;</span>
 <span class="c">-- CONCURRENTLY — без блокировки записи</span>
