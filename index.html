@@ -12534,6 +12534,100 @@ jdbc:postgresql:<span class="c">//pg1,pg2,pg3/app</span>
 <span class="c">-- удаление старых данных — мгновенно,</span>
 <span class="c">-- без bloat (вместо DELETE миллионов строк):</span>
 DROP <span class="k">TABLE</span> payment_2024_10;</pre>
+      <p><b>Партиции по месяцам: Liquibase + <code><span class="a">@Scheduled</span></code>.</b> Liquibase создаёт таблицу и первые партиции, дальше задача в приложении раз в сутки создаёт партиции на 3 месяца вперёд. Таблица <code>orders</code>, а не <code>order</code> — это зарезервированное слово; партиции <code>orders_2026_10</code>, <code>orders_2026_11</code>…</p>
+<pre><span class="c">--liquibase formatted sql</span>
+
+<span class="c">--changeset shop:020-orders</span>
+<span class="k">create</span> <span class="k">table</span> orders (
+    id         <span class="k">bigint</span> generated always
+               <span class="k">as</span> identity,
+    client_id  <span class="k">bigint</span> <span class="k">not</span> <span class="k">null</span>,
+    amount     <span class="k">numeric</span>(<span class="n">19</span>, <span class="n">2</span>) <span class="k">not</span> <span class="k">null</span>,
+    created_at <span class="k">timestamptz</span> <span class="k">not</span> <span class="k">null</span>
+               <span class="k">default</span> now(),
+    <span class="k">primary</span> <span class="k">key</span> (id, created_at)
+) <span class="k">partition</span> <span class="k">by</span> range (created_at);
+
+<span class="k">create</span> <span class="k">table</span> orders_2026_10
+    <span class="k">partition</span> <span class="k">of</span> orders
+    <span class="k">for</span> <span class="k">values</span> <span class="k">from</span> (<span class="s">'2026-10-01'</span>)
+                 <span class="k">to</span> (<span class="s">'2026-11-01'</span>);
+
+<span class="k">create</span> <span class="k">table</span> orders_2026_11
+    <span class="k">partition</span> <span class="k">of</span> orders
+    <span class="k">for</span> <span class="k">values</span> <span class="k">from</span> (<span class="s">'2026-11-01'</span>)
+                 <span class="k">to</span> (<span class="s">'2026-12-01'</span>);
+<span class="c">--rollback drop table orders;</span></pre>
+<pre class="wide"><span class="a">@Component</span>
+<span class="a">@RequiredArgsConstructor</span>
+<span class="k">public</span> <span class="k">class</span> <span class="t">OrdersPartitionJob</span> {
+
+    <span class="k">private</span> <span class="k">static</span> <span class="k">final</span> <span class="k">int</span> <span class="t">MONTHS_AHEAD</span> = <span class="n">3</span>;
+
+    <span class="k">private</span> <span class="k">final</span> <span class="t">JdbcTemplate</span> jdbcTemplate;
+
+    <span class="c">// при старте и каждую ночь; if not exists — уже созданные пропускаются</span>
+    <span class="a">@EventListener</span>(<span class="t">ApplicationReadyEvent</span>.<span class="k">class</span>)
+    <span class="a">@Scheduled</span>(cron = <span class="s">"0 0 3 * * *"</span>)
+    <span class="k">public</span> <span class="k">void</span> createUpcomingPartitions() {
+        <span class="t">LocalDate</span> month = <span class="t">LocalDate</span>.now().withDayOfMonth(<span class="n">1</span>);
+        <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt;= <span class="t">MONTHS_AHEAD</span>; i++) {
+            <span class="t">LocalDate</span> from = month.plusMonths(i);
+            <span class="t">LocalDate</span> to = from.plusMonths(<span class="n">1</span>);
+            <span class="c">// DDL не принимает параметры ?, поэтому строка; значения — из дат, не от пользователя</span>
+            jdbcTemplate.execute(<span class="s">"create table if not exists orders_%d_%02d partition of orders for values from ('%s') to ('%s')"</span>
+                    .formatted(from.getYear(), from.getMonthValue(), from, to));
+        }
+    }
+}
+
+<span class="c">// и не забыть @EnableScheduling на конфигурации</span></pre>
+<pre class="narrow"><span class="a">@Component</span>
+<span class="a">@RequiredArgsConstructor</span>
+<span class="k">public</span> <span class="k">class</span> <span class="t">OrdersPartitionJob</span> {
+
+    <span class="k">private</span> <span class="k">static</span> <span class="k">final</span> <span class="k">int</span> <span class="t">MONTHS_AHEAD</span> = <span class="n">3</span>;
+
+    <span class="k">private</span> <span class="k">final</span> <span class="t">JdbcTemplate</span> jdbcTemplate;
+
+    <span class="c">// при старте и каждую ночь; if not</span>
+    <span class="c">// exists — уже созданные пропускаются</span>
+    <span class="a">@EventListener</span>(
+            <span class="t">ApplicationReadyEvent</span>.<span class="k">class</span>)
+    <span class="a">@Scheduled</span>(cron = <span class="s">"0 0 3 * * *"</span>)
+    <span class="k">public</span> <span class="k">void</span> createUpcomingPartitions() {
+        <span class="t">LocalDate</span> month = <span class="t">LocalDate</span>.now()
+                .withDayOfMonth(<span class="n">1</span>);
+        <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt;= <span class="t">MONTHS_AHEAD</span>;
+                i++) {
+            <span class="k">var</span> from = month.plusMonths(i);
+            <span class="k">var</span> to = from.plusMonths(<span class="n">1</span>);
+            <span class="c">// DDL не принимает параметры ?,</span>
+            <span class="c">// поэтому строка; значения — из</span>
+            <span class="c">// дат, не от пользователя</span>
+            jdbcTemplate.execute(<span class="s">"""
+                create table if not exists
+                    orders_%d_%02d
+                    partition of orders
+                    for values from ('%s')
+                                 to ('%s')"""</span>
+                    .formatted(from.getYear(),
+                        from.getMonthValue(),
+                        from, to));
+        }
+    }
+}
+
+<span class="c">// и не забыть @EnableScheduling</span>
+<span class="c">// на конфигурации</span></pre>
+      <ul>
+        <li><b>Почему запас, а не «создать завтрашнюю».</b> Нет партиции — вставка падает с <code>no partition of relation <span class="s">"orders"</span> found <span class="k">for</span> row</code>. Запас в несколько месяцев переживёт и упавшую задачу, и долгий простой сервиса; на отсутствие партиции следующего месяца ставят алерт.</li>
+        <li><b>Несколько подов</b> запустят задачу одновременно, и <code><span class="k">if</span> not exists</code> может упасть на гонке — задачу запускают на одном поде (ShedLock) или берут advisory lock.</li>
+        <li><b>Default-партиция</b> (<code>partition of orders <span class="k">default</span></code>) спасает вставки, но если в неё попали строки нужного диапазона, создать новую партицию не получится, пока их не перенесут. Лучше запас и алерт, чем default.</li>
+        <li><b>Часовой пояс.</b> Границы <code>'<span class="n">2026</span>-<span class="n">10</span>-<span class="n">01</span>'</code> для <code>timestamptz</code> считаются в часовом поясе сессии — у Liquibase и приложения он должен быть одинаковым (обычно UTC).</li>
+        <li><b>Старые данные</b> удаляет та же задача: <code><span class="k">alter</span> <span class="k">table</span> orders detach <span class="k">partition</span> orders_2024_10 <span class="k">concurrently</span></code>, затем <code>drop table</code> или выгрузка в архив.</li>
+        <li><b>Если не писать самим</b> — расширение pg_partman делает то же (создание вперёд и ретенцию) через <code>pg_cron</code> или свой background worker.</li>
+      </ul>
       <div class="table-wrap"><table>
         <tr><th></th><th>Партиционирование</th><th>Шардирование</th></tr>
         <tr><td>Где данные</td><td>одна БД, один сервер</td><td>разные серверы</td></tr>
