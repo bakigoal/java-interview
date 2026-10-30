@@ -5255,673 +5255,209 @@ items.parallelStream()
     name=concurrency settings=profile \
     duration=60s filename=concurrency.jfr</pre><p><b>4. Подтвердить причину.</b> Например: HTTP-потоки ждут соединение → пул БД заполнен → соединения удерживают долгие транзакции. Добавление HTTP-потоков не устранит эту цепочку.</p><ul><li><b>Один дамп — снимок, не диагноз.</b> Сравнивают несколько снимков и метрики.</li><li><b>WAITING не равно проблеме, RUNNABLE не равно CPU.</b> Важны стек и полезный прогресс.</li><li><b>Гонка может не проявиться в дампе.</b> Нужны анализ доступа к состоянию и воспроизведение конкурентного сценария.</li></ul><p class="follow"><b>Почему не начать с увеличения пула?</b>Это может усилить нагрузку на зависимость, увеличить ожидание и расход памяти, сохранив исходную причину.</p><p>Команды: <a href="https://docs.oracle.com/en/java/javase/21/docs/specs/man/jcmd.html">документация jcmd, Java 21</a>.</p>
     </div></div></article>
-<article id="q80" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">80. Байткод, JVM, JRE и JDK</h2><div class="answer" hidden><div class="short"><ul><li><b>javac</b> компилирует исходники в платформенно-независимый <b>байткод</b> (class-файлы).</li><li><b>JVM</b> исполняет его: интерпретатор, JIT, сборщик мусора.</li><li><b>JRE</b> = JVM + стандартная библиотека — всё для запуска.</li><li><b>JDK</b> = JRE + инструменты: javac, jcmd, jfr, jlink.</li></ul>
-<p>С Java 11 <b>Oracle</b> не выпускает JRE отдельно, но у Temurin, Liberica, Zulu, Corretto JRE-сборки есть (<code>eclipse-temurin:<span class="n">21</span>-jre</code>). Минимальный рантайм собирают через <b>jlink</b>.</p></div>
+<article id="q80" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">80. Байткод, JVM, JRE и JDK</h2><div class="answer" hidden><div class="short"><p><b>javac компилирует исходники в class-файлы с байткодом.</b> JVM загружает и проверяет их, исполняет код интерпретатором и JIT-компилятором, управляет памятью и GC.</p><p><b>JRE</b> — среда для запуска, <b>JDK</b> — комплект для разработки и диагностики: рантайм плюс javac, javap, jcmd, jfr и другие инструменты. Состав поставки зависит от дистрибутива; современный JDK не обязан содержать отдельную папку jre.</p></div>
     <div class="more">
-<p>Цепочка от исходника до машинного кода: <code>.java</code> → javac → <code>.<span class="k">class</span></code> (байткод для стековой виртуальной машины) → JVM загружает, верифицирует, сначала интерпретирует, горячие участки JIT компилирует в машинный код под конкретный процессор.</p>
-<pre class="wide"><span class="c">// int sum(int a, int b) { return a + b; }  →  javap -c</span>
-iload_1     <span class="c">// положить a на стек операндов</span>
-iload_2     <span class="c">// положить b</span>
-iadd        <span class="c">// снять два, положить сумму</span>
-ireturn</pre>
-<pre class="narrow"><span class="c">// int sum(int a, int b) { return a + b; }</span>
-<span class="c">// → javap -c</span>
-iload_1     <span class="c">// положить a на стек операндов</span>
-iload_2     <span class="c">// положить b</span>
-iadd        <span class="c">// снять два, положить сумму</span>
-ireturn</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Понятие</th><th>Состав</th></tr>
-        <tr><td>JVM</td><td>спецификация виртуальной машины и её реализация (HotSpot, OpenJ9, GraalVM)</td></tr>
-        <tr><td>JRE</td><td>JVM + стандартная библиотека, чтобы запускать</td></tr>
-        <tr><td>JDK</td><td>JRE + javac, jcmd, jfr, jlink, javap, jdeps…</td></tr>
-        <tr><td>OpenJDK / дистрибутивы</td><td>исходники открыты; сборки — Temurin, Corretto, Liberica, Zulu, Oracle JDK (разные лицензии и сроки поддержки)</td></tr>
-      </table></div>
-      <p>Почему «write once, run anywhere» работает: байткод не зависит от ОС и процессора, зависит только JVM. Обратная совместимость: класс, скомпилированный под Java 17 (class file version 61), не запустится на JVM 11 — UnsupportedClassVersionError; старый байткод на новой JVM работает.</p>
-      <p>jlink собирает минимальный рантайм только из нужных модулей (<code>jdeps --print-module-deps</code> подскажет список) — образ становится в разы меньше. Для Spring Boot из-за рефлексии список модулей приходится подбирать.</p>
-    </div></div></article>
-<article id="q81" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">81. Загрузка класса: этапы и когда выполняется static-блок</h2><div class="answer" hidden><div class="short"><ol><li><b>Loading</b> — найти байты класса.</li><li><b>Linking</b> — проверка байткода, static-поля со значениями по умолчанию, разрешение ссылок.</li><li><b>Initialization</b> — static-инициализаторы и блоки.</li></ol>
-<p>Инициализация <b>ленивая</b>: при первом new, вызове static-метода или обращении к не-константному static-полю. JVM выполняет её <b>ровно один раз и потокобезопасно</b> — на этом держится ленивый синглтон через holder-класс.</p></div>
-    <div class="more">
-<ul>
-      <li>На этом держится ленивый синглтон «holder»: вложенный класс инициализируется при первом вызове, потокобезопасно силами JVM.</li>
-    </ul>
-<div class="table-wrap"><table>
-        <tr><th>Этап</th><th>Что происходит</th><th>Ошибки</th></tr>
-        <tr><td>Loading</td><td>загрузчик находит байты класса и создаёт объект Class</td><td>ClassNotFoundException / NoClassDefFoundError</td></tr>
-        <tr><td>Verification</td><td>проверка байткода: типы на стеке, корректные переходы, доступ</td><td>VerifyError</td></tr>
-        <tr><td>Preparation</td><td>память под static-поля, значения по умолчанию (0, null)</td><td></td></tr>
-        <tr><td>Resolution</td><td>символьные ссылки → прямые (часто лениво, при первом использовании)</td><td>NoSuchMethodError, NoSuchFieldError, IncompatibleClassChangeError</td></tr>
-        <tr><td>Initialization</td><td>выполнение <code>&lt;clinit&gt;</code>: static-инициализаторы и блоки в порядке объявления</td><td>ExceptionInInitializerError, дальше — NoClassDefFoundError</td></tr>
-      </table></div>
-      <p>Когда класс инициализируется (активное использование): <code><span class="k">new</span></code>, вызов static-метода, чтение или запись static-поля (кроме compile-time констант — они вшиты в байткод вызывающего), рефлексия <code><span class="t">Class</span>.forName(name)</code>, инициализация наследника (сначала родитель), запуск main-класса. Не инициализируют: <code><span class="t">Foo</span>.<span class="k">class</span></code>, объявление переменной, создание массива <code><span class="t">Foo</span>[]</code>, <code><span class="t">ClassLoader</span>.loadClass</code>.</p>
-      <p>Потокобезопасность: JVM гарантирует, что <code>&lt;clinit&gt;</code> выполнится ровно один раз, а остальные потоки дождутся его окончания под внутренним локом класса. Отсюда и holder-idiom, и риск дедлока при взаимной инициализации двух классов из разных потоков (A в static-блоке трогает B, а B — A).</p>
-      <p>NoSuchMethodError в рантайме при успешной компиляции — классический симптом конфликта версий зависимостей: скомпилировались против одной версии библиотеки, а на classpath другая (смотреть <code>mvn dependency:tree</code>).</p>
-    </div></div></article>
-<article id="q82" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">82. Загрузчики классов и делегирование</h2><div class="answer" hidden><div class="short"><p>Иерархия: <b>Bootstrap</b> — ядро JDK, <b>Platform</b> — остальные модули JDK, <b>Application</b> — classpath приложения.</p>
-<ul><li><b>Делегирование</b>: загрузчик сначала спрашивает родителя и грузит сам, только если тот не нашёл — так нельзя подменить <code>java.lang.<span class="t">String</span></code>.</li><li>Класс определяется парой <b>«имя + загрузчик»</b>: один класс из двух загрузчиков — разные типы, отсюда загадочный ClassCastException.</li><li>Удержанный загрузчик — классическая <b>утечка Metaspace</b> при редеплое.</li></ul></div>
-    <div class="more">
-<ul><li>Удерживаемый загрузчик (ThreadLocal, static-ссылки) — утечка Metaspace при горячем редеплое. Сервлет-контейнеры и DevTools используют свои загрузчики (child-first, restart).</li></ul>
-<div class="table-wrap"><table>
-        <tr><th>Загрузчик</th><th>Что грузит</th></tr>
-        <tr><td>Bootstrap</td><td>java.base и ядро JDK (написан в нативном коде, в Java — null)</td></tr>
-        <tr><td>Platform (до Java 9 — Extension)</td><td>остальные модули JDK: java.sql, java.xml…</td></tr>
-        <tr><td>Application (System)</td><td>classpath / module path приложения</td></tr>
-        <tr><td>Пользовательские</td><td>Tomcat (на каждое веб-приложение), Spring Boot LaunchedURLClassLoader (jar в jar), DevTools RestartClassLoader, OSGi, плагины</td></tr>
-      </table></div>
-<pre class="wide"><span class="c">// родительское делегирование, упрощённо (ClassLoader.loadClass)</span>
-<span class="t">Class</span>&lt;?&gt; c = findLoadedClass(name);           <span class="c">// уже загружен этим загрузчиком?</span>
-<span class="k">if</span> (c == <span class="k">null</span>) {
-    <span class="k">try</span> { c = parent.loadClass(name); }        <span class="c">// сначала родитель</span>
-    <span class="k">catch</span> (<span class="t">ClassNotFoundException</span> e) { c = findClass(name); }  <span class="c">// потом сам</span>
-}</pre>
-<pre class="narrow"><span class="c">// родительское делегирование, упрощённо</span>
-<span class="c">// (ClassLoader.loadClass)</span>
-<span class="c">// уже загружен этим загрузчиком?</span>
-<span class="t">Class</span>&lt;?&gt; c = findLoadedClass(name);
-<span class="k">if</span> (c == <span class="k">null</span>) {
-    <span class="k">try</span> {
-        <span class="c">// сначала родитель</span>
-        c = parent.loadClass(name);
-    } <span class="k">catch</span> (<span class="t">ClassNotFoundException</span> e) {
-        <span class="c">// потом сам</span>
-        c = findClass(name);
+<pre><span class="k">class</span> <span class="t">Sum</span> {
+    <span class="k">int</span> add(<span class="k">int</span> a, <span class="k">int</span> b) {
+        <span class="k">return</span> a + b;
     }
-}</pre>
-      <p>Почему «ClassCastException: com.x.Foo cannot be cast to com.x.Foo»: класс загружен дважды разными загрузчиками — для JVM это два разных типа. Встречается со Spring Boot DevTools (класс из библиотеки в одном загрузчике, кеш/десериализация — в другом), в серверах приложений, при плагинах.</p>
-      <p><b>Child-first</b>: веб-контейнер сначала ищет класс в WEB-INF/lib приложения и только потом у родителя — чтобы приложение могло иметь свою версию библиотеки. Для java.* делегирование всё равно parent-first.</p>
-      <p>ClassNotFoundException vs NoClassDefFoundError: первое — явная загрузка по имени не нашла класс (Class.forName); второе — класс был при компиляции, но не найден или не инициализировался при выполнении (часто вторичная ошибка после ExceptionInInitializerError в static-блоке).</p>
+}</pre><pre>javac --release <span class="n">21</span> <span class="t">Sum</span>.java
+javap -c <span class="t">Sum</span></pre><p><b>Байткод метода add:</b> загрузить аргументы на стек операндов, сложить, вернуть результат.</p><pre>iload_1
+iload_2
+iadd
+ireturn</pre><p>Байткод переносим между совместимыми JVM, машинный код JIT — уже под конкретную платформу. --release задаёт целевую версию языка, class-файла и доступных стандартных API: класс Java 21 не запустится на JVM 17. Нативные библиотеки и платформенные зависимости отдельно ограничивают переносимость.</p><p class="follow"><b>Нужен ли полный JDK в runtime-образе?</b> Для исполнения можно использовать runtime image, в том числе собранный jlink. Но диагностику и доступ к нужным инструментам нужно предусмотреть отдельно, а не обнаруживать их отсутствие во время инцидента.</p>
     </div></div></article>
-<article id="q83" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">83. Стек и куча: что где хранится</h2><div class="answer" hidden><div class="short"><ul><li><b>Стек</b> — свой у каждого потока: кадры вызовов с локальными примитивами и ссылками.</li><li><b>Куча</b> — общая, все объекты, включая их <b>примитивные поля</b> (частая неточность).</li></ul>
-<p>Escape analysis иногда вообще убирает аллокацию. Глубокая рекурсия — <b>StackOverflowError</b>, размер задаёт <code>-<span class="t">Xss</span></code>. Платформенный поток резервирует под стек около мегабайта.</p></div>
+<article id="q81" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">81. Загрузка класса: этапы и когда выполняется static-блок</h2><div class="answer" hidden><div class="short"><ul><li><b>Loading:</b> получить байты и создать представление класса.</li><li><b>Linking:</b> проверить байткод, выделить static-поля со значениями по умолчанию, разрешить символические ссылки — часть resolution может быть отложена.</li><li><b>Initialization:</b> выполнить инициализаторы static-полей и static-блоки в порядке объявления.</li></ul><p>Инициализация запускается при активном использовании класса, например new или вызове static-метода. JVM синхронизирует её; чтение compile-time константы само по себе static-блок не запускает.</p></div>
     <div class="more">
-<ul><li>Каждый платформенный поток резервирует стек (обычно 512 КБ–1 МБ) — тысячи потоков стоят памяти; у виртуальных стек в куче и растёт по мере нужды.</li></ul>
-<div class="table-wrap"><table>
-        <tr><th></th><th>Стек потока</th><th>Куча</th></tr>
-        <tr><td>Что хранит</td><td>кадры методов: локальные примитивы, ссылки, операнды, адрес возврата</td><td>все объекты и массивы, включая поля-примитивы объектов</td></tr>
-        <tr><td>Видимость</td><td>только свой поток</td><td>общая для всех потоков</td></tr>
-        <tr><td>Время жизни</td><td>до выхода из метода</td><td>пока достижим (решает GC)</td></tr>
-        <tr><td>Ошибка</td><td>StackOverflowError</td><td>OutOfMemoryError: Java heap space</td></tr>
-        <tr><td>Размер</td><td>-Xss (по умолчанию 1 МБ на Linux x64)</td><td>-Xmx</td></tr>
-      </table></div>
-<pre class="wide"><span class="k">void</span> handle(<span class="t">Request</span> r) {
-    <span class="k">int</span> retries = <span class="n">3</span>;                 <span class="c">// примитив — в кадре стека</span>
-    <span class="t">Order</span> order = <span class="k">new</span> <span class="t">Order</span>(r);      <span class="c">// ссылка order — в стеке, объект Order — в куче</span>
-    <span class="t">List</span>&lt;<span class="t">Item</span>&gt; items = order.items();<span class="c">// ссылка в стеке, список и элементы — в куче</span>
-}</pre>
-<pre class="narrow"><span class="k">void</span> handle(<span class="t">Request</span> r) {
-    <span class="c">// примитив — в кадре стека</span>
-    <span class="k">int</span> retries = <span class="n">3</span>;
-    <span class="c">// ссылка order — в стеке, объект — в куче</span>
-    <span class="t">Order</span> order = <span class="k">new</span> <span class="t">Order</span>(r);
-    <span class="c">// ссылка — в стеке, список — в куче</span>
-    <span class="t">List</span>&lt;<span class="t">Item</span>&gt; items = order.items();
-}</pre>
-      <p>Частая неточность: «примитивы хранятся в стеке». Только локальные. <code><span class="k">int</span></code>-поле объекта лежит в куче вместе с объектом. И наоборот, объект может не попасть в кучу совсем благодаря escape analysis.</p>
-      <p>StackOverflowError в реальных приложениях: глубокая рекурсия (обход дерева без ограничения глубины, рекурсивный парсер), бесконечная рекурсия из-за ошибки — <code>toString</code>/<code>hashCode</code> двунаправленных JPA-связей через Lombok, Jackson-сериализация циклических графов без <code><span class="a">@JsonManagedReference</span></code>. Увеличивать <code>-<span class="t">Xss</span></code> — обычно маскировать баг.</p>
-    </div></div></article>
-<article id="q84" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">84. Память JVM: из чего состоит и почему RSS больше Xmx</h2><div class="answer" hidden><div class="short"><p>Память процесса — <b>не только heap</b>: ещё Metaspace, стеки потоков, Code Cache, direct buffers, структуры GC и нативные аллокации библиотек.</p>
-<p>Поэтому <b>RSS всегда больше -Xmx</b>, и Xmx, равный лимиту контейнера, приведёт к <b>OOMKill</b>. Кучу задают долей от лимита — обычно <b>70–75%</b>, а рост нативной памяти смотрят через <b>Native Memory Tracking</b>.</p></div>
-    <div class="more">
-<ul>
-      <li>OOM: Java heap space, Metaspace, GC overhead limit exceeded, unable to create native thread, Direct buffer memory.</li>
-      <li>В контейнере — <code>-<span class="t">XX</span>:<span class="t">MaxRAMPercentage</span>=<span class="n">70</span>–<span class="n">75</span></code>. Нативная память — NMT (<code><span class="t">VM</span>.native_memory summary</code>); при множестве потоков помогает <code><span class="t">MALLOC_ARENA_MAX</span>=<span class="n">2</span></code>.</li>
-    </ul>
-<div class="table-wrap"><table>
-        <tr><th>Область</th><th>Что там</th><th>Чем ограничить</th></tr>
-        <tr><td>Heap</td><td>объекты</td><td>-Xmx, MaxRAMPercentage</td></tr>
-        <tr><td>Metaspace</td><td>метаданные классов</td><td>-XX:MaxMetaspaceSize</td></tr>
-        <tr><td>Code Cache</td><td>скомпилированный JIT-код</td><td>-XX:ReservedCodeCacheSize (240 МБ по умолчанию)</td></tr>
-        <tr><td>Стеки потоков</td><td>кадры вызовов</td><td>-Xss × число потоков</td></tr>
-        <tr><td>Direct buffers</td><td>ByteBuffer.allocateDirect, Netty</td><td>-XX:MaxDirectMemorySize (по умолчанию = Xmx)</td></tr>
-        <tr><td>GC</td><td>remembered sets, card table, марк-битмапы</td><td>зависит от сборщика, у G1 — до ~10% кучи</td></tr>
-        <tr><td>Прочее native</td><td>malloc библиотек, JNI, символы, потоки ОС</td><td>MALLOC_ARENA_MAX</td></tr>
-      </table></div>
-      <p>Типичный расклад для сервиса с <code>-<span class="t">Xmx2g</span></code>: heap 2 ГБ + metaspace 150–250 МБ + code cache 50–100 МБ + 200 потоков × 1 МБ + структуры GC + direct buffers HTTP-клиента — RSS легко 2.7–3 ГБ. Поэтому при лимите контейнера 3 ГБ хип ставят не 3 ГБ, а около 2–2.2 (MaxRAMPercentage 70–75).</p>
-<pre class="wide"># включить учёт нативной памяти (оверхед ~<span class="n">5</span>%) и посмотреть сводку
-java -<span class="t">XX</span>:<span class="t">NativeMemoryTracking</span>=summary ...
-jcmd &lt;pid&gt; <span class="t">VM</span>.native_memory summary
-# сравнить два момента времени
-jcmd &lt;pid&gt; <span class="t">VM</span>.native_memory baseline
-jcmd &lt;pid&gt; <span class="t">VM</span>.native_memory summary.diff</pre>
-<pre class="narrow"># учёт нативной памяти (оверхед ~<span class="n">5</span>%)
-java -<span class="t">XX</span>:<span class="t">NativeMemoryTracking</span>=summary ...
-jcmd &lt;pid&gt; <span class="t">VM</span>.native_memory summary
-# сравнить два момента времени
-jcmd &lt;pid&gt; <span class="t">VM</span>.native_memory baseline
-jcmd &lt;pid&gt; <span class="t">VM</span>.native_memory summary.diff</pre>
-      <p>MALLOC_ARENA_MAX: glibc создаёт отдельную арену malloc почти для каждого потока, ограничиваясь 8 × число ядер; арены фрагментируются и не отдают память ОС — RSS растёт без утечки в Java. Ограничение до 2–4 арен заметно снижает RSS. Альтернатива — jemalloc вместо glibc malloc.</p>
-      <p>NMT не видит память, выделенную нативными библиотеками в обход JVM (например, через JNI в сторонней библиотеке) — тогда смотрят <code>pmap</code> и профилирование malloc.</p>
-<p class="follow"><b>RSS растёт неделями, heap стабилен?</b> Нативная утечка: direct buffers, незакрытые Inflater/Deflater, JNI, фрагментация арен malloc.</p>
-    </div></div></article>
-<article id="q85" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">85. GC roots: от чего считается достижимость</h2><div class="answer" hidden><div class="short"><p>Живые объекты ищут <b>обходом графа от корней</b>. Корни — локальные переменные и параметры в <b>стеках потоков</b>, <b>статические поля</b> загруженных классов, JNI-ссылки, объекты-мониторы.</p>
-<p>Всё недостижимое — мусор, даже если объекты ссылаются друг на друга: <b>циклы не мешают</b>. Любая утечка — это путь от какого-то корня, чаще всего от статического поля или потока.</p></div>
-    <div class="more">
-<ul>
-      <li>Типичная утечка — статическая коллекция или кеш, который только растёт: объекты достижимы, GC их не тронет.</li>
-    </ul>
-<p>Корни — ссылки, которые живы по определению, без того чтобы на них кто-то ссылался:</p>
-      <ul>
-        <li>локальные переменные и параметры в активных кадрах стеков всех потоков (с учётом того, что JIT знает, какие переменные ещё понадобятся — объект может стать недостижимым раньше конца метода);</li>
-        <li>статические поля загруженных классов (точнее, классы — корни, пока жив их загрузчик);</li>
-        <li>JNI-ссылки из нативного кода (global и local);</li>
-        <li>объекты, используемые как мониторы synchronized в данный момент;</li>
-        <li>живые потоки сами по себе, системные объекты JVM.</li>
-      </ul>
-<pre class="wide"><span class="k">class</span> <span class="t">Node</span> { <span class="t">Node</span> next; }
-<span class="t">Node</span> a = <span class="k">new</span> <span class="t">Node</span>(), b = <span class="k">new</span> <span class="t">Node</span>();
-a.next = b; b.next = a;      <span class="c">// цикл</span>
-a = <span class="k">null</span>; b = <span class="k">null</span>;          <span class="c">// от корней не достижимы — оба соберутся, несмотря на взаимные ссылки</span></pre>
-<pre class="narrow"><span class="k">class</span> <span class="t">Node</span> { <span class="t">Node</span> next; }
-<span class="t">Node</span> a = <span class="k">new</span> <span class="t">Node</span>(), b = <span class="k">new</span> <span class="t">Node</span>();
-a.next = b; b.next = a;   <span class="c">// цикл</span>
-<span class="c">// от корней не достижимы — оба соберутся,</span>
-<span class="c">// несмотря на взаимные ссылки</span>
-a = <span class="k">null</span>; b = <span class="k">null</span>;</pre>
-      <p>Почему это важно понимать для утечек: «утечка» в Java — всегда путь от корня. В MAT это и есть Path to GC Roots. Самые частые корни утечек — static-поле (кеш, реестр, синглтон со списком слушателей) и поток (ThreadLocal в потоке пула, незавершённый поток, держащий ссылку в стеке).</p>
-      <p>Подсчёт ссылок (как в Python/Swift) Java не использует именно потому, что он не собирает циклы и требует атомарных счётчиков на каждое присваивание.</p>
-    </div></div></article>
-<article id="q86" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">86. Strong, soft, weak и phantom ссылки</h2><div class="answer" hidden><div class="short"><ul><li><b>Strong</b> — обычная ссылка: пока есть, объект не соберут.</li><li><b>Soft</b> — соберут при нехватке памяти; кеши на них плохо предсказуемы.</li><li><b>Weak</b> — соберут при ближайшей сборке без сильных ссылок (WeakHashMap).</li><li><b>Phantom</b> — объект уже недостижим, через очередь ссылок можно освободить нативные ресурсы; на этом построен <b>Cleaner</b> — замена finalize.</li></ul></div>
-    <div class="more">
-<ul><li>Вместо устаревшего finalize — <code>java.lang.ref.<span class="t">Cleaner</span></code> или явный close/try-with-resources.</li></ul>
-<div class="table-wrap"><table>
-        <tr><th>Тип</th><th>Когда соберут объект</th><th>get()</th><th>Применение</th></tr>
-        <tr><td>Strong</td><td>никогда, пока ссылка есть</td><td>—</td><td>всё обычное</td></tr>
-        <tr><td>SoftReference</td><td>при нехватке памяти, до OOM</td><td>объект или null</td><td>кеши, «желательно держать»</td></tr>
-        <tr><td>WeakReference</td><td>на ближайшей сборке, если нет сильных ссылок</td><td>объект или null</td><td>WeakHashMap, метаданные к чужим объектам, слушатели</td></tr>
-        <tr><td>PhantomReference</td><td>объект уже недостижим, ссылка ставится в очередь</td><td>всегда null</td><td>уведомление о сборке для освобождения нативных ресурсов (Cleaner)</td></tr>
-      </table></div>
-<pre class="wide"><span class="c">// Cleaner — современная замена finalize для нативных ресурсов</span>
-<span class="k">class</span> <span class="t">NativeBuffer</span> <span class="k">implements</span> <span class="t">AutoCloseable</span> {
-    <span class="k">private</span> <span class="k">static</span> <span class="k">final</span> <span class="t">Cleaner</span> <span class="t">CLEANER</span> = <span class="t">Cleaner</span>.create();
-    <span class="k">private</span> <span class="k">final</span> <span class="t">Cleaner</span>.<span class="t">Cleanable</span> cleanable;
-    <span class="t">NativeBuffer</span>(<span class="k">long</span> address) {
-        <span class="c">// действие не должно ссылаться на this, иначе объект никогда не станет недостижимым</span>
-        <span class="k">this</span>.cleanable = <span class="t">CLEANER</span>.register(<span class="k">this</span>, <span class="k">new</span> <span class="t">FreeMemory</span>(address));
-    }
-    <span class="k">public</span> <span class="k">void</span> close() { cleanable.clean(); }     <span class="c">// явное освобождение; Cleaner — страховка</span>
-    <span class="k">private</span> <span class="k">record</span> <span class="t">FreeMemory</span>(<span class="k">long</span> address) <span class="k">implements</span> <span class="t">Runnable</span> {
-        <span class="k">public</span> <span class="k">void</span> run() { <span class="t">NativeLib</span>.free(address); }
-    }
-}</pre>
-<pre class="narrow"><span class="c">// Cleaner — современная замена finalize</span>
-<span class="c">// для нативных ресурсов</span>
-<span class="k">class</span> <span class="t">NativeBuffer</span> <span class="k">implements</span> <span class="t">AutoCloseable</span> {
-    <span class="k">private</span> <span class="k">static</span> <span class="k">final</span> <span class="t">Cleaner</span> <span class="t">CLEANER</span> =
-            <span class="t">Cleaner</span>.create();
-    <span class="k">private</span> <span class="k">final</span> <span class="t">Cleaner</span>.<span class="t">Cleanable</span> cleanable;
+<figure class="concept" aria-labelledby="jvm-class-lifecycle-caption"><svg viewBox="0 0 320 280" role="img" aria-labelledby="jvm-class-lifecycle-title jvm-class-lifecycle-desc" xmlns="http://www.w3.org/2000/svg"><title id="jvm-class-lifecycle-title">Загрузка и инициализация класса</title><desc id="jvm-class-lifecycle-desc">До выполнения static-блоков класс загружается и связывается. Resolution может выполняться лениво.</desc><defs><marker id="jvm-class-lifecycle-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 62 V96" marker-end="url(#jvm-class-lifecycle-arrow)"/><path class="concept-edge" d="M160 170 V204" marker-end="url(#jvm-class-lifecycle-arrow)"/><rect class="concept-node plain" x="16" y="12" width="288" height="50" rx="9"/><text x="160.0" y="42.0" text-anchor="middle">Loading: байты → Class</text><rect class="concept-node accent" x="16" y="100" width="288" height="70" rx="9"/><text x="160.0" y="130.0" text-anchor="middle">Linking</text><text x="160.0" y="150.0" text-anchor="middle">verify → prepare → resolve</text><rect class="concept-node plain" x="16" y="208" width="288" height="60" rx="9"/><text x="160.0" y="233.0" text-anchor="middle">Initialization</text><text x="160.0" y="253.0" text-anchor="middle">static-поля и блоки</text></svg><figcaption id="jvm-class-lifecycle-caption">До выполнения static-блоков класс загружается и связывается. Resolution может выполняться лениво.</figcaption></figure><pre><span class="k">class</span> <span class="t">Config</span> {
+    <span class="k">static</span> <span class="k">final</span> <span class="k">int</span> <span class="t">LIMIT</span> = <span class="n">10</span>;
+    <span class="k">static</span> <span class="k">int</span> value = init();
 
-    <span class="t">NativeBuffer</span>(<span class="k">long</span> address) {
-        <span class="c">// действие не ссылается на this,</span>
-        <span class="c">// иначе объект не станет недостижимым</span>
-        <span class="k">this</span>.cleanable = <span class="t">CLEANER</span>.register(
-                <span class="k">this</span>,
-                <span class="k">new</span> <span class="t">FreeMemory</span>(address));
+    <span class="k">static</span> <span class="k">int</span> init() {
+        <span class="t">System</span>.out.println(<span class="s">"init"</span>);
+        <span class="k">return</span> <span class="n">42</span>;
     }
+}</pre><pre><span class="t">System</span>.out.println(<span class="t">Config</span>.<span class="t">LIMIT</span>);
+<span class="t">System</span>.out.println(<span class="t">Config</span>.value);
+<span class="t">System</span>.out.println(<span class="t">Config</span>.value);
+<span class="c">// 10, затем init, затем 42 и 42</span></pre><p>LIMIT — константа, её значение может оказаться в байткоде вызывающего класса. value требует инициализации Config. Сначала инициализируется нужный суперкласс; static-метод или поле запускает инициализацию именно объявляющего его класса.</p><p class="follow"><b>Что будет, если static-блок выбросит исключение?</b> Инициализация завершится ошибкой, обычно ExceptionInInitializerError. Класс в этом загрузчике останется ошибочным; следующая попытка активного использования обычно даст NoClassDefFoundError, а не повторный запуск блока.</p>
+    </div></div></article>
+<article id="q82" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">82. Загрузчики классов и делегирование</h2><div class="answer" hidden><div class="short"><p><b>Загрузчик класса определяет, откуда получить его байткод.</b> В стандартной иерархии HotSpot есть bootstrap, platform и application loader; обычная модель делегирует поиск родителю перед собственной загрузкой.</p><p><b>Тип определяется именем и определившим загрузчиком.</b> Два класса с одинаковым полным именем, загруженные независимо, могут быть несовместимыми типами.</p><p>Parent-first — стандартное поведение, но не обязательная стратегия всех пользовательских загрузчиков. Серверы приложений и плагины могут применять собственные правила.</p></div>
+    <div class="more">
+<div class="table-wrap"><table><tr><th>Загрузчик</th><th>Обычно загружает</th></tr><tr><td>Bootstrap</td><td>Основные классы JDK, например java.lang.String</td></tr><tr><td>Platform</td><td>Платформенные модули, не отнесённые к другим встроенным загрузчикам</td></tr><tr><td>Application</td><td>Классы приложения из classpath/module path</td></tr></table></div><pre><span class="t">ClassLoader</span> loader =
+    <span class="t">String</span>.<span class="k">class</span>.getClassLoader();
+<span class="t">System</span>.out.println(loader); <span class="c">// null</span></pre><p>null здесь обозначает bootstrap loader, а не отсутствие загрузки. В ошибке «X cannot be cast to X» проверяют не только имена, но и загрузчики обеих сторон. Thread context class loader позволяет инфраструктуре искать реализации, доступные приложению, например через ServiceLoader.</p><p class="follow"><b>Как загрузчик становится причиной утечки?</b> Поток, ThreadLocal, listener или кеш продолжает удерживать объект старого приложения либо сам loader. Тогда его обычные классы и связанные метаданные не удаётся выгрузить после redeploy.</p>
+    </div></div></article>
+<article id="q83" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">83. Стек и куча: что где хранится</h2><div class="answer" hidden><div class="short"><p><b>Стек хранит состояние вызовов потока:</b> кадры методов, локальные значения, ссылки и промежуточные операнды. <b>Куча хранит объекты и массивы</b>, в том числе их примитивные поля.</p><p>Локальная ссылка и объект — разные вещи: ссылка может быть в кадре, а объект находится в куче. JIT способен вовсе устранить часть объектов, поэтому физическое размещение после оптимизации не стоит выводить только из исходника.</p></div>
+    <div class="more">
+<pre><span class="k">class</span> <span class="t">Box</span> {
+    <span class="k">int</span> value;
+}
 
-    <span class="c">// явное освобождение; Cleaner — страховка</span>
-    <span class="k">public</span> <span class="k">void</span> close() { cleanable.clean(); }
-
-    <span class="k">private</span> <span class="k">record</span> <span class="t">FreeMemory</span>(<span class="k">long</span> address)
-            <span class="k">implements</span> <span class="t">Runnable</span> {
-        <span class="k">public</span> <span class="k">void</span> run() {
-            <span class="t">NativeLib</span>.free(address);
-        }
-    }
+<span class="k">void</span> example() {
+    <span class="k">int</span> count = <span class="n">7</span>;
+    <span class="t">Box</span> box = <span class="k">new</span> <span class="t">Box</span>();
+    box.value = count;
+}</pre><div class="table-wrap"><table><tr><th>В примере</th><th>Логическая роль</th></tr><tr><td>count</td><td>Локальное примитивное значение кадра</td></tr><tr><td>box</td><td>Локальная ссылка, а не сам Box</td></tr><tr><td>Box и его value</td><td>Объект с полем в куче, если аллокация не устранена</td></tr></table></div><p>Глубокая рекурсия или большой кадр могут привести к StackOverflowError; -Xss влияет на стек платформенного потока, но не увеличивает кучу. У виртуальных потоков сохраняемые кадры размещаются в heap-структурах: переносить на них расчёт «по мегабайту native stack на поток» неверно.</p><p class="follow"><b>Нехватка памяти при создании потока — это StackOverflowError?</b> Нет. Unable to create native thread может означать лимит потоков ОС или нехватку native memory под новый поток. StackOverflowError относится к переполнению стека выполняющегося потока.</p>
+    </div></div></article>
+<article id="q84" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">84. Память JVM: из чего состоит и почему RSS больше Xmx</h2><div class="answer" hidden><div class="short"><p><b>Xmx — верхняя граница кучи, а не памяти процесса.</b> Кроме heap нужны Metaspace, Code Cache, стеки, direct buffers, структуры GC и native memory библиотек.</p><p><b>RSS показывает резидентные страницы процесса.</b> Он может быть и меньше Xmx, пока куча не заполнена, и больше Xmx за счёт остальных областей. В контейнере нужен запас вне кучи; универсального процента для всех сервисов нет.</p></div>
+    <div class="more">
+<figure class="concept" aria-labelledby="jvm-process-memory-caption"><svg viewBox="0 0 320 272" role="img" aria-labelledby="jvm-process-memory-title jvm-process-memory-desc" xmlns="http://www.w3.org/2000/svg"><title id="jvm-process-memory-title">Память процесса JVM</title><desc id="jvm-process-memory-desc">Xmx ограничивает только Java heap. Остальная память процесса требует отдельного бюджета.</desc><defs><marker id="jvm-process-memory-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><rect class="concept-node accent" x="16" y="12" width="288" height="50" rx="9"/><text x="160.0" y="42.0" text-anchor="middle">Java heap: объекты и массивы</text><rect class="concept-node plain" x="16" y="96" width="288" height="60" rx="9"/><text x="160.0" y="121.0" text-anchor="middle">Metaspace + Code Cache</text><text x="160.0" y="141.0" text-anchor="middle">классы + JIT-код</text><rect class="concept-node plain" x="16" y="190" width="288" height="70" rx="9"/><text x="160.0" y="220.0" text-anchor="middle">Стеки, direct buffers, GC,</text><text x="160.0" y="240.0" text-anchor="middle">JNI и другие native-данные</text></svg><figcaption id="jvm-process-memory-caption">Xmx ограничивает только Java heap. Остальная память процесса требует отдельного бюджета.</figcaption></figure><p><b>Пример бюджета:</b> при лимите 2 ГБ и Xmx=1200 МБ остаётся около 800 МБ на остальные расходы и запас. Достаточность проверяют под пиковым числом потоков, соединений и буферов.</p><pre># Включить при запуске:
+-<span class="t">XX</span>:<span class="t">NativeMemoryTracking</span>=summary</pre><pre>jcmd &lt;pid&gt; <span class="t">VM</span>.native_memory baseline
+jcmd &lt;pid&gt; <span class="t">VM</span>.native_memory summary.diff</pre><p>Команды сравнивают изменения с baseline. NMT различает reserved и committed, а не измеряет RSS напрямую; он также не покрывает все выделения сторонних native-библиотек. Поэтому его сопоставляют с метриками ОС и контейнера, памятью heap/direct и числом потоков.</p><p class="follow"><b>Почему OOMKill случается без Java OutOfMemoryError?</b> Процесс может превысить лимит контейнера и быть завершён ОС. JVM не обязана успеть выбросить исключение или записать heap dump; сам exit code 137 без статуса OOMKilled ещё не доказывает причину.</p>
+    </div></div></article>
+<article id="q85" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">85. GC roots: от чего считается достижимость</h2><div class="answer" hidden><div class="short"><p><b>GC определяет жизнь объекта по достижимости от корней.</b> Живые ссылки в кадрах потоков, JNI handles и другие поддерживаемые JVM корни дают начало обходу графа.</p><p>Статическое поле удерживает объект через живой класс и его загрузчик. <b>Циклические ссылки сами по себе не мешают сборке:</b> если пути от корней нет, цикл не удерживает себя.</p><p>Утечка heap обычно означает, что такой путь остался, хотя бизнесу объект уже не нужен.</p></div>
+    <div class="more">
+<figure class="concept" aria-labelledby="jvm-roots-caption"><svg viewBox="0 0 320 264" role="img" aria-labelledby="jvm-roots-title jvm-roots-desc" xmlns="http://www.w3.org/2000/svg"><title id="jvm-roots-title">Достижимость от GC roots</title><desc id="jvm-roots-desc">Объект A достижим от корня и удерживает B. Отдельный цикл C ↔ D не имеет пути от корней и может быть собран.</desc><defs><marker id="jvm-roots-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 56 V78 H82 V96" marker-end="url(#jvm-roots-arrow)"/><path class="concept-edge" d="M148 123 H168" marker-end="url(#jvm-roots-arrow)"/><path class="concept-edge" d="M148 218 H168" marker-end="url(#jvm-roots-arrow)"/><path class="concept-edge" d="M172 240 H152" marker-end="url(#jvm-roots-arrow)"/><rect class="concept-node accent" x="16" y="12" width="288" height="44" rx="9"/><text x="160.0" y="39.0" text-anchor="middle">GC root: живая ссылка</text><rect class="concept-node plain" x="16" y="100" width="132" height="46" rx="9"/><text x="82.0" y="128.0" text-anchor="middle">A</text><rect class="concept-node plain" x="172" y="100" width="132" height="46" rx="9"/><text x="238.0" y="128.0" text-anchor="middle">B</text><rect class="concept-node warning" x="16" y="206" width="132" height="46" rx="9"/><text x="82.0" y="234.0" text-anchor="middle">C</text><rect class="concept-node warning" x="172" y="206" width="132" height="46" rx="9"/><text x="238.0" y="234.0" text-anchor="middle">D</text></svg><figcaption id="jvm-roots-caption">Объект A достижим от корня и удерживает B. Отдельный цикл C ↔ D не имеет пути от корней и может быть собран.</figcaption></figure><p><b>Пример удержания:</b> поток приложения → ThreadLocal → контекст запроса → большой граф DTO. Или живой класс → static-кеш → все когда-либо добавленные значения. Искать нужно владельца ссылки, а не только большой объект.</p><div class="table-wrap"><table><tr><th>Вопрос в heap dump</th><th>Что помогает</th></tr><tr><td>Кто удерживает этот объект?</td><td>Path to GC Roots</td></tr><tr><td>Что освободится при удалении владельца?</td><td>Retained size / dominator tree</td></tr><tr><td>Почему цикл не исчез?</td><td>Искать входящую ссылку от достижимого объекта</td></tr></table></div><p class="follow"><b>Можно считать любой локальный объект живым до конца метода?</b> Нет. После последнего использования JIT может перестать считать локальную ссылку живой раньше выхода из области исходника. Для специальных native-протоколов существует Reference.reachabilityFence.</p>
+    </div></div></article>
+<article id="q86" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">86. Strong, soft, weak и phantom ссылки</h2><div class="answer" hidden><div class="short"><ul><li><b>Strong:</b> обычная сильная ссылка удерживает достижимый объект.</li><li><b>Soft:</b> GC может очистить при давлении на память; момент очистки плохо подходит для управления размером кеша.</li><li><b>Weak:</b> не удерживает слабо достижимый объект; после очистки get возвращает null.</li><li><b>Phantom:</b> get всегда null, уведомление через ReferenceQueue позволяет организовать очистку ресурсов.</li></ul><p>Очистка ссылки и обработка очереди не имеют гарантированного срока. Файлы и соединения закрывают явно, а не ждут GC.</p></div>
+    <div class="more">
+<pre><span class="t">Object</span> value = <span class="k">new</span> <span class="t">Object</span>();
+<span class="k">var</span> weak = <span class="k">new</span> <span class="t">WeakReference</span>&lt;&gt;(value);
+<span class="t">System</span>.out.println(weak.get() == value);
+<span class="c">// true — value ещё strongly reachable</span>
+<span class="t">Reference</span>.reachabilityFence(value);</pre><p>После исчезновения сильных ссылок объект может стать кандидатом на очистку; вызов System.gc() не превращает это в детерминированный тест. В WeakHashMap ключ weak, но value strong: если value прямо или косвенно ссылается на ключ, ожидаемая очистка может не произойти.</p><p>Cleaner строит механизм резервной очистки на phantom reachability. Действие очистки не должно удерживать сам регистрируемый объект, например через захват this. Для обычного кеша предсказуемее явные ограничения размера и TTL.</p><p class="follow"><b>WeakReference гарантирует очистку на ближайшем вызове GC?</b> Нет такой гарантии для произвольного вызова и выбранной области сборки. Он не обязан немедленно пройти по объекту и доставить уведомление очереди в нужный приложению момент.</p>
+    </div></div></article>
+<article id="q87" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">87. Как работает GC и как устроен G1</h2><div class="answer" hidden><div class="short"><p><b>GC находит достижимые объекты и освобождает память остальных.</b> Поколенческие сборщики используют наблюдение: много объектов умирает вскоре после создания, поэтому молодую область выгодно собирать чаще.</p><p><b>G1 делит heap на регионы.</b> Young GC переносит живые объекты из молодых регионов; конкурентная маркировка определяет живые данные, после неё mixed GC может собирать молодые и выбранные старые регионы.</p><p><b>Цель паузы — ориентир, не гарантия.</b> Слишком тесная куча и недостаток ресурсов могут привести к тяжёлой сборке и длинной задержке.</p></div>
+    <div class="more">
+<ol><li><b>Аллокация:</b> обычные небольшие объекты попадают в молодые регионы, часто через TLAB.</li><li><b>Young pause:</b> приложение останавливается, выжившие объекты копируются в survivor/old; освободившиеся регионы используются снова.</li><li><b>Concurrent marking:</b> значительная часть поиска живого выполняется вместе с приложением; отдельные фазы всё равно требуют STW.</li><li><b>Mixed pauses:</b> к young добавляются старые регионы, которые выгодно освободить в выбранном бюджете.</li></ol><p>G1 учитывает межрегионные ссылки через remembered sets и барьеры записи: не нужно каждый раз сканировать всю старую область при young GC. Порог начала маркировки адаптируется, а не всегда равен одному жёсткому проценту.</p><p><b>Humongous:</b> объект размером примерно от половины региона требует специального размещения в последовательных регионах. Такие аллокации и недостаток места для эвакуации могут увеличить давление на GC.</p><p class="follow"><b>MaxGCPauseMillis=200 ограничит любой запрос 200 мс?</b> Нет. Это цель эвристик G1 для GC-пауз; она не ограничивает каждую паузу и не включает очередь, I/O, safepoint-ожидание и сам код запроса.</p>
+    </div></div></article>
+<article id="q88" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">88. Какие бывают сборщики мусора и как выбрать</h2><div class="answer" hidden><div class="short"><ul><li><b>Serial:</b> простой сборщик с одним GC-потоком, уместен для небольших процессов и ограниченных ресурсов.</li><li><b>Parallel:</b> ориентирован на throughput, ценой более заметных STW-пауз.</li><li><b>G1:</b> распространённый компромисс по пропускной способности и паузам.</li><li><b>ZGC / Shenandoah:</b> больше конкурентной работы для коротких пауз, с накладными расходами на CPU, барьеры и запас памяти.</li></ul><p>Выбираю по SLO, живому набору, скорости аллокаций и CPU-квоте. Поддержка конкретного GC зависит от версии, платформы и сборки JDK.</p></div>
+    <div class="more">
+<div class="table-wrap"><table><tr><th>Нагрузка</th><th>Что сравнить</th></tr><tr><td>Короткая CLI-утилита</td><td>Старт, общий RSS и время выполнения с Serial/дефолтом</td></tr><tr><td>Пакетная обработка</td><td>Общее время, CPU и throughput с Parallel/G1</td></tr><tr><td>HTTP-сервис</td><td>p95/p99, паузы и расход CPU с G1</td></tr><tr><td>Жёсткие требования к хвостам задержки</td><td>ZGC/Shenandoah при достаточных ресурсах</td></tr></table></div><p>Сравнивают на одинаковом сценарии после прогрева, при одинаковых лимитах и сопоставимом бюджете памяти. Слишком маленькая куча может ухудшить любой выбор. Короткая GC-пауза ещё не означает меньшую задержку запроса: конкурентная работа тоже расходует CPU.</p><p class="follow"><b>Почему не всегда выбирать сборщик с самыми короткими паузами?</b> У него могут быть выше постоянные расходы и требования к запасу памяти. Если SLO уже выполняется, переход может уменьшить throughput без нужной бизнес-пользы.</p>
+    </div></div></article>
+<article id="q89" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">89. ZGC и Shenandoah: как получаются паузы меньше миллисекунды <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>ZGC и Shenandoah переносят основную работу, включая перемещение объектов, из STW в конкурентные фазы.</b> Приложение продолжает работать, а барьеры при доступе к ссылкам помогают согласовать его с GC.</p><p><b>ZGC использует метаданные в ссылках и барьеры</b>; в поколенческом варианте существенны и load-, и store-barriers. Shenandoah поддерживает переход к перемещённому объекту своим механизмом forwarding и барьеров.</p><p>Паузы обычно короткие, но нехватка CPU или свободной памяти всё равно может остановить продвижение аллокаций.</p></div>
+    <div class="more">
+<ol><li>Пометить живые объекты, пока работает приложение.</li><li>Перемещать их конкурентно; старые ссылки ещё могут встречаться у приложения.</li><li>При обращении через барьер получить корректную ссылку и при необходимости обновить её.</li><li>Завершить необходимые короткие STW-фазы и освободить старое размещение.</li></ol><p><b>Java 21, поколенческий ZGC:</b></p><pre>-<span class="t">XX</span>:+<span class="t">UseZGC</span>
+-<span class="t">XX</span>:+<span class="t">ZGenerational</span></pre><p>Это версионный пример: в новых JDK режимы ZGC и набор флагов менялись. Нельзя без проверки переносить команду Java 21 на другой релиз. Доступность Shenandoah также проверяют в конкретной сборке.</p><p class="follow"><b>Allocation stall — это длинная STW-пауза?</b> Не обязательно. Поток может ждать свободную память, потому что GC не успевает освобождать её. В SLO это реальная задержка, даже если журнал показывает короткие STW-фазы.</p>
+    </div></div></article>
+<article id="q90" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">90. Почему System.gc() и finalize — плохая идея</h2><div class="answer" hidden><div class="short"><p><b>System.gc() — запрос JVM попытаться выполнить сборку.</b> Он не гарантирует немедленное освобождение конкретного объекта; фактическое поведение зависит от сборщика и флагов, а цена может быть высокой.</p><p><b>finalize не обеспечивает своевременное освобождение ресурсов</b> и устарел к удалению. Файлы, соединения и native handles закрывают через AutoCloseable/try-with-resources; Cleaner оставляют резервной страховкой, когда она нужна.</p></div>
+    <div class="more">
+<pre class="wide"><span class="k">try</span> (<span class="k">var</span> input = <span class="t">Files</span>.newInputStream(path)) {
+    <span class="k">return</span> input.read();
 }</pre>
-      <p>Почему SoftReference-кеш — плохая идея на сервере: JVM очищает soft-ссылки по эвристике (по умолчанию держит ~1 с на каждый свободный МБ кучи с момента последнего обращения), поведение плохо предсказуемо, а массовая очистка мягких ссылок перед OOM даёт долгие GC. Кеш с явным размером и TTL (Caffeine) лучше.</p>
+<pre class="narrow"><span class="k">try</span> (<span class="k">var</span> input =
+        <span class="t">Files</span>.newInputStream(path)) {
+    <span class="k">return</span> input.read();
+}</pre><p>close вызывается при нормальном выходе и исключении. GC не знает, сколько открытых файлов или подключений допустимо приложению: маленький Java-объект может владеть дорогим внешним ресурсом.</p><ul><li><b>finalize:</b> непредсказуемый запуск, возможность воскресить объект, накопление очереди финализации.</li><li><b>Cleaner:</b> нет гарантии выполнить действие до завершения процесса; действие не должно удерживать referent.</li><li><b>System.gc:</b> не использовать вместо поиска утечки; уменьшение графика после ручной сборки не исправляет удерживающие ссылки.</li></ul><p class="follow"><b>System.gc всегда означает Full GC со стопом всей кучи?</b> Нет. Некоторые конфигурации игнорируют запрос или выполняют значительную часть конкурентно. Но вызывать его на каждый запрос всё равно не становится разумным управлением памятью.</p>
     </div></div></article>
-<article id="q87" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">87. Как работает GC и как устроен G1</h2><div class="answer" hidden><div class="short"><p>Живые объекты — достижимые от <b>GC roots</b>. Большинство умирает молодыми, поэтому <b>young-поколение</b> собирают часто и дёшево копированием.</p>
-<p><b>G1</b> (по умолчанию) делит кучу на <b>регионы</b>: young GC эвакуирует молодые регионы, а когда старое поколение заполнено выше порога — <b>конкурентная маркировка</b> и <b>mixed GC</b>, собирающие самые «мусорные» старые регионы в пределах цели паузы (<b>200 мс</b>).</p></div>
+<article id="q91" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">91. Как читать GC-логи</h2><div class="answer" hidden><div class="short"><p><b>В GC-логе смотрю длительность, частоту и причины сборок</b>, а также сколько памяти остаётся после них. Важно сопоставить эти данные с нагрузкой и задержкой запросов.</p><p>У G1 обычная young-пауза и Full GC — разные события. <b>Растущий объём живых данных после сопоставимых циклов</b> может указывать на удержание объектов, но сам по себе ещё не доказывает утечку.</p></div>
     <div class="more">
-<ul>
-      <li>Remembered sets отслеживают межрегионные ссылки — young GC не сканирует весь old.</li>
-      <li>Humongous-объекты (от половины региона) сразу в old и фрагментируют кучу.</li>
-      <li>С G1 не задают <code>-<span class="t">Xmn</span></code>: фиксированный young ломает адаптацию; <code>to-space exhausted</code> — предвестник Full GC.</li>
-    </ul>
-<p>Базовые фазы любого трассирующего GC: <b>mark</b> (найти живые объекты обходом от корней), <b>sweep</b> или <b>compact</b>/<b>copy</b> (освободить мёртвое и уплотнить живое). Копирующий сборщик быстр, когда живых мало — поэтому молодое поколение собирают копированием: из Eden живые переезжают в Survivor, пережившие N сборок (порог tenuring, до 15) — в old.</p>
-      <p>Как устроен G1:</p>
-      <ul>
-        <li>Куча — 2048 регионов одного размера (1–32 МБ). Регион в каждый момент — Eden, Survivor, Old или Humongous. Размеры поколений не фиксированы, G1 меняет их, чтобы уложиться в цель паузы.</li>
-        <li><b>Young GC</b> (STW, параллельно): эвакуирует живые объекты из всех young-регионов. Чтобы не сканировать весь old в поисках ссылок на young, у каждого региона есть remembered set — кто на него ссылается; его поддерживают write-барьеры.</li>
-        <li><b>Concurrent marking</b> запускается, когда занятость old превысила IHOP (по умолчанию адаптивный, начальный 45%): маркирует old конкурентно с приложением (алгоритм SATB — snapshot at the beginning).</li>
-        <li><b>Mixed GC</b>: следующие сборки, кроме young, эвакуируют часть old-регионов, в которых больше всего мусора (отсюда Garbage-First), — столько, сколько успевает в цель паузы.</li>
-        <li><b>Full GC</b> — аварийный режим, если эвакуировать некуда (to-space exhausted) или маркировка не успела. С Java 10 параллельный, но всё равно долгий.</li>
-      </ul>
-<pre class="wide">-<span class="t">XX</span>:+<span class="t">UseG1GC</span> -<span class="t">XX</span>:<span class="t">MaxGCPauseMillis</span>=<span class="n">200</span>     # цель, а не гарантия
--<span class="t">XX</span>:<span class="t">G1HeapRegionSize</span>=16m                   # при множестве крупных объектов, чтобы они не были humongous
--<span class="t">XX</span>:<span class="t">InitiatingHeapOccupancyPercent</span>=<span class="n">35</span>      # начинать маркировку раньше, если <span class="t">Full</span> <span class="t">GC</span> из-за «не успел»</pre>
-<pre class="narrow"># цель, а не гарантия
--<span class="t">XX</span>:+<span class="t">UseG1GC</span> -<span class="t">XX</span>:<span class="t">MaxGCPauseMillis</span>=<span class="n">200</span>
-# много крупных объектов — чтобы они
-# не были humongous
--<span class="t">XX</span>:<span class="t">G1HeapRegionSize</span>=16m
-# начинать маркировку раньше, если
-# <span class="t">Full</span> <span class="t">GC</span> из-за «не успел»
--<span class="t">XX</span>:<span class="t">InitiatingHeapOccupancyPercent</span>=<span class="n">35</span></pre>
-      <p>Что говорить на интервью: GC — компромисс трёх величин: пауза, пропускная способность (доля CPU на приложение), память. G1 по умолчанию держит паузу; уменьшение <code><span class="t">MaxGCPauseMillis</span></code> делает сборки чаще и снижает throughput.</p>
+<pre>-<span class="t">Xlog</span>:gc*:file=gc.log:time,uptime</pre><p>Это аргумент JVM при запуске. Файл требует контроля объёма и ротации. Ниже — условные числа для чтения смысла записи, а не формат всех сборщиков:</p><pre>До <span class="t">GC</span>: <span class="n">512</span> МБ
+После <span class="t">GC</span>: <span class="n">128</span> МБ
+Текущая ёмкость heap: <span class="n">2</span> ГБ
+Пауза: <span class="n">8</span> мс</pre><div class="table-wrap"><table><tr><th>Наблюдение</th><th>Как трактовать</th></tr><tr><td>Частые короткие young GC</td><td>Проверить скорость аллокаций и суммарную долю времени GC</td></tr><tr><td>После mixed-циклов память почти не снижается</td><td>Возможно, растёт живой набор или не хватает возможности его собрать</td></tr><tr><td>Full GC / evacuation failure</td><td>Проверить свободное место, humongous-аллокации и причины цикла</td></tr><tr><td>Паузы выросли при прежнем объёме работы</td><td>Проверить CPU-квоту, ресурсы ОС, live set и фазу GC</td></tr></table></div><p>Young GC не обязан освобождать old generation. Сравнивать две произвольные точки «после GC» без понимания вида сборки нельзя. Для анализа нужны версия JDK, выбранный GC, флаги и период нормальной нагрузки для сравнения.</p><p class="follow"><b>В логах короткие паузы, но p99 плохой — GC исключён?</b> Нет. Могут влиять allocation stalls, конкурентная нагрузка GC на CPU или долгое достижение safepoint. Проверяют JFR, safepoint-логи и ресурсы контейнера.</p>
     </div></div></article>
-<article id="q88" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">88. Какие бывают сборщики мусора и как выбрать</h2><div class="answer" hidden><div class="short"><ul><li><b>Serial</b> — однопоточный: маленькие кучи, утилиты.</li><li><b>Parallel</b> — максимальная пропускная способность ценой длинных пауз: пакетная обработка.</li><li><b>G1</b> — баланс паузы и throughput, дефолт для серверов.</li><li><b>ZGC, Shenandoah</b> — паузы меньше миллисекунды на больших кучах ценой CPU и памяти.</li></ul>
-<p>Выбирают <b>по нагрузочному тесту</b>: что важнее — p99 или throughput, какая куча и сколько CPU у контейнера.</p></div>
+<article id="q92" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">92. Утечка памяти: как найти</h2><div class="answer" hidden><div class="short"><p><b>Утечка heap — ненужные объекты, которые приложение продолжает удерживать.</b> Типичные владельцы: кеш без вытеснения, ThreadLocal пула, listener, очередь и метрики с неограниченным набором labels.</p><p>Сначала подтверждаю устойчивый рост живого набора при сопоставимой нагрузке. Затем в heap dump ищу <b>dominator tree, retained size и путь к GC roots</b>. Большой RSS при стабильном heap требует отдельного поиска native memory.</p></div>
     <div class="more">
-<ul><li>Выбирают по нагрузочному тесту: цель по p99 латентности или по throughput, размер кучи, лимит CPU контейнера.</li></ul>
-<div class="table-wrap"><table>
-        <tr><th>Сборщик</th><th>Паузы</th><th>Throughput</th><th>Где</th></tr>
-        <tr><td>Serial</td><td>длинные, один поток</td><td>хороший на 1 ядре</td><td>контейнеры с &lt;2 CPU, CLI, маленькие кучи; дефолт там, где JVM считает машину «клиентской»</td></tr>
-        <tr><td>Parallel</td><td>длинные, многопоточные STW</td><td>максимальный</td><td>пакетная обработка, ETL — где латентность не важна</td></tr>
-        <tr><td>G1</td><td>предсказуемые, цель 200 мс</td><td>хороший</td><td>универсальный дефолт для серверов</td></tr>
-        <tr><td>ZGC</td><td>&lt;1 мс, не зависят от кучи</td><td>чуть ниже, больше CPU</td><td>большие кучи и жёсткие требования к p99</td></tr>
-        <tr><td>Shenandoah</td><td>&lt;10 мс, конкурентное уплотнение</td><td>чуть ниже</td><td>то же, сборки OpenJDK от Red Hat и др.</td></tr>
-        <tr><td>Epsilon</td><td>нет сборки вообще</td><td>—</td><td>тесты производительности, короткоживущие задачи</td></tr>
-      </table></div>
-      <p>CMS удалён в Java 14; если на собеседовании спрашивают про него — это вопрос про историю (конкурентная маркировка без уплотнения → фрагментация и деградация до Full GC).</p>
-      <p>Процесс выбора, который стоит описать: 1) зафиксировать цель (p99 латентности, throughput, бюджет памяти и CPU); 2) начать с G1 по умолчанию; 3) нагрузочный тест с GC-логами; 4) если паузы G1 не укладываются в цель при разумной куче — пробовать ZGC, проверяя CPU и allocation stall; 5) если латентность не важна, а важна скорость обработки — Parallel. Тюнинг флагов — в последнюю очередь, часто больше даёт снижение аллокаций в коде.</p>
+<ol><li>Сопоставить рост с трафиком, размером очередей, кешей и числом сессий.</li><li>Определить область: heap, Metaspace, direct/native или стеки.</li><li>Для heap снять dump с учётом паузы, размера файла и доступного места.</li><li>Найти крупного удерживающего владельца и путь к корню; при необходимости сравнить несколько снимков.</li><li>Исправить жизненный цикл или ограничение размера и проверить тот же сценарий нагрузки.</li></ol><pre class="wide">jcmd &lt;pid&gt; <span class="t">GC</span>.heap_dump /dumps/heap.hprof</pre>
+<pre class="narrow">jcmd &lt;pid&gt; <span class="t">GC</span>.heap_dump \
+  /dumps/heap.hprof</pre><p>Обычный GC.heap_dump может запросить Full GC и остановить приложение на заметное время. Heap dump содержит данные приложения; доступ и хранение организуют так же внимательно, как к рабочим данным.</p><div class="table-wrap"><table><tr><th>Показатель</th><th>Смысл</th></tr><tr><td>Shallow size</td><td>Размер самого объекта</td></tr><tr><td>Retained size</td><td>Память, которая стала бы недостижимой вместе с этим владельцем</td></tr><tr><td>Dominator</td><td>Объект, через который проходят все пути от корней к удерживаемому объекту</td></tr></table></div><p class="follow"><b>Растущий кеш всегда утечка?</b> Нет. Это может быть ожидаемый прогрев или рост рабочего набора. Но отсутствие лимита и политики удаления способно превратить полезный кеш в причину OOM.</p>
     </div></div></article>
-<article id="q89" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">89. ZGC и Shenandoah: как получаются паузы меньше миллисекунды <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p>Оба делают почти всю работу, включая <b>перемещение объектов, конкурентно</b> с приложением. ZGC хранит метаданные в битах ссылки (<b>цветные указатели</b>) и чинит устаревшие ссылки <b>барьером при чтении</b> — пауза не зависит от размера кучи.</p>
-<p>Цена — <b>CPU на барьеры</b> и запас памяти: не успевает — потоки получают <b>allocation stall</b>. На маленьких кучах и жёстких CPU-лимитах лучше G1. На <b>Java 21</b> поколенческий ZGC включают флагом <code>-<span class="t">XX</span>:+<span class="t">ZGenerational</span></code>.</p></div>
+<article id="q93" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">93. OutOfMemoryError: Metaspace — откуда берётся</h2><div class="answer" hidden><div class="short"><p><b>Metaspace хранит метаданные классов в native memory.</b> Его расход растёт при загрузке новых классов; MaxMetaspaceSize может ограничивать эту область.</p><p>Причины OOM: слишком тесный лимит, неограниченная генерация классов или удержание старых загрузчиков после redeploy. <b>Для обычных классов выгрузка связана с жизненным циклом определившего их loader.</b></p><p>Смотрю число классов и загрузчиков, их динамику и удерживающие ссылки, а не только повышаю лимит.</p></div>
     <div class="more">
-<ul>
-      <li>Generational ZGC — с Java 21, но там включается только флагом <code>-<span class="t">XX</span>:+<span class="t">ZGenerational</span></code>; по умолчанию — с Java 23, единственный режим — с 24. Без флага на 21 сравнение ZGC с G1 нечестное.</li>
-      <li>Хуже G1: маленькие кучи, пакетная обработка на пропускную способность, контейнеры с жёстким лимитом CPU.</li>
-    </ul>
-<p>Почему у G1 паузы растут с размером кучи: эвакуация (копирование живых объектов и исправление всех ссылок на них) идёт в STW-паузе. ZGC и Shenandoah переносят и эвакуацию в конкурентную фазу. Проблема: приложение работает, пока объекты переезжают, и может прочитать старый адрес.</p>
-      <div class="table-wrap"><table>
-        <tr><th></th><th>ZGC</th><th>Shenandoah</th></tr>
-        <tr><td>Как узнаёт о переезде</td><td>цветные указатели: биты метаданных прямо в 64-битной ссылке</td><td>forwarding pointer у объекта (раньше — отдельное слово, сейчас в заголовке)</td></tr>
-        <tr><td>Барьер</td><td>load barrier: при чтении ссылки проверяет биты и при необходимости чинит ссылку («self-healing»)</td><td>load reference barrier с той же идеей</td></tr>
-        <tr><td>Поколения</td><td>generational с 21, единственный режим с 24</td><td>generational — с JDK 25 (в 24 экспериментальный)</td></tr>
-        <tr><td>Поставка</td><td>в Oracle JDK и OpenJDK</td><td>в OpenJDK у большинства вендоров (Red Hat, Temurin), не в Oracle JDK</td></tr>
-      </table></div>
-      <p>Паузы остаются, но короткие и не зависят от кучи: сканирование корней (стеков потоков) — поэтому важна не куча, а число потоков и глубина стеков.</p>
-      <p>Когда ZGC проигрывает: на CPU-ограниченном контейнере конкурентной фазе не хватает ядер, GC отстаёт, и приложение получает allocation stall — поток, которому нужна память, ждёт, пока GC её освободит. Это хуже паузы G1. Также барьеры стоят несколько процентов throughput, а для мелких куч (до 1–2 ГБ) выигрыш от ZGC обычно не нужен.</p>
-<pre class="wide">-<span class="t">XX</span>:+<span class="t">UseZGC</span> -<span class="t">XX</span>:+<span class="t">ZGenerational</span>     # на <span class="n">21</span> — явно; в <span class="n">23</span>+ generational по умолчанию
--<span class="t">XX</span>:<span class="t">SoftMaxHeapSize</span>=6g              # стараться держаться ниже, оставляя запас до <span class="t">Xmx</span> на пики
--<span class="t">Xlog</span>:gc*:file=gc.log              # искать <span class="s">"Allocation Stall"</span></pre>
-<pre class="narrow"># на <span class="t">Java</span> <span class="n">21</span> поколенческий режим —
-# только с <span class="t">ZGenerational</span> (в <span class="n">23</span>+ по умолч.)
--<span class="t">XX</span>:+<span class="t">UseZGC</span> -<span class="t">XX</span>:+<span class="t">ZGenerational</span>
-# держаться ниже, оставляя запас до <span class="t">Xmx</span>
--<span class="t">XX</span>:<span class="t">SoftMaxHeapSize</span>=6g
-# искать <span class="s">"Allocation Stall"</span>
--<span class="t">Xlog</span>:gc*:file=gc.log</pre>
-<p class="follow"><b>Как понять, что ZGC не успевает?</b> Allocation Stall в логах и JFR; помогают больше кучи и меньше аллокаций.</p>
+<pre>jcmd &lt;pid&gt; <span class="t">VM</span>.classloader_stats
+jcmd &lt;pid&gt; <span class="t">VM</span>.metaspace</pre><div class="table-wrap"><table><tr><th>Картина</th><th>Гипотеза</th></tr><tr><td>Один loader, число классов всё растёт</td><td>Генерация прокси/скриптов без повторного использования</td></tr><tr><td>Много похожих старых loader после redeploy</td><td>Поток, кеш или ThreadLocal удерживает старое приложение</td></tr><tr><td>Набор классов стабилен, лимит очень мал</td><td>Возможно, настройка не соответствует штатному рабочему набору</td></tr></table></div><p>Закрытие URLClassLoader освобождает его ресурсы, но не заставляет выгрузить классы, пока граф остаётся достижимым. Для выгрузки должны исчезнуть удерживающие пути; static-поля самих недостижимых классов не делают loader вечным корнем. Hidden classes имеют особенности жизненного цикла, поэтому правило о loader не стоит без оговорки переносить на все механизмы JVM.</p><p class="follow"><b>Нужно всегда ставить жёсткий MaxMetaspaceSize?</b> Нет универсального требования. Лимит позволяет раньше получить Java-ошибку, но слишком маленький сам создаёт отказ. Его выбирают по рабочему набору, динамической загрузке и общему бюджету памяти.</p>
     </div></div></article>
-<article id="q90" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">90. Почему System.gc() и finalize — плохая идея</h2><div class="answer" hidden><div class="short"><ul><li><b>System.gc()</b> — лишь просьба, обычно запускающая <b>полную сборку</b> с долгой паузой; «помочь сборщику» так нельзя.</li><li><b>finalize</b> вызывается непредсказуемо или никогда, объекты собираются за два прохода, может «воскресить» объект, единственный поток финализации — узкое место. Объявлен устаревшим к удалению.</li></ul>
-<p>Ресурсы закрывают <b>try-with-resources</b>, Cleaner — страховка.</p></div>
+<article id="q94" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">94. G1: Какие флаги JVM в проде и почему <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>В проде сначала задаю бюджет памяти и включаю диагностику</b>, затем меняю поведение GC по измерениям. Xmx оставляет запас под native memory; G1 и цель паузы проверяются на реальной нагрузке.</p><p>Минимально полезны GC-логи с ротацией и heap dump при Java OOM, если хватает места. <b>ExitOnOutOfMemoryError</b> уместен, когда приложение не может надёжно продолжать работу, а перезапуск и сохранность работы обеспечены.</p><p>Контейнерные лимиты и выбранные JVM значения проверяю фактически, а не по универсальному проценту из статьи.</p></div>
     <div class="more">
-<ul>
-      <li>Ресурсы закрывают явно: try-with-resources, Cleaner — страховка.</li>
-    </ul>
-<p>Почему <code><span class="t">System</span>.gc()</code> вредит: в G1 по умолчанию это полная STW-сборка всей кучи (если не включён <code>-<span class="t">XX</span>:+<span class="t">ExplicitGCInvokesConcurrent</span></code>). Код, который «помогает GC» после обработки большого файла, на деле добавляет паузу на секунды. Источники неожиданных вызовов: библиотеки (старый RMI делал System.gc() раз в час — <code>sun.rmi.dgc.server.gcInterval</code>), при исчерпании direct memory JDK сам вызывает System.gc(), чтобы освободить буферы. Поэтому <code>-<span class="t">XX</span>:+<span class="t">DisableExplicitGC</span></code> надо ставить осознанно: с ним можно получить OOM: Direct buffer memory.</p>
-      <p>Почему finalize плох:</p>
-      <ul>
-        <li>нет гарантии, когда и будет ли вызван — ресурс (файл, сокет) может закончиться раньше;</li>
-        <li>объекты с finalize не собираются за одну сборку: попадают в очередь финализации, ждут потока Finalizer, освобождаются только на следующем GC — нагрузка на память;</li>
-        <li>один поток Finalizer: медленный finalize блокирует финализацию всех объектов — классическая причина OOM;</li>
-        <li>finalize может «воскресить» объект, сохранив this в статическое поле;</li>
-        <li>исключения в finalize молча игнорируются.</li>
-      </ul>
-      <p>Статус: deprecated с Java 9, «for removal» с Java 18 (JEP 421), можно выключить флагом <code><span class="c">--finalization=disabled</span></code> и проверить, не зависит ли от него приложение. Замена — try-with-resources как основной механизм и Cleaner как страховка для нативных ресурсов.</p>
+<pre class="wide">java -<span class="t">Xmx1200m</span> -<span class="t">XX</span>:+<span class="t">UseG1GC</span> \
+  -<span class="t">XX</span>:+<span class="t">HeapDumpOnOutOfMemoryError</span> \
+  -<span class="t">XX</span>:<span class="t">HeapDumpPath</span>=/dumps \
+  -<span class="t">XX</span>:+<span class="t">ExitOnOutOfMemoryError</span> \
+  '-<span class="t">Xlog</span>:gc*:file=gc.log::filecount=<span class="n">5</span>,filesize=20M' \
+  -jar app.jar</pre>
+<pre class="narrow">gcLog='gc*:file=gc.log'
+gcLog=<span class="s">"$gcLog::filecount=5,filesize=20M"</span>
+java -<span class="t">Xmx1200m</span> -<span class="t">XX</span>:+<span class="t">UseG1GC</span> \
+  -<span class="t">XX</span>:+<span class="t">HeapDumpOnOutOfMemoryError</span> \
+  -<span class="t">XX</span>:<span class="t">HeapDumpPath</span>=/dumps \
+  -<span class="t">XX</span>:+<span class="t">ExitOnOutOfMemoryError</span> \
+  <span class="s">"-Xlog:$gcLog"</span> \
+  -jar app.jar</pre><p>Это пример запуска G1, не готовый размер heap для любого контейнера. Каталог /dumps должен существовать и иметь достаточный объём. MaxRAMPercentage — альтернатива расчёта кучи от доступной памяти; при явном Xmx именно он задаёт верхнюю границу.</p><pre>jcmd &lt;pid&gt; <span class="t">VM</span>.flags
+java -<span class="t">XshowSettings</span>:system -version</pre><p>Вторая команда показывает системные настройки, доступные выбранной JVM; детали container metrics зависят от ОС и сборки. На малых ресурсах эргономика может выбрать другой GC. Проверяют фактические heap, CPU, сборщик и ограничение cgroups.</p><p class="follow"><b>HeapDumpOnOutOfMemoryError спасёт при любом OOM?</b> Нет. OOMKill от ОС, исчерпание места и некоторые native-отказы не обязаны оставить heap dump. Нужны ещё метрики контейнера, логи завершения и план диагностики вне heap.</p>
     </div></div></article>
-<article id="q91" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">91. Как читать GC-логи</h2><div class="answer" hidden><div class="short"><p>Включают <code>-<span class="t">Xlog</span>:gc*</code> в файл с ротацией и смотрят три вещи:</p>
-<ul><li><b>длительность и частота пауз</b>;</li><li><b>причина сборки</b> — нехватка места, humongous-объекты, Metaspace;</li><li><b>занятость старого поколения после сборки</b>: растущий «пол» — утечка или маленькая куча.</li></ul>
-<p>Тревожные сигналы у G1 — <b>Full GC</b> и <b>to-space exhausted</b>. Анализ удобен в GCeasy.</p></div>
+<article id="q95" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">95. JIT-компиляция и почему микробенчмарк без JMH врёт</h2><div class="answer" hidden><div class="short"><p><b>HotSpot собирает профиль выполнения и компилирует горячий код.</b> В обычной tiered-конфигурации используются интерпретатор, быстрые уровни C1 и оптимизирующий C2; не каждый метод обязан пройти все уровни.</p><p>JIT может встроить вызовы, свернуть константы и удалить неиспользуемую работу. Поэтому <b>цикл с nanoTime легко измеряет прогрев или изменённую компилятором задачу.</b></p><p>JMH даёт обвязку для прогрева, отдельных JVM и потребления результата, но правильный сценарий и входные данные всё равно задаёт автор.</p></div>
     <div class="more">
-<ul>
-      <li>Разбор — GCeasy или GCViewer; в проде те же данные дают метрики Micrometer (jvm_gc_pause).</li>
-    </ul>
-<pre class="wide"># пример строки unified logging <span class="t">G1</span> (<span class="t">Java</span> <span class="n">9</span>+)
-[<span class="n">2026</span>-<span class="n">10</span>-22T10:<span class="n">15</span>:<span class="n">03.123</span>+<span class="n">0300</span>][<span class="n">123</span>.456s] <span class="t">GC</span>(<span class="n">42</span>) <span class="t">Pause</span> <span class="t">Young</span> (<span class="t">Normal</span>) (<span class="t">G1</span> <span class="t">Evacuation</span> <span class="t">Pause</span>)
-    512M-&gt;180M(2048M) <span class="n">23</span>.456ms
-#   ↑ занятость до → после (размер кучи)     ↑ длительность паузы
-
-<span class="t">GC</span>(<span class="n">57</span>) <span class="t">Pause</span> <span class="t">Young</span> (<span class="t">Concurrent</span> <span class="t">Start</span>) (<span class="t">G1</span> <span class="t">Humongous</span> <span class="t">Allocation</span>) ...
-<span class="t">GC</span>(<span class="n">57</span>) <span class="t">Concurrent</span> <span class="t">Mark</span> <span class="t">Cycle</span> ...
-<span class="t">GC</span>(<span class="n">61</span>) <span class="t">Pause</span> <span class="t">Young</span> (<span class="t">Mixed</span>) (<span class="t">G1</span> <span class="t">Evacuation</span> <span class="t">Pause</span>) ...
-<span class="t">GC</span>(<span class="n">80</span>) <span class="t">Pause</span> <span class="t">Full</span> (<span class="t">G1</span> <span class="t">Compaction</span> <span class="t">Pause</span>) 1950M-&gt;1900M(2048M) <span class="n">2345</span>.678ms   # тревога</pre>
-<pre class="narrow"># строка unified logging <span class="t">G1</span> (<span class="t">Java</span> <span class="n">9</span>+)
-[<span class="n">2026</span>-<span class="n">10</span>-22T10:<span class="n">15</span>:<span class="n">03.123</span>+<span class="n">0300</span>][<span class="n">123</span>.456s]
-<span class="t">GC</span>(<span class="n">42</span>) <span class="t">Pause</span> <span class="t">Young</span> (<span class="t">Normal</span>)
-  (<span class="t">G1</span> <span class="t">Evacuation</span> <span class="t">Pause</span>) 512M-&gt;180M(2048M)
-  <span class="n">23</span>.456ms
-# 512M-&gt;180M(2048M): занятость до → после
-# (размер кучи), <span class="n">23</span>.456ms — длительность паузы
-
-<span class="t">GC</span>(<span class="n">57</span>) <span class="t">Pause</span> <span class="t">Young</span> (<span class="t">Concurrent</span> <span class="t">Start</span>)
-  (<span class="t">G1</span> <span class="t">Humongous</span> <span class="t">Allocation</span>) ...
-<span class="t">GC</span>(<span class="n">57</span>) <span class="t">Concurrent</span> <span class="t">Mark</span> <span class="t">Cycle</span> ...
-<span class="t">GC</span>(<span class="n">61</span>) <span class="t">Pause</span> <span class="t">Young</span> (<span class="t">Mixed</span>)
-  (<span class="t">G1</span> <span class="t">Evacuation</span> <span class="t">Pause</span>) ...
-# тревога:
-<span class="t">GC</span>(<span class="n">80</span>) <span class="t">Pause</span> <span class="t">Full</span> (<span class="t">G1</span> <span class="t">Compaction</span> <span class="t">Pause</span>)
-  1950M-&gt;1900M(2048M) <span class="n">2345</span>.678ms</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Что видим</th><th>Что это значит</th></tr>
-        <tr><td>«после» у young GC растёт от сборки к сборке</td><td>объекты переходят в old и не умирают — утечка или кеш</td></tr>
-        <tr><td>Pause Full</td><td>G1 не справился: мало кучи, утечка, маркировка не успела (снизить IHOP)</td></tr>
-        <tr><td>Full GC освобождает мало (1950M→1900M)</td><td>живые данные почти заполняют кучу — утечка или куча мала</td></tr>
-        <tr><td>To-space exhausted / Evacuation Failure</td><td>некуда копировать живые объекты — нужен запас кучи</td></tr>
-        <tr><td>Частые Humongous Allocation</td><td>много больших массивов: увеличить регион или изменить код (стриминг вместо целого JSON в памяти)</td></tr>
-        <tr><td>Metadata GC Threshold</td><td>сборка из-за роста Metaspace</td></tr>
-      </table></div>
-      <p>Ключевые метрики сводкой (GCeasy их считает): доля времени в GC (throughput, хорошо — &gt;95–98%), максимальная и p99 пауза, allocation rate, promotion rate. Сопоставлять с латентностью приложения по времени — одна пауза 2 секунды объясняет таймауты, которые иначе выглядят как «сеть».</p>
-    </div></div></article>
-<article id="q92" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">92. Утечка памяти: как найти</h2><div class="answer" hidden><div class="short"><p>Утечка — объекты, которые <b>не нужны, но достижимы</b>: статические кеши без вытеснения, ThreadLocal в пулах, неотписанные слушатели, ключи со сломанным hashCode, метрики с высокой кардинальностью тегов.</p>
-<p>Признак — память <b>после полной сборки растёт</b>. Дальше — <b>heap dump</b> (лучше два с интервалом) и в Eclipse MAT <b>dominator tree</b> и путь до GC roots.</p></div>
-    <div class="more">
-<ul>
-      <li>Дамп: <code>jcmd &lt;pid&gt; <span class="t">GC</span>.heap_dump file.hprof</code> или заранее <code>-<span class="t">XX</span>:+<span class="t">HeapDumpOnOutOfMemoryError</span></code>.</li>
-      <li>В MAT: dominator tree, retained size, path to GC roots. JFR показывает профиль аллокаций в проде дёшево.</li>
-    </ul>
-<p>Порядок действий:</p>
-      <ol>
-        <li><b>Подтвердить, что это утечка.</b> На графике heap after GC (метрика <code>jvm_memory_used</code> для old gen сразу после сборки) «пол» растёт от сборки к сборке. Пила, которая возвращается к одному уровню, — не утечка.</li>
-        <li><b>Определить, какая память.</b> Растёт heap — Java-объекты; растёт RSS при стабильном heap — нативная память (NMT, direct buffers, Metaspace).</li>
-        <li><b>Снять heap dump</b>, лучше два с интервалом — разница покажет, что растёт. Дамп вызывает STW-паузу на секунды и весит как куча: снимать с выведенного из балансировки инстанса.</li>
-        <li><b>Разобрать в Eclipse MAT</b>: Leak Suspects report, dominator tree (кто удерживает больше всего памяти), для подозрительного объекта — Path to GC Roots (excluding weak references) — цепочка, которая держит объект живым.</li>
-      </ol>
-<pre class="wide">jcmd &lt;pid&gt; <span class="t">GC</span>.class_histogram | head -<span class="n">30</span>      # быстро, без полного дампа: топ классов по памяти
-jcmd &lt;pid&gt; <span class="t">GC</span>.heap_dump /dumps/app.hprof      # по умолчанию только живые объекты (с full <span class="t">GC</span>)</pre>
-<pre class="narrow"># быстро, без полного дампа: топ классов
-jcmd &lt;pid&gt; <span class="t">GC</span>.class_histogram | head -<span class="n">30</span>
-# по умолчанию только живые объекты (full <span class="t">GC</span>)
-jcmd &lt;pid&gt; <span class="t">GC</span>.heap_dump /dumps/app.hprof</pre>
-      <p>Типичные находки в Spring-приложениях: <code><span class="a">@Cacheable</span></code> с ConcurrentMapCacheManager (кеш без вытеснения), метрики Micrometer с тегом высокой кардинальности (userId или URL с id в теге — каждый уникальный тег новый Meter), статическая мапа «для отладки», незакрытые стримы и ResultSet, Hibernate persistence context в долгой транзакции пакетной обработки (тысячи сущностей в первом кеше).</p>
-      <p>Shallow vs retained size: shallow — сам объект, retained — всё, что освободится, если удалить этот объект. Искать надо по retained.</p>
-    </div></div></article>
-<article id="q93" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">93. OutOfMemoryError: Metaspace — откуда берётся</h2><div class="answer" hidden><div class="short"><p>Metaspace хранит метаданные классов, а класс выгружается <b>только вместе с загрузчиком</b>. Поэтому OOM в Metaspace — это:</p>
-<ul><li><b>бесконечная генерация классов</b> — прокси или CGLIB на каждый вызов, компиляция скриптов при каждом выполнении;</li><li><b>утечка загрузчика</b> при редеплое.</li></ul>
-<p>По умолчанию Metaspace не ограничен — в контейнере задают <b>MaxMetaspaceSize</b>, чтобы получить понятную ошибку вместо OOMKill.</p></div>
-    <div class="more">
-<ul><li>Диагностика: <code>jcmd &lt;pid&gt; <span class="t">VM</span>.classloader_stats</code>, гистограмма классов, heap dump — кто держит ClassLoader.</li></ul>
-<p>Класс выгружается только вместе со своим ClassLoader’ом, и только когда загрузчик, все его классы и все их экземпляры недостижимы. Поэтому две причины роста Metaspace:</p>
-      <ul>
-        <li><b>Генерация классов без кеширования</b>: создание CGLIB/ByteBuddy-прокси на каждый вызов, <code><span class="t">Proxy</span>.newProxyInstance</code> с новым загрузчиком, компиляция Groovy/JS-скриптов при каждом выполнении, XSLT-шаблоны без кеша, библиотеки маппинга, генерирующие класс на каждый новый экземпляр конфигурации.</li>
-        <li><b>Утечка загрузчика</b>: при редеплое в Tomcat старый WebAppClassLoader удерживается — потоком, который приложение запустило и не остановило; ThreadLocal в потоке контейнера со значением класса приложения; JDBC-драйвером, зарегистрированным в DriverManager; shutdown hook. Каждый редеплой добавляет полную копию классов.</li>
-      </ul>
-<pre class="wide">jcmd &lt;pid&gt; <span class="t">VM</span>.metaspace                          # сколько занято, по загрузчикам
-jcmd &lt;pid&gt; <span class="t">VM</span>.classloader_stats                  # число классов на загрузчик
-jcmd &lt;pid&gt; <span class="t">GC</span>.class_histogram | grep -i proxy    # тысячи $$<span class="t">EnhancerByCGLIB</span>$$ — подозрение
--<span class="t">Xlog</span>:<span class="k">class</span>+load=info                            # какие классы грузятся постоянно</pre>
-<pre class="narrow"># сколько занято, по загрузчикам
-jcmd &lt;pid&gt; <span class="t">VM</span>.metaspace
-# число классов на загрузчик
-jcmd &lt;pid&gt; <span class="t">VM</span>.classloader_stats
-# тысячи $$<span class="t">EnhancerByCGLIB</span>$$ — подозрение
-jcmd &lt;pid&gt; <span class="t">GC</span>.class_histogram | grep -i proxy
-# какие классы грузятся постоянно
--<span class="t">Xlog</span>:<span class="k">class</span>+load=info</pre>
-      <p>Почему по умолчанию нет лимита и это опасно в контейнере: Metaspace растёт за пределами heap, и вместо понятной OOM: Metaspace процесс убивается OOMKiller’ом. Ставить <code><span class="t">MaxMetaspaceSize</span></code> (например, 256–512 МБ) полезно именно чтобы получить диагностируемую Java-ошибку. Также есть <code><span class="t">MetaspaceSize</span></code> — порог, на котором запускается GC для выгрузки классов (не начальный размер, как можно подумать).</p>
-    </div></div></article>
-<article id="q94" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">94. G1: Какие флаги JVM в проде и почему <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p>С Java 10 JVM читает лимиты контейнера из <b>cgroups</b>: от лимита памяти считает кучу (по умолчанию всего <b>25%</b>), от квоты CPU — число ядер, а от него потоки GC, JIT и commonPool.</p>
-<ul><li><code><span class="t">MaxRAMPercentage</span>=<span class="n">75</span></code> — куча долей от лимита контейнера;</li><li><code><span class="t">UseG1GC</span></code> явно — при <b>&lt;2 CPU</b> или &lt;1792 МБ JVM сама выберет Serial GC;</li><li><b>heap dump при OOM</b> на постоянный том;</li><li><code><span class="t">ExitOnOutOfMemoryError</span></code> — после OOM процесс умирает, оркестратор перезапускает;</li><li><b>GC-логи с ротацией</b>.</li></ul>
-<p>Цель паузы и прочий тюнинг — <b>по нагрузочному тесту</b>. Не делать: копировать «оптимизирующие» флаги из старых статей и ставить <b>Xmx, равный лимиту</b> контейнера.</p></div>
-    <div class="more">
-<pre class="wide">-<span class="t">XX</span>:<span class="t">MaxRAMPercentage</span>=<span class="n">75</span>
--<span class="t">XX</span>:+<span class="t">UseG1GC</span>
--<span class="t">XX</span>:+<span class="t">HeapDumpOnOutOfMemoryError</span> -<span class="t">XX</span>:<span class="t">HeapDumpPath</span>=/dumps
--<span class="t">XX</span>:+<span class="t">ExitOnOutOfMemoryError</span>
--<span class="t">Xlog</span>:gc*:file=/logs/gc.log:time,uptime:filecount=<span class="n">5</span>,filesize=20m</pre>
-<pre class="narrow">-<span class="t">XX</span>:<span class="t">MaxRAMPercentage</span>=<span class="n">75</span>
--<span class="t">XX</span>:+<span class="t">UseG1GC</span>
--<span class="t">XX</span>:+<span class="t">HeapDumpOnOutOfMemoryError</span>
--<span class="t">XX</span>:<span class="t">HeapDumpPath</span>=/dumps
--<span class="t">XX</span>:+<span class="t">ExitOnOutOfMemoryError</span>
--<span class="t">Xlog</span>:gc*:file=/logs/gc.log:time,uptime:filecount=<span class="n">5</span>,filesize=20m</pre>
-<div class="table-wrap"><table>
-        <tr><th>Флаг</th><th>Зачем</th></tr>
-        <tr><td>-XX:MaxRAMPercentage=75</td><td>куча от лимита контейнера, оставляя место под не-heap память; меняется вместе с лимитом без правки флагов</td></tr>
-        <tr><td>-XX:InitialRAMPercentage=75 (или Xms = Xmx)</td><td>не тратить время на рост кучи и сразу выявить нехватку памяти на старте</td></tr>
-        <tr><td>-XX:+UseG1GC / UseZGC</td><td>явный выбор: при &lt;2 CPU или &lt;1792 МБ JVM считает машину «клиентской» и выбирает Serial GC</td></tr>
-        <tr><td>-XX:MaxGCPauseMillis</td><td>цель паузы G1 (по умолчанию 200 мс); менять только по замерам — меньше пауза, больше GC-циклов и ниже throughput</td></tr>
-        <tr><td>-XX:ActiveProcessorCount</td><td>если квота CPU дробная, в одно ядро или без лимитов — задать число ядер для размеров пулов явно</td></tr>
-        <tr><td>-XX:+HeapDumpOnOutOfMemoryError, -XX:HeapDumpPath</td><td>улика после падения; путь — на volume, иначе дамп исчезнет вместе с подом</td></tr>
-        <tr><td>-XX:+ExitOnOutOfMemoryError</td><td>после OOM состояние приложения не определено, процесс может остаться «живым», но неработоспособным — лучше умереть и быть перезапущенным</td></tr>
-        <tr><td>-Xlog:gc*…:filecount,filesize</td><td>GC-лог с ротацией; оверхед ничтожный</td></tr>
-      </table></div>
-<p>Что JVM берёт из лимитов контейнера:</p>
-<div class="table-wrap"><table>
-        <tr><th>Лимит</th><th>Что от него считает JVM</th></tr>
-        <tr><td>memory limit</td><td>максимальная куча (MaxRAMPercentage, по умолчанию 25%), начальная (InitialRAMPercentage, 1.5625%), выбор GC</td></tr>
-        <tr><td>CPU quota (limits.cpu)</td><td><code>availableProcessors()</code> = округлённая вверх квота → потоки GC (ParallelGCThreads, ConcGCThreads), потоки JIT, размер commonPool, пулы Netty/Tomcat, которые смотрят на число ядер</td></tr>
-        <tr><td>CPU shares (requests.cpu)</td><td>с JDK 19 не учитываются (раньше давали странные числа ядер)</td></tr>
-      </table></div>
-<pre class="wide"># что видит <span class="t">JVM</span> внутри контейнера
-java -<span class="t">XX</span>:+<span class="t">PrintFlagsFinal</span> -version | grep -<span class="t">E</span> '<span class="t">MaxHeapSize</span>|<span class="t">ActiveProcessorCount</span>|<span class="t">UseSerialGC</span>|<span class="t">UseG1GC</span>'
-java -<span class="t">Xlog</span>:os+container=trace -version         # какие cgroup-файлы и значения прочитаны</pre>
-<pre class="narrow"># что видит <span class="t">JVM</span> внутри контейнера
-java -<span class="t">XX</span>:+<span class="t">PrintFlagsFinal</span> -version | grep \
-  -e <span class="t">MaxHeapSize</span> -e <span class="t">ActiveProcessorCount</span> \
-  -e <span class="t">UseSerialGC</span> -e <span class="t">UseG1GC</span>
-# какие cgroup-файлы и значения прочитаны
-java -<span class="t">Xlog</span>:os+container=trace -version</pre>
-      <p>Почему дефолтные 25% — плохо: при лимите 2 ГБ куча 512 МБ, а остальные 1.5 ГБ простаивают. Почему не 90%: Metaspace, стеки потоков, code cache, direct-буферы живут вне кучи, и при Xmx около лимита процесс убивает OOMKiller вместо понятной Java-ошибки.</p>
-      <p>Ловушка с CPU: при <code><span class="p">limits.cpu</span>: 1</code> JVM видит одно ядро → Serial GC, один поток JIT, commonPool с параллелизмом 1 (CompletableFuture.*Async создаёт новый поток на каждую задачу). Сервис работает, но паузы и прогрев заметно хуже. Либо давать минимум 2 CPU, либо явно <code>-<span class="t">XX</span>:<span class="t">ActiveProcessorCount</span>=<span class="n">2</span></code> и <code>-<span class="t">XX</span>:+<span class="t">UseG1GC</span></code>.</p>
-      <p>cgroups v2 (современные дистрибутивы и Kubernetes 1.25+) поддержаны с JDK 15 и 11.0.16 / 8u372. На более старых патчах JVM в контейнере с cgroups v2 видит всю память и CPU ноды — и выбирает огромную кучу.</p>
-      <p>Чего не стоит делать: копировать «оптимизирующие» флаги из статей десятилетней давности (<code>-<span class="t">XX</span>:+<span class="t">UseConcMarkSweepGC</span></code> уже удалён, <code>-<span class="t">XX</span>:<span class="t">NewRatio</span></code> с G1 ломает адаптацию), ставить <code>-<span class="t">Xmx</span></code> равным лимиту контейнера, отключать JIT-оптимизации без измерений.</p>
-      <p>Как передавать: <code><span class="t">JAVA_TOOL_OPTIONS</span></code> — подхватывается любым java-процессом в контейнере (и пишет об этом в stderr), или <code><span class="t">JAVA_OPTS</span></code>, если ENTRYPOINT его подставляет.</p>
-    </div></div></article>
-<article id="q95" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">95. JIT-компиляция и почему микробенчмарк без JMH врёт</h2><div class="answer" hidden><div class="short"><p>Код сначала <b>интерпретируется</b>, горячие методы компилирует <b>C1</b>, самые горячие — <b>C2</b> с инлайнингом, escape analysis и удалением мёртвого кода. Оптимизации спекулятивные, бывает <b>деоптимизация</b>.</p>
-<p>Поэтому цикл с nanoTime измеряет то прогрев, то код, который JIT выкинул. <b>JMH</b> решает это: прогрев, отдельные форки JVM и <b>Blackhole</b>, чтобы результат не выбросили.</p></div>
-    <div class="more">
-<ul><li>Уровни: интерпретатор → C1 с профилированием → C2. OSR подменяет долгий цикл скомпилированной версией прямо во время выполнения.</li></ul>
-<p>Tiered compilation в HotSpot — пять уровней, на практике запоминают три шага: интерпретатор собирает счётчики вызовов → C1 быстро компилирует горячий метод с профилированием (какие ветки берутся, какие типы приходят) → C2 по профилю делает агрессивные оптимизации: инлайнинг, разворачивание циклов, удаление проверок границ массива, escape analysis, девиртуализацию.</p>
-      <p><b>Спекулятивность</b>: C2 оптимизирует под наблюдавшийся профиль. Видел только одну реализацию интерфейса — вызывает её напрямую (мономорфный инлайн) и ставит проверку. Пришёл другой тип — деоптимизация: метод снова интерпретируется и перекомпилируется. Поэтому производительность зависит от того, какими данными код прогрели.</p>
-      <p>Почему самописный бенчмарк врёт:</p>
-      <ul>
-        <li>измеряется прогрев (интерпретатор и C1), а не установившийся режим;</li>
-        <li>результат не используется — C2 удаляет вычисление целиком (dead code elimination), «очень быстрый» код ничего не делает;</li>
-        <li>константные входы сворачиваются при компиляции (constant folding);</li>
-        <li>профиль одного бенчмарка «отравляет» другой в той же JVM;</li>
-        <li>сборки мусора и OSR попадают в случайные итерации.</li>
-      </ul>
-<pre class="wide"><span class="a">@State</span>(<span class="t">Scope</span>.<span class="t">Benchmark</span>)
-<span class="a">@Warmup</span>(iterations = <span class="n">5</span>) <span class="a">@Measurement</span>(iterations = <span class="n">5</span>) <span class="a">@Fork</span>(<span class="n">2</span>)
-<span class="k">public</span> <span class="k">class</span> <span class="t">ParseBenchmark</span> {
-    <span class="k">private</span> <span class="t">String</span> input = <span class="s">"12345.67"</span>;
-    <span class="a">@Benchmark</span>
-    <span class="k">public</span> <span class="k">void</span> parse(<span class="t">Blackhole</span> bh) {
-        bh.consume(<span class="k">new</span> <span class="t">BigDecimal</span>(input));   <span class="c">// Blackhole не даёт выкинуть результат</span>
-    }
-}</pre>
-<pre class="narrow"><span class="a">@State</span>(<span class="t">Scope</span>.<span class="t">Benchmark</span>)
-<span class="a">@Warmup</span>(iterations = <span class="n">5</span>)
+<figure class="concept" aria-labelledby="jvm-jit-tiers-caption"><svg viewBox="0 0 320 264" role="img" aria-labelledby="jvm-jit-tiers-title jvm-jit-tiers-desc" xmlns="http://www.w3.org/2000/svg"><title id="jvm-jit-tiers-title">Исполнение и JIT</title><desc id="jvm-jit-tiers-desc">Горячий код компилируется с учётом профиля выполнения. При нарушении предположений возможен возврат к менее оптимизированному исполнению.</desc><defs><marker id="jvm-jit-tiers-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 62 V98" marker-end="url(#jvm-jit-tiers-arrow)"/><path class="concept-edge" d="M160 152 V188" marker-end="url(#jvm-jit-tiers-arrow)"/><rect class="concept-node plain" x="16" y="12" width="288" height="50" rx="9"/><text x="160.0" y="42.0" text-anchor="middle">Интерпретатор: исполнение</text><rect class="concept-node accent" x="16" y="102" width="288" height="50" rx="9"/><text x="160.0" y="132.0" text-anchor="middle">C1: код + профилирование</text><rect class="concept-node plain" x="16" y="192" width="288" height="60" rx="9"/><text x="160.0" y="227.0" text-anchor="middle">C2: оптимизированный код</text></svg><figcaption id="jvm-jit-tiers-caption">Горячий код компилируется с учётом профиля выполнения. При нарушении предположений возможен возврат к менее оптимизированному исполнению.</figcaption></figure><p><b>Пример класса для JMH-проекта:</b> вход задан в state, результат возвращается harness, прогрев отделён от измерения.</p><pre><span class="a">@State</span>(<span class="t">Scope</span>.<span class="t">Thread</span>)
+<span class="a">@Warmup</span>(iterations = <span class="n">3</span>)
 <span class="a">@Measurement</span>(iterations = <span class="n">5</span>)
 <span class="a">@Fork</span>(<span class="n">2</span>)
-<span class="k">public</span> <span class="k">class</span> <span class="t">ParseBenchmark</span> {
-    <span class="k">private</span> <span class="t">String</span> input = <span class="s">"12345.67"</span>;
+<span class="a">@BenchmarkMode</span>(<span class="t">Mode</span>.<span class="t">AverageTime</span>)
+<span class="a">@OutputTimeUnit</span>(<span class="t">TimeUnit</span>.<span class="t">NANOSECONDS</span>)
+<span class="k">public</span> <span class="k">class</span> <span class="t">ParseBench</span> {
+    <span class="a">@Param</span>({<span class="s">"12345"</span>, <span class="s">"98765"</span>})
+    <span class="k">public</span> <span class="t">String</span> text;
 
     <span class="a">@Benchmark</span>
-    <span class="k">public</span> <span class="k">void</span> parse(<span class="t">Blackhole</span> bh) {
-        <span class="c">// Blackhole не даёт выкинуть</span>
-        <span class="c">// результат</span>
-        bh.consume(<span class="k">new</span> <span class="t">BigDecimal</span>(input));
+    <span class="k">public</span> <span class="k">int</span> parse() {
+        <span class="k">return</span> <span class="t">Integer</span>.parseInt(text);
     }
-}</pre>
-      <p>Полезно знать флаги наблюдения: <code>-<span class="t">XX</span>:+<span class="t">PrintCompilation</span></code> (что компилируется), <code>-<span class="t">XX</span>:+<span class="t">UnlockDiagnosticVMOptions</span> -<span class="t">XX</span>:+<span class="t">PrintInlining</span></code> (что заинлайнено и почему нет — «too big», «hot method too big»).</p>
+}</pre><p>Класс размещают в именованном package, подключают JMH annotation processor и запускают сгенерированный harness. Эти числа итераций — пример, достаточность прогрева проверяют по результатам. Один результат можно вернуть, несколько — потребить через Blackhole.</p><p class="follow"><b>JMH гарантирует правильный бенчмарк?</b> Нет. Он не исправит константный ввод, неверную модель конкурентности, отличия от продовой нагрузки или измерение не той операции. Прогрев и форки устраняют лишь часть ошибок.</p>
     </div></div></article>
-<article id="q96" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">96. Escape analysis: что JIT делает с объектами, не покидающими метод <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p>Escape analysis проверяет, может ли объект <b>оказаться вне метода</b>. Если нет (не записан в поле, не возвращён, не передан в неинлайненный вызов) — C2 не создаёт его в куче: поля раскладываются по регистрам (<b>scalar replacement</b>), блокировки на нём снимаются.</p>
-<p>Поэтому короткоживущие обёртки и итераторы часто ничего не стоят. Работает <b>только после инлайнинга</b>; проверять — JMH с профилем аллокаций.</p></div>
+<article id="q96" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">96. Escape analysis: что JIT делает с объектами, не покидающими метод <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Escape analysis выясняет, куда может попасть ссылка на объект.</b> Если C2 докажет, что объект не требуется материализовать, он может заменить его отдельными значениями и устранить аллокацию — scalar replacement.</p><p>Также может исчезнуть ненужная синхронизация на объекте, недоступном другим потокам. <b>Это возможность оптимизации, не обещание для каждого new.</b> Инлайнинг помогает анализу видеть использование объекта; сложный граф и вызовы могут помешать.</p></div>
     <div class="more">
-<ul><li>Работает только после инлайнинга: большой или полиморфный вызов ломает анализ. Проверять — JMH с <code>-prof gc</code>, а не на глаз.</li></ul>
-<p>Анализ отвечает на вопрос: может ли ссылка на объект оказаться доступной вне метода (или вне потока)? Три степени: NoEscape — объект только локальный; ArgEscape — передан в метод, но не сохранён; GlobalEscape — записан в поле, возвращён, отдан в другой поток.</p>
-      <ul>
-        <li><b>Scalar replacement</b> (NoEscape): объект не создаётся вовсе, его поля становятся локальными переменными в регистрах. Ноль аллокаций, ноль работы для GC.</li>
-        <li><b>Lock elision</b>: синхронизация на объекте, который никто другой не видит, удаляется — так исчезают локи старого StringBuffer или Vector внутри метода.</li>
-        <li>Stack allocation в HotSpot нет — именно скалярная замена.</li>
-      </ul>
-<pre class="wide"><span class="k">long</span> distanceSquared(<span class="k">int</span> x1, <span class="k">int</span> y1, <span class="k">int</span> x2, <span class="k">int</span> y2) {
-    <span class="t">Point</span> a = <span class="k">new</span> <span class="t">Point</span>(x1, y1);       <span class="c">// после инлайна конструктора и getX/getY</span>
-    <span class="t">Point</span> b = <span class="k">new</span> <span class="t">Point</span>(x2, y2);       <span class="c">// объекты не нужны — только 4 int в регистрах</span>
-    <span class="k">long</span> dx = a.x() - b.x(), dy = a.y() - b.y();
-    <span class="k">return</span> dx * dx + dy * dy;
-}</pre>
-<pre class="narrow"><span class="k">long</span> distanceSquared(<span class="k">int</span> x1, <span class="k">int</span> y1,
-                     <span class="k">int</span> x2, <span class="k">int</span> y2) {
-    <span class="c">// после инлайна конструктора и x()/y()</span>
-    <span class="c">// объекты не нужны — 4 int в регистрах</span>
-    <span class="t">Point</span> a = <span class="k">new</span> <span class="t">Point</span>(x1, y1);
-    <span class="t">Point</span> b = <span class="k">new</span> <span class="t">Point</span>(x2, y2);
-    <span class="k">long</span> dx = a.x() - b.x();
-    <span class="k">long</span> dy = a.y() - b.y();
-    <span class="k">return</span> dx * dx + dy * dy;
-}</pre>
-      <p>Почему «работает только после инлайнинга»: если объект передан в метод, который не заинлайнен, анализ не видит, что тот делает со ссылкой, и считает её убежавшей. Поэтому большие методы (больше 325 байт байткода для горячих) и мегаморфные вызовы ломают оптимизацию. Также объект не должен попадать в слияние путей управления в сложных формах (частично решено в новых JDK).</p>
-      <p>Практический вывод для интервью: не надо руками избегать мелких короткоживущих объектов (Optional, record-ключи, итераторы) в ущерб читаемости — часто JIT их убирает; а если важно — измерить JMH с <code>-prof gc</code> (покажет alloc rate norm в байтах на операцию).</p>
+<pre><span class="k">record</span> <span class="t">Pair</span>(<span class="k">int</span> left, <span class="k">int</span> right) {}
+
+<span class="k">int</span> sum(<span class="k">int</span> a, <span class="k">int</span> b) {
+    <span class="t">Pair</span> pair = <span class="k">new</span> <span class="t">Pair</span>(a, b);
+    <span class="k">return</span> pair.left() + pair.right();
+}</pre><p>После оптимизации для вычисления могут остаться только a и b без отдельного Pair. Но из исходника нельзя утверждать, что аллокации точно нет: важны компиляция конкретного метода, профиль и версия JVM.</p><div class="table-wrap"><table><tr><th>Термин</th><th>Что происходит</th></tr><tr><td>Scalar replacement</td><td>Поля объекта используются отдельно, самого объекта может не быть</td></tr><tr><td>Lock elimination</td><td>Устраняется синхронизация, доказанно не нужная другим потокам</td></tr><tr><td>Stack allocation</td><td>Отдельное размещение объекта на стеке; это не синоним scalar replacement</td></tr></table></div><p>Проверяют allocation rate, например JMH с -prof gc, и при необходимости машинный код. Возврат ссылки не всегда окончательный барьер: после инлайнинга вызывающей стороны её использование может оказаться локальным.</p><p class="follow"><b>Стоит заранее заменить все record и Optional примитивами?</b> Нет. Сначала измеряют аллокации и их влияние. Ручное усложнение кода ради оптимизации, которая уже выполнена JIT или не нужна нагрузке, редко оправдано.</p>
     </div></div></article>
-<article id="q97" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">97. Safepoints и всплески латентности без длинных GC-пауз <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Safepoint</b> — момент, когда все Java-потоки остановлены в известных точках: нужен STW-фазам GC, деоптимизации, части диагностики.</p>
-<p>Потоки останавливаются только в <b>точках проверки</b>: если один долго до неё не доходит, ждут все — пауза длиннее самой сборки (<b>time-to-safepoint</b>). Диагностика — <code>-<span class="t">Xlog</span>:safepoint</code> и JFR. Другие источники пауз — запись GC-лога на медленный диск, своп, <b>CPU throttling</b>.</p></div>
+<article id="q97" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">97. Safepoints и всплески латентности без длинных GC-пауз <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Safepoint позволяет JVM безопасно выполнить операцию, требующую согласованного состояния потоков.</b> Для глобальной остановки потоки должны дойти до подходящего состояния; часть JVM-операций может использовать и локальные handshakes.</p><p><b>Time-to-safepoint</b> — ожидание этого состояния, а не сама работа GC. Другие потоки уже могут стоять, пока последний ещё не остановился.</p><p>При скачке задержек сопоставляю safepoint-логи, JFR, CPU throttling и I/O, а не ищу причину только в длительности GC.</p></div>
     <div class="more">
-<ul>
-      <li>Диагностика: <code>-<span class="t">Xlog</span>:safepoint</code>, события safepoint в JFR.</li>
-      <li>Другие источники остановок: GC-лог на медленный диск (<code>-<span class="t">Xlog</span>:async</code> с Java 17), swap, CPU throttling.</li>
-    </ul>
-<p>Safepoint — состояние, в котором все Java-потоки остановились в местах, где JVM точно знает их стек и ссылки (карта ссылок известна). JIT вставляет опросы (poll) на возвратах из методов и в обратных переходах циклов; потоки в нативном коде или заблокированные считаются уже стоящими.</p>
-      <p>Кому нужен safepoint: STW-фазы GC, деоптимизация, отзыв ссылок кода, снятие thread dump, переопределение классов агентами, часть операций JFR и JVMTI.</p>
-      <p><b>Time-to-safepoint (TTSP)</b> — время от запроса до момента, когда остановился последний поток. Пока один поток не дошёл до опроса, остальные уже стоят. Классический виновник — counted loop: цикл <code><span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt; n; i++)</code> C2 мог компилировать без опросов, и миллиардная итерация по массиву задерживала safepoint на сотни миллисекунд. С Java 10 включён loop strip mining (опрос раз в ~1000 итераций), проблема стала редкой, но встречается в других формах (большой System.arraycopy, долгие нативные переходы).</p>
-<pre class="wide">-<span class="t">Xlog</span>:safepoint*:file=safepoint.log:time,uptime
-# строка лога: <span class="s">"Safepoint "</span><span class="t">G1CollectForAllocation</span><span class="s">", Time since last: ..., Reaching safepoint: 152ms, At safepoint: 8ms"</span>
-# reaching <span class="n">152</span> мс при самой операции <span class="n">8</span> мс — проблема в <span class="t">TTSP</span>, а не в <span class="t">GC</span></pre>
-<pre class="narrow">-<span class="t">Xlog</span>:safepoint*:file=sp.log:time,uptime
-# строка лога:
-# <span class="t">Safepoint</span> <span class="s">"G1CollectForAllocation"</span>,
-#   <span class="t">Time</span> since last: ...,
-#   <span class="t">Reaching</span> safepoint: 152ms,
-#   <span class="t">At</span> safepoint: 8ms
-# reaching <span class="n">152</span> мс при самой операции <span class="n">8</span> мс —
-# проблема в <span class="t">TTSP</span>, а не в <span class="t">GC</span></pre>
-      <p>Остальные источники «паузы, которой нет в GC-логе»: запись GC-лога синхронно на медленный или переполненный диск (поток GC ждёт I/O в паузе) — лечится <code>-<span class="t">Xlog</span>:async</code>; своп; CPU throttling в Kubernetes (процесс выбрал квоту и стоит до конца периода 100 мс) — смотрится по <code>container_cpu_cfs_throttled_periods_total</code>.</p>
-<p class="follow"><b>Как отличить паузу JVM от медленного кода?</b> Сопоставить GC- и safepoint-логи с метриками латентности; в JFR видно, стояли ли все потоки одновременно.</p>
+<pre>-<span class="t">Xlog</span>:safepoint:file=sp.log:uptime</pre><div class="table-wrap"><table><tr><th>Условный фрагмент лога</th><th>Смысл</th></tr><tr><td>Reaching safepoint: 152 ms</td><td>Долго собирали потоки в безопасное состояние</td></tr><tr><td>At safepoint: 8 ms</td><td>Сама операция при остановленных потоках была короткой</td></tr><tr><td>Total около 160 ms</td><td>Приложение могло ощутить намного больше 8 ms</td></tr></table></div><p>JIT вставляет проверки в подходящие места машинного кода. Поток в native-состоянии может уже считаться безопасным и не задерживать safepoint, пока не вернётся; поэтому фраза «любой долгий JNI блокирует GC» неверна. Специальные критические native-участки и механизмы конкретного GC рассматривают отдельно.</p><p class="follow"><b>Все всплески без длинного GC — safepoint?</b> Нет. Возможны очередь, блокировки, нехватка CPU, swap, медленный диск и сеть. Нужна корреляция по времени, а не диагноз по отсутствию одной строки в GC-логе.</p>
     </div></div></article>
-<article id="q98" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">98. Почему первые запросы после старта медленные</h2><div class="answer" hidden><div class="short"><p>JVM стартует в <b>интерпретаторе</b>: JIT компилирует код только когда он стал горячим (C1, потом C2). Плюс первые запросы <b>загружают классы</b>, открывают соединения в пулах, наполняют кеши и устанавливают TLS-соединения.</p>
-<p>Лечат <b>прогревом</b> типовыми запросами до того, как под станет ready, плюс <b>CDS</b> (и AOT-кеш с Java 24).</p></div>
+<article id="q98" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">98. Почему первые запросы после старта медленные</h2><div class="answer" hidden><div class="short"><p><b>Первый запрос часто оплачивает отложенную работу:</b> загрузку классов, создание сериализаторов, ленивых бинов, DNS/TLS и соединений. JIT также ещё не успел оптимизировать горячие пути.</p><p>Сначала измеряю, какая стадия медленная, затем прогреваю безопасные типовые сценарии до допуска трафика и постепенно увеличиваю нагрузку. <b>Прогрев не должен выполнять реальные платежи или создавать неконтролируемую нагрузку на зависимости.</b></p></div>
     <div class="more">
-<ul>
-      <li>Лечат прогревом перед readiness (прогон типовых запросов), CDS/AppCDS, CRaC, в крайнем случае — native image (без JIT-пика, но и ниже пиковая производительность).</li>
-    </ul>
-<p>Что происходит при первом запросе, кроме прогрева JIT:</p>
-      <ul>
-        <li>загрузка и инициализация классов, которые не понадобились при старте (сериализаторы Jackson для конкретных DTO, обработчики ошибок, ветки кода);</li>
-        <li>ленивые бины и прокси (<code><span class="a">@Lazy</span></code>, lazy-initialization);</li>
-        <li>Hikari открывает соединения до <code>minimumIdle</code> — если он мал, первые запросы ждут создания соединения (TLS, аутентификация);</li>
-        <li>Hibernate готовит планы запросов и метамодель, драйвер БД — prepared statements на стороне сервера (после 5 выполнений у PgJDBC);</li>
-        <li>HTTP-клиенты — DNS, TCP и TLS-рукопожатия к каждому внешнему хосту;</li>
-        <li>пустые кеши приложения.</li>
-      </ul>
-<pre class="wide"><span class="a">@Component</span>
+<div class="table-wrap"><table><tr><th>Причина</th><th>Что проверить</th></tr><tr><td>Загрузка / JIT</td><td>Class loading, compilation events, профиль первых запросов</td></tr><tr><td>Сериализация / ORM</td><td>Первое создание обработчиков и метаданных</td></tr><tr><td>Пулы и транспорт</td><td>Подключение к БД, DNS, TCP/TLS</td></tr><tr><td>Пустой кеш</td><td>Стоимость первичной загрузки и допустимость прогрева</td></tr></table></div><p><b>Пример безопасного локального прогрева Spring Boot:</b> создать сериализатор типовой структуры до перехода приложения в готовность. В настоящем сервисе выбирают свои DTO.</p><pre class="wide"><span class="a">@Component</span>
+<span class="a">@RequiredArgsConstructor</span>
 <span class="k">class</span> <span class="t">Warmup</span> <span class="k">implements</span> <span class="t">ApplicationRunner</span> {
-    <span class="k">public</span> <span class="k">void</span> run(<span class="t">ApplicationArguments</span> args) {
-        <span class="c">// до того как readiness станет UP — прогнать типовые сценарии</span>
-        <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt; <span class="n">1000</span>; i++) {
-            rateService.convert(<span class="t">SAMPLE_REQUEST</span>);
-            objectMapper.writeValueAsString(<span class="t">SAMPLE_RESPONSE</span>);
-        }
+    <span class="k">private</span> <span class="k">final</span> <span class="t">ObjectMapper</span> mapper;
+
+    <span class="k">public</span> <span class="k">void</span> run(<span class="t">ApplicationArguments</span> args) <span class="k">throws</span> <span class="t">Exception</span> {
+        <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt; <span class="n">200</span>; i++) mapper.writeValueAsString(<span class="t">Map</span>.of(<span class="s">"status"</span>, <span class="s">"READY"</span>));
     }
-}
-<span class="c">// readiness в Boot переходит в ACCEPTING_TRAFFIC после ApplicationRunner’ов</span></pre>
+}</pre>
 <pre class="narrow"><span class="a">@Component</span>
-<span class="k">class</span> <span class="t">Warmup</span> <span class="k">implements</span> <span class="t">ApplicationRunner</span> {
-    <span class="k">public</span> <span class="k">void</span> run(
-            <span class="t">ApplicationArguments</span> args) {
-        <span class="c">// до того как readiness станет UP —</span>
-        <span class="c">// прогнать типовые сценарии</span>
-        <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt; <span class="n">1000</span>; i++) {
-            rateService.convert(
-                    <span class="t">SAMPLE_REQUEST</span>);
-            objectMapper.writeValueAsString(
-                    <span class="t">SAMPLE_RESPONSE</span>);
-        }
+<span class="a">@RequiredArgsConstructor</span>
+<span class="k">class</span> <span class="t">Warmup</span>
+  <span class="k">implements</span> <span class="t">ApplicationRunner</span> {
+  <span class="k">private</span> <span class="k">final</span> <span class="t">ObjectMapper</span> mapper;
+
+  <span class="k">public</span> <span class="k">void</span> run(
+    <span class="t">ApplicationArguments</span> args)
+    <span class="k">throws</span> <span class="t">Exception</span> {
+    <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt; <span class="n">200</span>; i++) {
+      mapper.writeValueAsString(
+        <span class="t">Map</span>.of(<span class="s">"status"</span>, <span class="s">"READY"</span>));
     }
-}
-<span class="c">// readiness в Boot переходит в</span>
-<span class="c">// ACCEPTING_TRAFFIC после</span>
-<span class="c">// ApplicationRunner’ов</span></pre>
-      <p>Почему это важно в Kubernetes: при раскатке или автоскейлинге новый под сразу получает свою долю трафика, и его p99 первые десятки секунд в разы хуже — пользователи видят всплеск латентности на каждом деплое. Помогают: прогрев до readiness, постепенное включение трафика (slow start в балансировщике или service mesh), CDS/AOT-кеш.</p>
+  }
+}</pre><p>Boot обычно объявляет ACCEPTING_TRAFFIC после runners. Платформа должна использовать правильную readiness-пробу; число 200 не гарантирует завершения JIT-прогрева. Проверяют latency первых запросов, а не только успешный запуск runner.</p><p class="follow"><b>Lazy initialization решает холодный старт?</b> Она сокращает работу до старта, но переносит её на первые обращения и позже обнаруживает ошибки конфигурации. Это обмен startup time на задержку первого использования, а не бесплатное ускорение.</p>
     </div></div></article>
-<article id="q99" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">99. Как ускорить старт Java-сервиса <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p>По возрастанию сложности:</p>
-<ul><li><b>убрать лишнее</b> при старте — ненужные автоконфигурации, тяжёлую работу в @PostConstruct;</li><li><b>AppCDS</b> — архив разобранных классов, старт на 20–40% быстрее (в Boot 3.3+ штатно); с Java 24 — AOT-кеш Leyden;</li><li><b>CRaC</b> — восстановление прогретого процесса из снимка;</li><li><b>GraalVM native image</b> — старт за миллисекунды и мало памяти, но без пикового JIT, с ограничениями рефлексии и долгой сборкой.</li></ul></div>
+<article id="q99" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">99. Как ускорить старт Java-сервиса <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Сначала измеряю время до готовности и до устойчивого обслуживания.</b> Убираю ненужную инициализацию, тяжёлую работу старта и лишние зависимости; затем проверяю CDS/AppCDS.</p><p>Более сложные варианты — JVM AOT cache, CRaC и native image. Они решают разные задачи и имеют ограничения по версии, обучению, ресурсам и динамике приложения. <b>Фиксированный выигрыш в процентах без замера обещать нельзя.</b></p></div>
     <div class="more">
-<ul>
-      <li>Native — для serverless, CLI, scale-to-zero; долгоживущие нагруженные сервисы чаще выигрывают на JVM с JIT.</li>
-      <li>Медленные первые запросы — прогрев JIT и ленивая инициализация; лечат прогревом до readiness.</li>
-    </ul>
-<p>Из чего складывается старт Spring Boot сервиса: загрузка и верификация тысяч классов, сканирование classpath и создание бинов, рефлексия, прокси, инициализация пулов (Hikari соединяется с БД), миграции Liquibase/Flyway, прогрев JIT уже после старта.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Приём</th><th>Выигрыш</th><th>Цена</th></tr>
-        <tr><td>Ленивая инициализация бинов (<code>spring.main.lazy-initialization</code>)</td><td>быстрый старт</td><td>ошибки конфигурации всплывают на первом запросе, первый запрос медленный</td></tr>
-        <tr><td>Отключить ненужные автоконфигурации</td><td>меньше бинов</td><td>ручной труд</td></tr>
-        <tr><td>AppCDS (<code>-<span class="t">XX</span>:<span class="t">SharedArchiveFile</span></code>, в Boot 3.3 — поддержка extract + CDS)</td><td>старт на 20–40% быстрее</td><td>архив под конкретный JDK и classpath</td></tr>
-        <tr><td>AOT cache Leyden (JDK 24+, на 21 нет: <code>-<span class="t">XX</span>:<span class="t">AOTCache</span></code>)</td><td>классы загружены и связаны заранее, в 25 — плюс профили методов</td><td>тренировочный запуск в сборке</td></tr>
-        <tr><td>CRaC</td><td>старт за десятки мс, сразу прогретый JIT</td><td>Linux, поддерживающий JDK, закрытие и переоткрытие соединений при checkpoint/restore, секреты в снимке</td></tr>
-        <tr><td>GraalVM native image</td><td>старт за десятки мс, малая память</td><td>сборка минутами, ограничения рефлексии и прокси, ниже пиковая производительность без PGO</td></tr>
-      </table></div>
-      <p>Важно разделять «быстро стартовал» и «быстро обслуживает»: после старта JVM-сервис ещё десятки секунд работает в интерпретаторе/C1. Для автоскейлинга под пиком важны оба показателя — новый под принимает трафик, но с плохой латентностью. Поэтому readiness выставляют после прогрева (прогон типовых запросов в <code><span class="t">ApplicationRunner</span></code>), а не сразу после старта контекста.</p>
-      <p>Spring Boot сам рассказывает, куда ушло время: <code><span class="t">BufferingApplicationStartup</span></code> и эндпоинт <code>/actuator/startup</code> — длительность создания каждого бина.</p>
+<div class="table-wrap"><table><tr><th>Подход</th><th>Суть и цена</th></tr><tr><td>CDS / AppCDS</td><td>Переиспользовать подготовленные данные классов; архив связан с JDK и приложением</td></tr><tr><td>JVM AOT cache</td><td>В новых JDK заранее сохранять больше результатов подготовки; не путать с native image</td></tr><tr><td>CRaC</td><td>Восстановить процесс из checkpoint; нужна поддержка платформы, закрытие/возобновление ресурсов</td></tr><tr><td>Native image</td><td>Заранее собрать исполняемый файл; нужны учёт динамических возможностей, отдельная сборка и тесты</td></tr></table></div><p><b>Простой AppCDS-пример для Java 21 и обычного JAR:</b> обучающий запуск должен штатно завершиться. Для Boot executable JAR учитывают поддерживаемую им распаковку и загрузчик.</p><pre class="wide">java -<span class="t">XX</span>:<span class="t">ArchiveClassesAtExit</span>=app.jsa -jar app.jar
+java -<span class="t">XX</span>:<span class="t">SharedArchiveFile</span>=app.jsa -jar app.jar</pre>
+<pre class="narrow">java -<span class="t">XX</span>:<span class="t">ArchiveClassesAtExit</span>=app.jsa \
+  -jar app.jar
+java -<span class="t">XX</span>:<span class="t">SharedArchiveFile</span>=app.jsa \
+  -jar app.jar</pre><p>JVM AOT cache появился в JDK 24, а в JDK 25 изменились удобство команд и сохраняемые профили. Команды конкретного релиза нельзя переносить на Java 21. CRaC-снимок может содержать чувствительное состояние; подключения и сроки действия credentials проверяют после restore.</p><p class="follow"><b>Native image всегда медленнее прогретой JVM?</b> Нет универсального результата. Зависят workload, конфигурация и профильные оптимизации. Сравнивают startup, первый запрос, устойчивый throughput, задержки и общий расход памяти.</p>
     </div></div></article>
-<article id="q100" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">100. Thread dump: как снять и что искать</h2><div class="answer" hidden><div class="short"><p>Снимают <code>jcmd &lt;pid&gt; <span class="t">Thread</span>.print</code> или jstack — <b>3–5 дампов</b> с интервалом в несколько секунд: поток, стоящий во всех дампах в одном месте, — реальная проблема.</p>
-<p>Ищут <b>BLOCKED-потоки</b> на одном мониторе и владельца лока, <b>deadlock</b> (JVM печатает сама) и пулы, где все потоки ждут сеть или соединение — например, в <code><span class="t">HikariPool</span>.getConnection</code>.</p></div>
+<article id="q100" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">100. Thread dump: как снять и что искать</h2><div class="answer" hidden><div class="short"><p><b>Thread dump — снимок стеков и состояний потоков.</b> Снимаю несколько с интервалом и сопоставляю их с CPU, очередями и метриками пулов.</p><p>Ищу владельцев горячих мониторов, deadlock, массовое ожидание соединений и повторяющиеся участки активного кода. <b>Одинаковый стек в нескольких дампах сам по себе не означает зависание:</b> idle-потоки тоже нормально ждут на одном месте.</p></div>
     <div class="more">
-<ul>
-      <li>Для виртуальных потоков — <code>jcmd &lt;pid&gt; <span class="t">Thread</span>.dump_to_file -format=json</code>.</li>
-    </ul>
-<pre class="wide"><span class="s">"http-nio-8080-exec-17"</span> #<span class="n">63</span> daemon prio=<span class="n">5</span> os_prio=<span class="n">0</span> cpu=<span class="n">1234</span>.5ms elapsed=3600s tid=0x... nid=0x3039 waiting on condition
-   java.lang.<span class="t">Thread</span>.<span class="t">State</span>: <span class="t">TIMED_WAITING</span> (parking)
-        at jdk.internal.misc.<span class="t">Unsafe</span>.park(<span class="t">Native</span> <span class="t">Method</span>)
-        - parking to wait <span class="k">for</span>  &lt;0x000000071c2a3b40&gt; (a java.util.concurrent.<span class="t">SynchronousQueue</span>$...)
-        at com.zaxxer.hikari.pool.<span class="t">HikariPool</span>.getConnection(<span class="t">HikariPool</span>.java:<span class="n">181</span>)
-        at ...<span class="t">JpaTransactionManager</span>.doBegin(...)
-        at ...<span class="t">PaymentService</span>.pay(<span class="t">PaymentService</span>.java:<span class="n">42</span>)</pre>
-<pre class="narrow"><span class="s">"http-nio-8080-exec-17"</span> #<span class="n">63</span> daemon ...
-    nid=0x3039 waiting on condition
- java.lang.<span class="t">Thread</span>.<span class="t">State</span>:
-   <span class="t">TIMED_WAITING</span> (parking)
-   at jdk.internal.misc.<span class="t">Unsafe</span>.park(...)
-   - parking to wait <span class="k">for</span> &lt;0x...3b40&gt;
-     (a ...<span class="t">SynchronousQueue</span>$...)
-   at com.zaxxer.hikari.pool.<span class="t">HikariPool</span>
-       .getConnection(<span class="t">HikariPool</span>.java:<span class="n">181</span>)
-   at ...<span class="t">JpaTransactionManager</span>.doBegin(...)
-   at ...<span class="t">PaymentService</span>.pay(
-       <span class="t">PaymentService</span>.java:<span class="n">42</span>)</pre>
-      <p>Как читать: имя потока говорит, чей он (пул Tomcat, Kafka-консюмер, Hikari housekeeper); <code>nid</code> — id потока ОС в hex (сопоставить с top -H); состояние и верх стека — что делает сейчас; строки «- locked» и «- waiting to lock» — какие мониторы держит и ждёт.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Паттерн</th><th>Диагноз</th></tr>
-        <tr><td>Все exec-потоки в <code><span class="t">HikariPool</span>.getConnection</code></td><td>исчерпан пул соединений: долгие транзакции, медленные запросы, утечка соединений или вложенный REQUIRES_NEW</td></tr>
-        <tr><td>Много потоков BLOCKED на одном мониторе, один RUNNABLE внутри</td><td>горячая блокировка — synchronized на общем объекте</td></tr>
-        <tr><td>Потоки RUNNABLE в <code><span class="t">SocketInputStream</span>.read</code> во всех дампах</td><td>ожидание внешнего сервиса без таймаута</td></tr>
-        <tr><td>Число потоков растёт от дампа к дампу</td><td>утечка потоков: создают Executor на каждый запрос и не закрывают</td></tr>
-        <tr><td>Один поток RUNNABLE в одном и том же коде во всех дампах, CPU высокий</td><td>бесконечный цикл или катастрофический regex</td></tr>
-      </table></div>
-      <p>Способы снять: <code>jcmd &lt;pid&gt; <span class="t">Thread</span>.print</code>, <code>jstack -l &lt;pid&gt;</code>, <code>kill -<span class="n">3</span> &lt;pid&gt;</code> (дамп уйдёт в stdout процесса — в логи контейнера), <code>/actuator/threaddump</code>. Дамп вызывает короткую safepoint-паузу — снимать в проде можно.</p>
+<pre>jcmd &lt;pid&gt; <span class="t">Thread</span>.print -l</pre><div class="table-wrap"><table><tr><th>Картина</th><th>Что проверить дальше</th></tr><tr><td>BLOCKED на одном мониторе</td><td>Кто владелец, что делает внутри и сколько длится секция</td></tr><tr><td>Много HikariPool.getConnection</td><td>Занятость пула, длительность транзакций, запросы и утечки соединений</td></tr><tr><td>RUNNABLE в socket read</td><td>Это может быть I/O-ожидание; нужны таймауты, трейс и сетевые метрики</td></tr><tr><td>Один активный стек + высокий CPU</td><td>CPU-профиль: цикл, regex, сериализация или другая тяжёлая работа</td></tr><tr><td>Deadlock в отчёте</td><td>Цепочка взаимного ожидания; JVM обнаруживает поддерживаемые типы lock, но не любой бизнес-deadlock</td></tr></table></div><p><b>Java 21, дамп с виртуальными потоками:</b></p><pre class="wide">jcmd &lt;pid&gt; <span class="t">Thread</span>.dump_to_file -format=json threads.json</pre>
+<pre class="narrow">jcmd &lt;pid&gt; <span class="t">Thread</span>.dump_to_file \
+  -format=json threads.json</pre><p>Состав и формат нового дампа отличаются от Thread.print; выбирать инструмент нужно с учётом модели потоков. Диагностический attach требует доступа к процессу и может быть запрещён конфигурацией. Для больших приложений оценивают стоимость снятия и объём файла.</p><p class="follow"><b>RUNNABLE означает, что поток сейчас расходует CPU?</b> Нет. Состояние Java не равно состоянию планировщика ОС: native-вызов с ожиданием тоже может отображаться RUNNABLE. CPU подтверждают измерением.</p>
     </div></div></article>
-<article id="q101" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">101. Профилирование в проде: JFR, async-profiler, flame graphs <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li><b>JFR</b> встроен в JVM и стоит 1–2%: пишут постоянно и сбрасывают при инциденте, анализ — Mission Control.</li><li><b>async-profiler</b> снимает стеки без safepoint bias, режимы <b>cpu, wall, alloc, lock</b>.</li><li><b>Flame graph</b>: ширина — доля семплов, а не время по порядку; ищут широкие «плато».</li></ul>
-<p>wall — для ожиданий, alloc — для нагрузки на GC.</p></div>
+<article id="q101" class="responsive-code" hidden><div class="crumbs">JVM и производительность</div><h2 tabindex="-1">101. Профилирование в проде: JFR, async-profiler, flame graphs <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>JFR</b> записывает события JVM: выполнение, GC, аллокации, ожидания и I/O. Подходит для фонового наблюдения и разбора инцидента; стоимость зависит от включённых событий.</p><p><b>async-profiler</b> позволяет выбрать вопрос: CPU — вычисления, wall — время с ожиданиями, alloc — источники аллокаций, lock — поддерживаемые ожидания блокировок.</p><p><b>Flame graph:</b> ширина показывает вес семплов/событий в выбранном профиле; горизонтальная ось обычно не является шкалой времени.</p></div>
     <div class="more">
-<ul><li>wall — для ожиданий и блокировок, alloc — для нагрузки на GC. Классические семплеры снимают стек только в safepoint — картина искажена.</li></ul>
-<p><b>Safepoint bias</b>: старые семплирующие профилировщики (VisualVM, JProfiler в семплирующем режиме) просят стеки через JVMTI GetAllStackTraces, который работает в safepoint. Потоки снимаются только в точках опроса — горячий код без опросов (цикл после инлайнинга) в профиле не виден, вместо него «виноват» ближайший метод с опросом. async-profiler использует <code><span class="t">AsyncGetCallTrace</span></code> + perf_events и снимает стек в произвольный момент по сигналу.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Режим async-profiler</th><th>Отвечает на вопрос</th></tr>
-        <tr><td>cpu (itimer / perf)</td><td>на что тратится процессор, включая нативный код и ядро</td></tr>
-        <tr><td>wall</td><td>где потоки проводят время, включая ожидания — для «медленно, но CPU низкий»</td></tr>
-        <tr><td>alloc</td><td>кто аллоцирует больше всего — источник нагрузки на GC</td></tr>
-        <tr><td>lock</td><td>где потоки ждут мониторы и локи</td></tr>
-      </table></div>
-<pre class="wide"># профиль <span class="t">CPU</span> <span class="n">30</span> секунд в flame graph
-asprof -d <span class="n">30</span> -e cpu -f /tmp/cpu.html &lt;pid&gt;
-# <span class="t">JFR</span>: постоянная запись в кольцевой буфер, сброс при инциденте
-java -<span class="t">XX</span>:<span class="t">StartFlightRecording</span>=disk=<span class="k">true</span>,maxage=1h,settings=profile ...
-jcmd &lt;pid&gt; <span class="t">JFR</span>.dump filename=/dumps/incident.jfr</pre>
-<pre class="narrow"># профиль <span class="t">CPU</span> <span class="n">30</span> секунд в flame graph
-asprof -d <span class="n">30</span> -e cpu -f /tmp/cpu.html &lt;pid&gt;
-# <span class="t">JFR</span>: постоянная запись в кольцевой буфер
-java -<span class="t">XX</span>:<span class="t">StartFlightRecording</span>=\
-disk=<span class="k">true</span>,maxage=1h,settings=profile ...
-# сброс при инциденте
-jcmd &lt;pid&gt; <span class="t">JFR</span>.dump \
-    filename=/dumps/incident.jfr</pre>
-      <p><b>Как читать flame graph</b>: ось Y — стек (внизу точка входа, вверху листовые методы), ширина прямоугольника — доля семплов, в которых метод был на стеке. Порядок слева направо — алфавитный, не временной. Ищут широкие вершины («плато») — там реально тратится время — и неожиданно широкие промежуточные кадры (например, логирование или сериализация занимает 30% запроса).</p>
-      <p>Что есть в JFR кроме CPU: аллокации по месту (TLAB и вне TLAB), паузы GC, блокировки (Java Monitor Blocked), I/O сокетов и файлов с длительностями, исключения, пиннинг виртуальных потоков. Анализ — JDK Mission Control или <code>jfr print --events ...</code>.</p>
-<p class="follow"><b>В CPU-профиле 40% в HashMap.get?</b> Смотреть, что вызывает: плохой hashCode ключа, лишние поиски в цикле, неподходящая структура данных.</p>
+<pre class="wide">jcmd &lt;pid&gt; <span class="t">JFR</span>.start name=incident settings=profile duration=60s filename=incident.jfr
+jfr summary incident.jfr</pre>
+<pre class="narrow">jcmd &lt;pid&gt; <span class="t">JFR</span>.start name=incident \
+  settings=profile duration=60s \
+  filename=incident.jfr
+jfr summary incident.jfr</pre><p>Это запись на минуту, а не постоянный режим. Для непрерывной записи ограничивают maxage/maxsize и выгружают нужный интервал при инциденте. Разбор — через JDK Mission Control и инструменты JDK.</p><pre>asprof -d <span class="n">30</span> -e cpu -f cpu.html &lt;pid&gt;</pre><div class="table-wrap"><table><tr><th>Профиль</th><th>Что означает широкая область</th></tr><tr><td>CPU</td><td>Много CPU-семплов прошло через этот стек</td></tr><tr><td>Wall</td><td>Потоки проводят здесь много наблюдаемого времени, включая ожидание</td></tr><tr><td>Allocation</td><td>Большой вес аллокаций; это не обязательно удерживаемая память</td></tr><tr><td>Lock</td><td>Заметное ожидание тех типов блокировок, которые собирает режим</td></tr></table></div><p>Начинают с подходящего режима, затем смотрят не только широкий метод, но и вызывающий стек. Возможности async-profiler зависят от ОС, разрешений и версии. Профиль короткого интервала и sampling не доказывают, что редкой проблемы никогда не бывает.</p><p class="follow"><b>В alloc-профиле больше всего создаёт JSON-сериализация — это утечка?</b> Не обязательно. Профиль показывает создание объектов, а утечка — их ненужное удержание. Для последнего нужны живой набор и пути к корням в heap dump.</p>
     </div></div></article>
 <article id="q102" hidden><div class="crumbs">Kotlin</div><h2 tabindex="-1">102. Kotlin и Java: в чём главные отличия?</h2><div class="answer" hidden><div class="short"><ul><li><b>Null safety</b> в системе типов: <code><span class="t">String</span></code> и <code><span class="t">String</span>?</code> — разные типы, большинство NPE ловит компилятор.</li><li><b>Меньше шаблонного кода</b>: data class, свойства вместо геттеров и сеттеров, параметры по умолчанию, именованные аргументы, строковые шаблоны.</li><li>Классы и методы <b>final по умолчанию</b>, <b>нет checked exceptions</b>, нет static — вместо него top-level функции и companion object.</li><li><b>Extension-функции</b>, inline-функции высшего порядка, <code><span class="k">when</span></code> как выражение, smart cast.</li><li><b>Корутины</b> — асинхронный код в последовательном стиле.</li></ul>
 <p>Компилируется в тот же байткод: одна JVM, те же библиотеки и Spring, вызовы <b>в обе стороны</b> без обёрток.</p></div>
