@@ -13633,906 +13633,219 @@ log.error(<span class="s">"partner failed, paymentId={}"</span>,
     <div class="more">
 <figure class="concept" aria-labelledby="arch-strangler-caption"><svg viewBox="0 0 320 206" role="img" aria-labelledby="arch-strangler-title arch-strangler-desc" xmlns="http://www.w3.org/2000/svg"><title id="arch-strangler-title">Постепенное переключение маршрутов</title><desc id="arch-strangler-desc">Фасад направляет выбранные операции в новый сервис, остальные — в монолит. Владение данными переключается отдельным управляемым шагом.</desc><defs><marker id="arch-strangler-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 62 V92 H80 V120" marker-end="url(#arch-strangler-arrow)"/><path class="concept-edge" d="M160 62 V92 H240 V120" marker-end="url(#arch-strangler-arrow)"/><rect class="concept-node accent" x="16" y="12" width="288" height="50" rx="9"/><text x="160.0" y="42.0" text-anchor="middle">Gateway / фасад</text><rect class="concept-node plain" x="8" y="124" width="144" height="70" rx="9"/><text x="80.0" y="154.0" text-anchor="middle">Старые операции</text><text x="80.0" y="174.0" text-anchor="middle">Монолит</text><rect class="concept-node plain" x="168" y="124" width="144" height="70" rx="9"/><text x="240.0" y="154.0" text-anchor="middle">Вынесенный API</text><text x="240.0" y="174.0" text-anchor="middle">Новый сервис</text></svg><figcaption id="arch-strangler-caption">Фасад направляет выбранные операции в новый сервис, остальные — в монолит. Владение данными переключается отдельным управляемым шагом.</figcaption></figure><ol><li>Выбрать функцию, где независимый релиз или масштабирование дадут пользу.</li><li>Отделить её контрактом внутри монолита; закрыть прямые обращения к чужим таблицам.</li><li>Сделать новый сервис и проверить поведение на безопасном shadow-трафике.</li><li>Подготовить данные: snapshot + CDC/события, сверка и контроль отставания.</li><li>Определить единственного владельца записи и переключить его по плану.</li><li>Постепенно направить рабочий трафик, сравнить SLO и бизнес-результаты.</li><li>Удалить старую ветку, временную синхронизацию и лишние доступы.</li></ol><p>Общая БД на переходе допустима, если у таблиц понятный владелец и нет бесконтрольных записей с обеих сторон. Двойная запись «сначала сюда, потом туда» без журнала намерения и восстановления создаёт тот же dual-write разрыв, что и запись в БД плюс Kafka.</p><p class="follow"><b>Что нельзя делать в parallel run?</b> Повторять реальные списания и внешние необратимые действия обеими реализациями. Тень сравнивает расчёты или изолированные результаты; рабочий бизнес-эффект выполняет выбранный владелец.</p>
     </div></div></article>
-<article id="q259" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">259. Как проходить System Design интервью <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ol><li><b>Требования</b>: что входит, пользователи, нагрузка, латентность, доступность, консистентность.</li><li><b>Оценки</b> на салфетке — только чтобы обосновать решения.</li><li><b>API, модель данных, общая схема</b> — пройти основной сценарий.</li><li><b>Углубиться</b> в одно-два сложных места: отказы, узкие места, мониторинг.</li></ol>
-<p>Каждое решение — <b>с компромиссом</b>, думать вслух и слушать подсказки.</p></div>
+<article id="q259" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">259. Как проходить System Design интервью <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Сначала уточняю задачу, затем предлагаю минимальную рабочую схему.</b> Фиксирую основные функции, нагрузку, требования к задержке, доступности и согласованности.</p><p>Определяю API, данные и прохожу один запрос от клиента до результата. Затем углубляюсь в самое рискованное место: конкурентную запись, отказ зависимости, масштабирование или восстановление.</p><p><b>Каждое усложнение связываю с требованием:</b> что оно решает, сколько стоит и какая простая альтернатива есть.</p></div>
     <div class="more">
-<ul>
-      <li>Сутки ≈ 10⁵ секунд: миллион запросов в сутки ≈ 12 RPS в среднем, пик ×3–10.</li>
-      <li>Задержки: память ~100 нс, SSD ~100 мкс, сеть внутри ДЦ ~0,5 мс, между регионами 50–150 мс.</li>
-      <li>Оценивают ход мысли, знание пределов компонентов и глубину хотя бы в одной области.</li>
-    </ul>
-<div class="table-wrap"><table>
-        <tr><th>Этап (из ~45–60 мин)</th><th>Время</th><th>Что делать</th></tr>
-        <tr><td>Требования</td><td>5–8 мин</td><td>уточнить функции (что входит и что нет), пользователей, нагрузку, SLA, консистентность; записать</td></tr>
-        <tr><td>Оценки</td><td>3–5 мин</td><td>RPS среднее и пик, объём данных в год, соотношение чтения и записи — только чтобы обосновать решения</td></tr>
-        <tr><td>API и модель данных</td><td>5–8 мин</td><td>ключевые эндпоинты, сущности, ключи доступа</td></tr>
-        <tr><td>Высокоуровневая схема</td><td>10 мин</td><td>клиенты → входной слой → сервисы → хранилища/очереди; пройти по схеме основной сценарий</td></tr>
-        <tr><td>Углубление</td><td>15 мин</td><td>1–2 самых сложных места: консистентность, горячие ключи, масштабирование хранилища — обычно куда поведёт интервьюер</td></tr>
-        <tr><td>Отказы и эксплуатация</td><td>5 мин</td><td>что будет при падении каждого компонента, мониторинг, деградация</td></tr>
-      </table></div>
-      <p>Что оценивают: умение уточнять (а не проектировать то, что не просили), обоснованность («Kafka, потому что нужен буфер на пиковые ×10 и несколько потребителей», а не «Kafka, потому что так принято»), знание пределов компонентов в цифрах, понимание компромиссов и честность («здесь я бы сначала измерил»).</p>
-      <div class="table-wrap"><table>
-        <tr><th>Ошибка</th><th>Почему плохо</th></tr>
-        <tr><td>Сразу рисовать микросервисы и Kafka</td><td>решение без требований</td></tr>
-        <tr><td>Молчать и рисовать</td><td>интервьюер не видит хода мысли</td></tr>
-        <tr><td>Ширина без глубины</td><td>senior должен уметь углубиться хотя бы в одно место до индексов, блокировок, протоколов</td></tr>
-        <tr><td>Игнорировать подсказки интервьюера</td><td>он обычно направляет в то, что хочет проверить</td></tr>
-        <tr><td>Идеальный дизайн «на вырост» для 100 RPS</td><td>оверинжиниринг тоже минус</td></tr>
-      </table></div>
-      <p>Шпаргалка чисел: L1-кеш ~1 нс, RAM ~100 нс, SSD случайное чтение ~100 мкс, сеть в ДЦ ~0,5 мс, между континентами ~150 мс; один сервер держит тысячи–десятки тысяч простых RPS; PostgreSQL — тысячи–десятки тысяч транзакций в секунду в зависимости от железа и запросов; диск — сотни МБ/с — ГБ/с.</p>
+<ol><li><b>Границы:</b> какие сценарии обязательны, что сознательно оставляем за рамками.</li><li><b>Ограничения:</b> средний и пиковый поток, размер данных, SLO, допустимая потеря и устарелость.</li><li><b>Контракт:</b> запрос, ответ, ключ операции, ошибки и повтор.</li><li><b>Базовая схема:</b> API → обработка → хранилище; очередь и кеш добавляются по причине.</li><li><b>Углубление:</b> показать индекс, атомарный переход или протокол в главном узком месте.</li><li><b>Сбой:</b> что происходит после таймаута, рестарта, повторной доставки и потери узла.</li></ol><p><b>Пример обоснования:</b> «Отчёт строится несколько минут, поэтому возвращаю 202 с id операции, сохраняю задание и ограничиваю число исполнителей, чтобы не перегрузить БД». Это связывает API, долговечность и контроль нагрузки.</p><p class="follow"><b>Нужно сразу рисовать окончательную архитектуру?</b> Нет. Полезнее показать простую схему, проверить её на требованиях и расширить в месте, где она перестаёт работать. Ход рассуждений и границы гарантий важнее числа компонентов.</p>
     </div></div></article>
-<article id="q260" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">260. Оценка нагрузки на собеседовании (back-of-the-envelope)</h2><div class="answer" hidden><div class="short"><ul><li>В сутках около <b>10⁵ секунд</b>: 100 млн событий в день — ~1 200/с в среднем, пик в <b>3–10 раз</b> выше.</li><li>Объём: 1 КБ × 100 млн — <b>100 ГБ в день</b>, ~36 ТБ в год без реплик.</li><li>Пределы: PostgreSQL — <b>тысячи</b> простых транзакций/с, Redis — <b>сотня тысяч</b> операций, Kafka — <b>сотни МБ/с</b> на брокер.</li></ul>
-<p>Числа нужны, чтобы <b>обосновать решения</b>: нужен ли шардинг, кеш, очередь.</p></div>
+<article id="q260" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">260. Оценка нагрузки на собеседовании (back-of-the-envelope)</h2><div class="answer" hidden><div class="short"><p><b>Оценки нужны для выбора решения, а не угадывания точного TPS базы.</b> Считаю средний и пиковый поток, размер хранения, сетевой трафик и число одновременно выполняющихся операций.</p><p>Например, 100 млн событий за сутки — около 1 160/с в среднем; при 1 КБ на событие это около 100 ГБ в сутки до индексов, реплик и сжатия. <b>Пик и производительность обработчика — отдельные допущения, которые нужно проверить.</b></p></div>
     <div class="more">
-<ul>
-      <li>Числа нужны, чтобы обосновать решения: нужен ли шардинг, кеш, очередь — а не ради точности.</li>
-    </ul>
-<div class="table-wrap"><table>
-        <tr><th>Величина</th><th>Ориентир</th></tr>
-        <tr><td>Секунд в сутках</td><td>86 400 ≈ 10⁵</td></tr>
-        <tr><td>1 млн в сутки</td><td>≈ 12/с</td></tr>
-        <tr><td>1 млрд в сутки</td><td>≈ 12 000/с</td></tr>
-        <tr><td>Пик к среднему</td><td>×2–3 для равномерных систем, ×10 и выше для событийных (распродажа, зарплата)</td></tr>
-        <tr><td>Степени двойки</td><td>2¹⁰ ≈ тысяча, 2²⁰ ≈ миллион, 2³⁰ ≈ миллиард, 2³² ≈ 4 млрд</td></tr>
-        <tr><td>Месяц / год</td><td>≈ 2,5 млн с / ≈ 3,2·10⁷ с</td></tr>
-      </table></div>
-<pre class="wide">Пример: сервис платежей, <span class="n">20</span> млн активных клиентов, <span class="n">2</span> платежа в день на клиента
-  запись: <span class="n">40</span> млн / 10⁵ ≈ <span class="n">400</span>/с в среднем, пик ×<span class="n">10</span> → <span class="n">4</span> <span class="n">000</span>/с
-  чтение (история, статусы) ×<span class="n">10</span> к записи → <span class="n">4</span> <span class="n">000</span>/с в среднем, <span class="n">40</span> <span class="n">000</span>/с в пике
-  размер платежа с индексами ~<span class="n">1</span> КБ → <span class="n">40</span> ГБ в день → ~<span class="n">15</span> ТБ в год (×<span class="n">3</span> с репликами)
-Выводы: запись <span class="n">4</span> <span class="n">000</span>/с — одна хорошая <span class="t">PostgreSQL</span> выдержит, но на пределе — планировать партиционирование
-по дате и, возможно, шардирование по клиенту; чтение <span class="n">40</span> <span class="n">000</span>/с — кеш и реплики обязательны;
-<span class="n">15</span> ТБ в год — ретенция горячих данных и архив.</pre>
-<pre class="narrow">Пример: сервис платежей, <span class="n">20</span> млн активных
-клиентов, <span class="n">2</span> платежа в день на клиента
-  запись: <span class="n">40</span> млн / 10⁵ ≈ <span class="n">400</span>/с в среднем,
-    пик ×<span class="n">10</span> → <span class="n">4</span> <span class="n">000</span>/с
-  чтение (история, статусы) ×<span class="n">10</span> к записи
-    → <span class="n">4</span> <span class="n">000</span>/с в среднем, <span class="n">40</span> <span class="n">000</span>/с в пике
-  размер платежа с индексами ~<span class="n">1</span> КБ
-    → <span class="n">40</span> ГБ в день → ~<span class="n">15</span> ТБ в год
-    (×<span class="n">3</span> с репликами)
-Выводы:
-  запись <span class="n">4</span> <span class="n">000</span>/с — одна хорошая <span class="t">PostgreSQL</span>
-    выдержит, но на пределе — планировать
-    партиционирование по дате и, возможно,
-    шардирование по клиенту;
-  чтение <span class="n">40</span> <span class="n">000</span>/с — кеш и реплики
-    обязательны;
-  <span class="n">15</span> ТБ в год — ретенция горячих данных
-    и архив.</pre>
-      <p>Пропускные способности для сравнения (порядок, а не точные цифры): веб-сервер на JVM — тысячи–десятки тысяч простых RPS на инстанс; PostgreSQL — 5–50 тыс. простых транзакций/с на мощном сервере; Redis — 100 тыс.+ операций/с на ядро; Kafka — сотни МБ/с на брокер; сеть 10 Гбит/с ≈ 1 ГБ/с.</p>
-      <p>Хорошая привычка — сразу говорить вывод из числа: «4 000 записей в секунду — это не повод для NoSQL, это повод для батчинга и партиционирования».</p>
-    </div></div></article>
-<article id="q261" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">261. Балансировка нагрузки: L4 и L7, алгоритмы</h2><div class="answer" hidden><div class="short"><ul><li><b>L4</b> распределяет TCP-соединения, не глядя в содержимое: быстро, любой протокол.</li><li><b>L7</b> видит HTTP: маршрутизация по пути и заголовкам, терминация TLS, ретраи, канарейки.</li><li>Алгоритмы: <b>round robin</b>, <b>least connections</b> (запросы разной длительности), взвешенные, <b>по хешу ключа</b> (липкость).</li></ul>
-<p>Ловушка: долгие соединения <b>HTTP/2 и gRPC</b> на L4 распределяются плохо — нужна L7 или клиентская балансировка.</p></div>
-    <div class="more">
-<ul>
-      <li>Долгие соединения (gRPC, HTTP/2) на L4 распределяются плохо — один канал держит все запросы; нужна L7 или клиентская балансировка.</li>
-    </ul>
-<div class="table-wrap"><table>
-        <tr><th></th><th>L4 (транспортный)</th><th>L7 (прикладной)</th></tr>
-        <tr><td>Видит</td><td>IP, порт, TCP/UDP</td><td>HTTP: путь, заголовки, cookie, метод</td></tr>
-        <tr><td>Единица балансировки</td><td>соединение</td><td>запрос</td></tr>
-        <tr><td>TLS</td><td>проходит насквозь (или терминируется)</td><td>терминирует, может перешифровать</td></tr>
-        <tr><td>Возможности</td><td>скорость, любой протокол</td><td>маршрутизация по пути/версии, ретраи, канарейки, rate limit, sticky sessions по cookie</td></tr>
-        <tr><td>Примеры</td><td>kube-proxy (Service), AWS NLB, IPVS, HAProxy в tcp-режиме</td><td>nginx, Envoy, AWS ALB, Ingress-контроллеры</td></tr>
-      </table></div>
-      <div class="table-wrap"><table>
-        <tr><th>Алгоритм</th><th>Когда</th></tr>
-        <tr><td>Round robin / weighted</td><td>однородные запросы и инстансы; веса — для разной мощности или канарейки</td></tr>
-        <tr><td>Least connections / least outstanding requests</td><td>запросы разной длительности — не нагружать занятый узел</td></tr>
-        <tr><td>Power of two choices</td><td>выбрать два случайных узла и взять менее загруженный — почти как least connections без глобального знания</td></tr>
-        <tr><td>Hash по ключу (consistent hashing)</td><td>липкость: кеш на узле, сессии, шардированные данные</td></tr>
-        <tr><td>Latency-aware (EWMA)</td><td>узлы с разной производительностью, деградирующие инстансы</td></tr>
-      </table></div>
-      <p>Health checks — часть балансировки: активные (балансировщик сам опрашивает /health) и пассивные (outlier detection — исключать узел после серии ошибок). Без них балансировщик продолжает отправлять трафик на умирающий узел. Для Java-сервисов с прогревом — slow start: новому узлу плавно увеличивают долю трафика.</p>
-    </div></div></article>
-<article id="q262" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">262. CDN и кеширование на стороне клиента</h2><div class="answer" hidden><div class="short"><p><b>CDN</b> хранит статику и кешируемые ответы рядом с пользователем: меньше задержка и нагрузка на origin.</p>
-<ul><li>Управление — заголовки <b>Cache-Control</b>: max-age, s-maxage для CDN, <b>no-store</b> для персональных данных; <b>ETag</b> — условные запросы.</li><li>Сброс — не инвалидацией, а <b>версией в имени файла</b>.</li><li>Главное — не закешировать <b>персональный ответ</b> в общем кеше.</li></ul></div>
-    <div class="more">
-<div class="table-wrap"><table>
-        <tr><th>Заголовок</th><th>Смысл</th></tr>
-        <tr><td><code><span class="p">Cache-Control</span>: max-age=31536000, immutable</code></td><td>кешировать год, не перепроверять — для файлов с хешем в имени (app.3f9a2c.js)</td></tr>
-        <tr><td><code><span class="p">Cache-Control</span>: no-cache</code></td><td>можно хранить, но перед использованием перепроверить (ETag) — для index.html</td></tr>
-        <tr><td><code><span class="p">Cache-Control</span>: no-store</code></td><td>не хранить вообще — персональные и финансовые данные</td></tr>
-        <tr><td><code><span class="p">Cache-Control</span>: private</code> / <code><span class="k">public</span></code></td><td>только браузер / можно CDN и прокси</td></tr>
-        <tr><td><code>s-maxage</code></td><td>время жизни в общих кешах (CDN) отдельно от браузера</td></tr>
-        <tr><td><code>stale-<span class="k">while</span>-revalidate=<span class="n">60</span></code></td><td>отдавать устаревшее, обновляя в фоне — без задержки для пользователя</td></tr>
-        <tr><td><code><span class="t">ETag</span></code> / <code><span class="t">If</span>-<span class="t">None</span>-<span class="t">Match</span></code> → <code><span class="n">304</span> <span class="t">Not</span> <span class="t">Modified</span></code></td><td>условный запрос: тело не передаётся, если не изменилось</td></tr>
-        <tr><td><code><span class="p">Vary</span>: Accept-Encoding, Accept-Language</code></td><td>ключ кеша учитывает эти заголовки</td></tr>
-      </table></div>
-      <p>Почему версия в имени файла лучше инвалидации: инвалидация CDN не мгновенна и не гарантирована для браузерных кешей пользователей; новый файл с новым именем просто запрашивается заново, а старая HTML-страница продолжает ссылаться на старые файлы, которые всё ещё валидны — нет смешения версий. HTML при этом кешируют коротко или с ревалидацией.</p>
-      <p>CDN для API: кешируемые публичные ответы (курсы валют, каталог, конфигурация приложения) с коротким s-maxage разгружают origin в разы. Ловушка — случайно закешировать персональный ответ: всё, что зависит от авторизации, — <code><span class="k">private</span></code>/<code>no-store</code>, а ключ кеша CDN должен учитывать нужные заголовки. Ещё функции CDN: защита от DDoS, WAF, TLS ближе к пользователю, сжатие и оптимизация изображений.</p>
-    </div></div></article>
-<article id="q263" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">263. Консистентное хеширование</h2><div class="answer" hidden><div class="short"><p>При <code>hash % <span class="t">N</span></code> добавление узла меняет место <b>почти всех ключей</b> — кеш разом промахивается.</p>
-<p><b>Консистентное хеширование</b> размещает узлы и ключи на <b>кольце хешей</b>: ключ принадлежит ближайшему узлу по часовой стрелке, и при изменении состава переезжает лишь <b>~1/N ключей</b>. <b>Виртуальные узлы</b> выравнивают нагрузку. Применяется в Cassandra, DynamoDB, шардировании кешей.</p></div>
-    <div class="more">
-<ul>
-      <li>Применяют в шардированных кешах, Cassandra, DynamoDB, балансировке по ключу.</li>
-    </ul>
-<pre class="wide"><span class="c">// почему hash % N плохо: при N = 4 → 5 ключ остаётся на месте только если h % 4 == h % 5</span>
-<span class="c">// — это ~20% ключей; 80% кеша «промахивается» сразу после добавления узла</span>
-<span class="c">//</span>
-<span class="c">// кольцо: позиции 0 .. 2^32-1; узел ставится в несколько точек (виртуальные узлы)</span>
-<span class="t">TreeMap</span>&lt;<span class="t">Long</span>, <span class="t">Node</span>&gt; ring = <span class="k">new</span> <span class="t">TreeMap</span>&lt;&gt;();
-<span class="k">void</span> add(<span class="t">Node</span> n) {
-    <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt; <span class="n">150</span>; i++) ring.put(hash(n.id() + <span class="s">"#"</span> + i), n);
-}
-<span class="t">Node</span> nodeFor(<span class="t">String</span> key) {
-    <span class="k">var</span> e = ring.ceilingEntry(hash(key));           <span class="c">// ближайшая точка по часовой стрелке</span>
-    <span class="k">return</span> (e != <span class="k">null</span> ? e : ring.firstEntry()).getValue();   <span class="c">// за концом кольца — с начала</span>
-}</pre>
-<pre class="narrow"><span class="c">// почему hash % N плохо: при N = 4 → 5</span>
-<span class="c">// ключ остаётся на месте, только если</span>
-<span class="c">// h % 4 == h % 5 — это ~20% ключей;</span>
-<span class="c">// 80% кеша «промахивается» сразу после</span>
-<span class="c">// добавления узла</span>
-<span class="c">//</span>
-<span class="c">// кольцо: позиции 0 .. 2^32-1; узел ставится</span>
-<span class="c">// в несколько точек (виртуальные узлы)</span>
-<span class="t">TreeMap</span>&lt;<span class="t">Long</span>, <span class="t">Node</span>&gt; ring = <span class="k">new</span> <span class="t">TreeMap</span>&lt;&gt;();
+<pre>Средний поток = события / <span class="n">86</span> <span class="n">400</span>
+Хранение = поток × размер × срок
+В работе ≈ поток × среднее время
 
-<span class="k">void</span> add(<span class="t">Node</span> n) {
-    <span class="k">for</span> (<span class="k">int</span> i = <span class="n">0</span>; i &lt; <span class="n">150</span>; i++) {
-        ring.put(hash(n.id() + <span class="s">"#"</span> + i), n);
+<span class="n">10</span> <span class="n">000</span> запросов/с × <span class="n">0</span>,<span class="n">2</span> с
+≈ <span class="n">2</span> <span class="n">000</span> одновременных запросов</pre><p>Последняя оценка использует закон Литтла для устойчивого режима и согласованных средних величин. Нельзя подставить p99 вместо среднего и получить точное число потоков.</p><div class="table-wrap"><table><tr><th>Что добавить</th><th>Почему</th></tr><tr><td>Пиковый профиль и его длительность</td><td>Короткий всплеск и многочасовая нагрузка требуют разного буфера</td></tr><tr><td>Индексы, реплики, WAL и запас</td><td>Размер payload не равен размеру занятого диска</td></tr><tr><td>Разницу чтения и записи</td><td>Кеш и реплики не масштабируют любую запись</td></tr><tr><td>Время недоступности получателя</td><td>Определяет объём очереди и время последующего догоняния</td></tr></table></div><p>Если поступает 10 000/с, а обработка даёт 8 000/с, очередь растёт на 2 000/с: за 10 минут это 1,2 млн записей. Добавление очереди не устраняет дефицит мощности. Пределы PostgreSQL/Redis/Kafka проверяют на своём запросе, данных и настройках надёжности.</p><p class="follow"><b>Большой дневной объём сразу требует шардинга?</b> Нет. Важны пиковая скорость, размер активного набора, индексы, retention и нужные запросы. Шардинг добавляют после оценки конкретного ограничения.</p>
+    </div></div></article>
+<article id="q261" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">261. Балансировка нагрузки: L4 и L7, алгоритмы</h2><div class="answer" hidden><div class="short"><p><b>L4 балансирует транспортные потоки/соединения</b> по сетевым признакам. <b>L7 понимает прикладной протокол</b> и может маршрутизировать HTTP-запросы по пути, методу или заголовкам.</p><p>Алгоритм выбирают по характеру нагрузки: round robin для близких запросов, least outstanding для разной длительности, веса для разной мощности, хеш — для устойчивого назначения.</p><p>Одно долгое HTTP/2-соединение несёт много запросов: L4 не обязан распределять их между разными репликами.</p></div>
+    <div class="more">
+<div class="table-wrap"><table><tr><th>Сценарий</th><th>Что учитывать</th></tr><tr><td>Похожая длительность, одинаковые узлы</td><td>Round robin / weighted round robin</td></tr><tr><td>Долгие и короткие запросы вперемешку</td><td>Число активных запросов или соединений — это разные показатели</td></tr><tr><td>gRPC поверх одного канала</td><td>Клиентская или L7-балансировка; иначе один канал закреплён за backend</td></tr><tr><td>Кеш на конкретном узле</td><td>Hash по ключу, с пониманием потерь при отказе узла</td></tr></table></div><p>Для L7-анализа зашифрованного HTTP TLS обычно завершают на прокси или передают ему уже расшифрованный трафик. Проверки readiness и passive outlier detection исключают неготовые/ошибающиеся узлы; graceful draining завершает старые соединения без резкого обрыва.</p><p class="follow"><b>Least connections всегда лучше round robin?</b> Нет. Одно HTTP/2-соединение может быть загружено сильнее ста idle-соединений. Метрика должна отражать работу, которую реально распределяют.</p>
+    </div></div></article>
+<article id="q262" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">262. CDN и кеширование на стороне клиента</h2><div class="answer" hidden><div class="short"><p><b>CDN хранит разрешённые к кешированию ответы ближе к пользователю</b>, уменьшая задержку и обращения к origin. Браузерный кеш может вообще исключить сетевой запрос.</p><p><b>Cache-Control задаёт правила хранения и свежести.</b> no-cache разрешает хранить, но требует проверки перед повторным использованием; no-store запрещает хранение.</p><p>Статику версионируют в имени файла. Персональные ответы не должны попадать в общий кеш; это проверяют и заголовками, и конфигурацией CDN.</p></div>
+    <div class="more">
+<div class="table-wrap"><table><tr><th>Заголовок</th><th>Назначение</th></tr><tr><td>max-age</td><td>Свежесть для кеша, включая браузер</td></tr><tr><td>s-maxage</td><td>Отдельная свежесть в shared cache</td></tr><tr><td>private</td><td>Не хранить в общем кеше; браузерный кеш допустим</td></tr><tr><td>no-store</td><td>Не сохранять ответ</td></tr><tr><td>ETag / If-None-Match</td><td>Проверить версию и при совпадении вернуть 304 без тела</td></tr><tr><td>Vary</td><td>Указать заголовки запроса, влияющие на выбор варианта</td></tr></table></div><pre><span class="t">HTTP</span>/<span class="n">1.1</span> <span class="n">200</span> <span class="t">OK</span>
+<span class="t">Cache</span>-<span class="t">Control</span>: <span class="k">public</span>, max-age=<span class="n">300</span>
+<span class="t">ETag</span>: <span class="s">"catalog-v42"</span>
+
+{<span class="s">"version"</span>:<span class="n">42</span>}</pre><p>Для app.abc123.js допустим большой срок свежести, если содержимое по этому имени не меняется. HTML обновляют чаще или ревалидируют, а старые файлы сохраняют на время жизни старых страниц. Сброс CDN полезен для изменяемого контента, но не отзывает уже сохранённую копию в каждом браузере.</p><p class="follow"><b>private защищает данные от доступа другого пользователя?</b> Это правило кеширования, а не авторизация или шифрование. API всё равно проверяет доступ, а для чувствительного ответа может требоваться no-store.</p>
+    </div></div></article>
+<article id="q263" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">263. Консистентное хеширование</h2><div class="answer" hidden><div class="short"><p><b>Consistent hashing уменьшает перенос ключей при смене состава узлов.</b> В варианте с кольцом ключ направляется в ближайшую по часовой стрелке точку узла; при добавлении узел забирает часть соседнего диапазона.</p><p><b>Виртуальные узлы</b> распределяют диапазоны ровнее и позволяют учитывать веса. При равномерном хешировании добавление одного равного узла к N переносит в среднем около 1/(N+1) ключей.</p><p>Это не защита от горячего ключа и не автоматический протокол переноса самих данных.</p></div>
+    <div class="more">
+<figure class="concept" aria-labelledby="sd-hash-movement-caption"><svg viewBox="0 0 320 192" role="img" aria-labelledby="sd-hash-movement-title sd-hash-movement-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-hash-movement-title">Перенос части диапазона</title><desc id="sd-hash-movement-desc">При добавлении C между A и B новый узел забирает только часть диапазона B. Остальные назначения сохраняются.</desc><defs><marker id="sd-hash-movement-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 62 V106" marker-end="url(#sd-hash-movement-arrow)"/><rect class="concept-node plain" x="16" y="12" width="288" height="50" rx="9"/><text x="160.0" y="42.0" text-anchor="middle">До: (A, B] → B</text><rect class="concept-node accent" x="16" y="110" width="288" height="70" rx="9"/><text x="160.0" y="140.0" text-anchor="middle">После: (A, C] → C</text><text x="160.0" y="160.0" text-anchor="middle">(C, B] → B</text></svg><figcaption id="sd-hash-movement-caption">При добавлении C между A и B новый узел забирает только часть диапазона B. Остальные назначения сохраняются.</figcaption></figure><p><b>Пример выбора владельца:</b> TreeMap содержит уже построенные позиции виртуальных узлов. hash и построение кольца должны быть одинаковыми у всех участников.</p><pre class="wide"><span class="t">String</span> owner(<span class="k">long</span> keyHash, <span class="t">NavigableMap</span>&lt;<span class="t">Long</span>, <span class="t">String</span>&gt; ring) {
+    <span class="k">if</span> (ring.isEmpty()) <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalArgumentException</span>();
+    <span class="k">var</span> entry = ring.ceilingEntry(keyHash);
+    <span class="k">if</span> (entry == <span class="k">null</span>) entry = ring.firstEntry();
+    <span class="k">return</span> entry.getValue();
+}</pre>
+<pre class="narrow"><span class="t">String</span> owner(<span class="k">long</span> keyHash,
+    <span class="t">NavigableMap</span>&lt;<span class="t">Long</span>, <span class="t">String</span>&gt; ring) {
+    <span class="k">if</span> (ring.isEmpty()) {
+        <span class="k">throw</span> <span class="k">new</span>
+            <span class="t">IllegalArgumentException</span>();
     }
-}
-
-<span class="t">Node</span> nodeFor(<span class="t">String</span> key) {
-    <span class="c">// ближайшая точка по часовой стрелке</span>
-    <span class="k">var</span> e = ring.ceilingEntry(hash(key));
-    <span class="c">// за концом кольца — с начала</span>
-    <span class="k">if</span> (e == <span class="k">null</span>) e = ring.firstEntry();
-    <span class="k">return</span> e.getValue();
-}</pre>
-      <p>Свойства: при добавлении узла он забирает ключи только у соседей по кольцу — в среднем 1/N всех ключей; при удалении его ключи расходятся по соседям. Без виртуальных узлов распределение очень неравномерно (узлы случайно стоят неравно) — 100–200 точек на узел выравнивают нагрузку, а веса задаются числом точек.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Где применяется</th><th>Как</th></tr>
-        <tr><td>Cassandra, DynamoDB, Riak</td><td>размещение данных и реплик (следующие узлы по кольцу)</td></tr>
-        <tr><td>Клиентский шардинг кешей (Memcached)</td><td>клиент выбирает сервер по ключу</td></tr>
-        <tr><td>Балансировщики (Envoy ring hash, Maglev)</td><td>липкость запросов к инстансу</td></tr>
-        <tr><td>Redis Cluster</td><td>не кольцо, а 16384 фиксированных слота, распределённых по узлам — тот же эффект: переезжают слоты, а не все ключи</td></tr>
-      </table></div>
-      <p>Альтернативы: rendezvous hashing (HRW) — для ключа считаем хеш с каждым узлом и берём максимум, проще и без кольца, O(N) на выбор; jump consistent hash — без памяти, но только для нумерованных узлов без удаления из середины.</p>
-    </div></div></article>
-<article id="q264" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">264. SQL или NoSQL: как выбрать</h2><div class="answer" hidden><div class="short"><p>По умолчанию — <b>реляционная база</b>: транзакции, связи, гибкие запросы, понятная консистентность; PostgreSQL с партициями и репликами закрывает большинство задач. NoSQL — под <b>конкретный профиль</b>:</p>
-<ul><li><b>Redis</b> — кеш, счётчики, лимиты;</li><li><b>MongoDB</b> — гибкая документная модель и встроенный шардинг;</li><li><b>Cassandra</b> — огромный поток записи, чтение по известному ключу, несколько дата-центров.</li></ul>
-<p>Сначала <b>паттерны доступа и объёмы</b>, потом хранилище.</p></div>
-    <div class="more">
-<ul>
-      <li>Сначала паттерны доступа и объёмы, потом хранилище. PostgreSQL с партициями и репликами закрывает большинство задач.</li>
-    </ul>
-<div class="table-wrap"><table>
-        <tr><th>Тип</th><th>Сильные стороны</th><th>Слабые стороны</th><th>Примеры задач</th></tr>
-        <tr><td>Реляционная (PostgreSQL)</td><td>транзакции, ограничения, JOIN, произвольные запросы, зрелость</td><td>горизонтальное масштабирование записи — сложно</td><td>деньги, заказы, учёт — почти всё</td></tr>
-        <tr><td>Key-value (Redis)</td><td>микросекунды, структуры данных, TTL</td><td>память, ограниченная персистентность, нет запросов по значению</td><td>кеш, сессии, счётчики, лимиты, блокировки</td></tr>
-        <tr><td>Документная (MongoDB)</td><td>гибкая схема, вложенные документы, горизонтальный шардинг</td><td>JOIN и транзакции между документами ограничены и дороже</td><td>каталог, профили с переменной структурой, контент</td></tr>
-        <tr><td>Wide-column (Cassandra, ScyllaDB)</td><td>огромный поток записи, линейное масштабирование, мульти-ДЦ</td><td>запросы только по заранее спроектированным ключам, eventual consistency, нет JOIN</td><td>телеметрия, события, история с доступом по ключу</td></tr>
-        <tr><td>Колоночная аналитическая (ClickHouse)</td><td>агрегации по миллиардам строк за секунды</td><td>точечные обновления и транзакции</td><td>отчёты, логи, аналитика</td></tr>
-        <tr><td>Графовая (Neo4j)</td><td>обход связей произвольной глубины</td><td>масштабирование, нишевость</td><td>антифрод-связи, рекомендации</td></tr>
-        <tr><td>Поисковая (OpenSearch)</td><td>полнотекст, фасеты, ранжирование</td><td>не источник истины</td><td>поиск</td></tr>
-      </table></div>
-      <p>Порядок рассуждения: какие запросы (по ключу или произвольные, нужны ли JOIN и агрегации), соотношение чтения и записи, объём и рост, требования к консистентности и транзакциям, задержка, мульти-ДЦ, компетенции команды и стоимость эксплуатации. Нередко итог — несколько хранилищ (polyglot persistence): PostgreSQL как источник истины + Redis + поисковый индекс + аналитическое хранилище, синхронизированные событиями.</p>
-      <p>«NoSQL быстрее» — миф без контекста: Cassandra быстрее на записи по ключу в огромных объёмах, но медленнее и неудобнее для любого запроса, под который не спроектирована таблица (там правило «таблица на запрос» и денормализация).</p>
-    </div></div></article>
-<article id="q265" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">265. Генерация уникальных ID <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li><b>Sequence</b> в базе — просто и компактно, но централизованно.</li><li><b>UUIDv4</b> — где угодно, но случайный и фрагментирует индексы; <b>UUIDv7</b> упорядочен по времени.</li><li><b>Snowflake</b> — 64 бита из времени, номера воркера и счётчика: компактно и сортируемо, но нужно раздавать номера воркеров и защищаться от отката часов.</li></ul>
-<p>Последовательные id <b>наружу не отдают</b>: по ним видны объёмы бизнеса и проще перебирать чужие ресурсы.</p></div>
-    <div class="more">
-<ul><li>Последовательные id наружу не отдают: по ним видны объёмы бизнеса и возможен перебор.</li></ul>
-<pre class="wide"><span class="c">// Snowflake (64 бита):</span>
-<span class="c">// 1 бит знака | 41 бит миллисекунд от эпохи (~69 лет) | 10 бит id воркера (1024) | 12 бит счётчика (4096/мс)</span>
-<span class="k">long</span> next() {
-    <span class="k">long</span> now = clock.millis();
-    <span class="k">if</span> (now &lt; lastTs) <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>(<span class="s">"clock moved backwards"</span>);   <span class="c">// или ждать</span>
-    <span class="k">if</span> (now == lastTs) {
-        seq = (seq + <span class="n">1</span>) &amp; 0xFFF;
-        <span class="k">if</span> (seq == <span class="n">0</span>) now = waitNextMillis(lastTs);          <span class="c">// 4096 id в мс исчерпаны</span>
-    } <span class="k">else</span> seq = <span class="n">0</span>;
-    lastTs = now;
-    <span class="k">return</span> ((now - <span class="t">EPOCH</span>) &lt;&lt; <span class="n">22</span>) | (workerId &lt;&lt; <span class="n">12</span>) | seq;
-}</pre>
-<pre class="narrow"><span class="c">// Snowflake (64 бита):</span>
-<span class="c">//  1 бит знака</span>
-<span class="c">// 41 бит миллисекунд от эпохи (~69 лет)</span>
-<span class="c">// 10 бит id воркера (1024)</span>
-<span class="c">// 12 бит счётчика (4096/мс)</span>
-<span class="k">long</span> next() {
-    <span class="k">long</span> now = clock.millis();
-    <span class="k">if</span> (now &lt; lastTs) {
-        <span class="c">// или ждать</span>
-        <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>(
-                <span class="s">"clock moved backwards"</span>);
+    <span class="k">var</span> entry =
+        ring.ceilingEntry(keyHash);
+    <span class="k">if</span> (entry == <span class="k">null</span>) {
+        entry = ring.firstEntry();
     }
-    <span class="k">if</span> (now == lastTs) {
-        seq = (seq + <span class="n">1</span>) &amp; 0xFFF;
-        <span class="c">// 4096 id в мс исчерпаны</span>
-        <span class="k">if</span> (seq == <span class="n">0</span>) {
-            now = waitNextMillis(lastTs);
-        }
-    } <span class="k">else</span> {
-        seq = <span class="n">0</span>;
+    <span class="k">return</span> entry.getValue();
+}</pre><p>При hash % N изменение N меняет многие назначения. В кольце меняются только затронутые диапазоны, но всё равно нужны согласованный список узлов, версия конфигурации и безопасная миграция. Redis Cluster использует фиксированные hash slots, а не это кольцо; rendezvous hashing выбирает узел иначе, без кольца.</p><p class="follow"><b>Почему 150 виртуальных узлов не гарантируют равную нагрузку?</b> Они выравнивают распределение диапазонов, а не частоту запросов. Один популярный ключ всё равно может перегрузить своего владельца.</p>
+    </div></div></article>
+<article id="q264" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">264. SQL или NoSQL: как выбрать</h2><div class="answer" hidden><div class="short"><p><b>Выбор хранилища начинаю с запросов и гарантий.</b> Какие ключи чтения, транзакции, ограничения целостности, объёмы и требования к отказам нужны системе?</p><p>Реляционная БД часто даёт простую основу для связанных бизнес-данных. Документное, key-value, wide-column или аналитическое хранилище выбирают под конкретный профиль доступа, а не по слову «масштаб».</p><p><b>NoSQL не означает отсутствие транзакций, а SQL не означает отсутствие горизонтального масштабирования.</b> Возможности проверяют у конкретного продукта.</p></div>
+    <div class="more">
+<div class="table-wrap"><table><tr><th>Доступ</th><th>Кандидат и компромисс</th></tr><tr><td>Связанные операции, ограничения и JOIN</td><td>PostgreSQL: выразительная модель; распределение записи требует отдельного решения</td></tr><tr><td>Документ читается/меняется как целое</td><td>Документная БД; важны размер документа и междокументные операции</td></tr><tr><td>Чтение по заранее выбранному ключу при большом потоке</td><td>Wide-column/KV; модель запросов обычно проектируется заранее</td></tr><tr><td>Агрегаты по большим историческим наборам</td><td>Колоночная аналитическая БД; это другой профиль, чем точечный OLTP</td></tr><tr><td>Текстовый поиск</td><td>Поисковый индекс как отдельная read-модель</td></tr></table></div><p>Например, платежи хранятся в транзакционной БД, поиск — в индексе, отчётные агрегаты — в аналитическом хранилище. Каждая дополнительная копия требует доставки изменений, наблюдения за lag и восстановления; начинать с трёх баз только ради диаграммы не нужно.</p><p class="follow"><b>Когда добавить второе хранилище?</b> Когда измеренное требование плохо закрывается первым: например, поиск с ранжированием или тяжёлая аналитика мешают основному контуру. Сразу определяют владельца данных и способ пересборки копии.</p>
+    </div></div></article>
+<article id="q265" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">265. Генерация уникальных ID <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li><b>Sequence:</b> компактный упорядоченный id; выдаётся централизованно, пропуски нормальны.</li><li><b>UUIDv4:</b> можно генерировать независимо; случайное распределение влияет на локальность индекса.</li><li><b>UUIDv7:</b> содержит время и улучшает временную локальность; не обещает глобальный строгий порядок.</li><li><b>Snowflake:</b> обычно 64-битная комбинация времени, worker id и счётчика; требует уникальных worker id и политики отката часов.</li></ul><p>Непредсказуемый id не заменяет авторизацию. Последовательный публичный id — вопрос контракта и раскрытия информации, а не безусловный запрет.</p></div>
+    <div class="more">
+<div class="table-wrap"><table><tr><th>Требование</th><th>Что проверить</th></tr><tr><td>Генерация до обращения к БД</td><td>UUID или распределённый генератор</td></tr><tr><td>Строгий глобальный порядок</td><td>Нужен отдельный согласованный протокол, timestamp сам по себе недостаточен</td></tr><tr><td>Минимальный размер ключа</td><td>Sequence / 64-битный вариант, с учётом инфраструктуры генерации</td></tr><tr><td>Скрыть время и объёмы</td><td>Случайный публичный идентификатор или отдельный opaque token</td></tr></table></div><pre><span class="t">UUID</span> id = <span class="t">UUID</span>.randomUUID();
+<span class="t">System</span>.out.println(id.version()); <span class="c">// 4</span></pre><p>Это Java 21 и UUIDv4; UUIDv7 требует поддерживающей его реализации. У временных схем проверяют одинаковый timestamp у многих генераторов, откат часов и переполнение счётчика. Коллизии вероятностных id всё равно страхуют уникальным ограничением хранилища.</p><p class="follow"><b>Sequence — надёжный номер документа без пропусков?</b> Нет. Номера могут быть потеряны на rollback, cache или сбое. Непрерывная юридически значимая нумерация — отдельное бизнес-требование и протокол.</p>
+    </div></div></article>
+<article id="q266" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">266. Backpressure: что делать, когда потребитель не успевает</h2><div class="answer" hidden><div class="short"><p><b>Backpressure означает, что перегруженный потребитель ограничивает поступление работы.</b> Это ограниченная очередь, запрос demand в Reactive Streams, отказ на входе или лимит выполняемых операций.</p><p><b>Буфер даёт время, но не дополнительную производительность.</b> Если средняя скорость входа выше обработки, любая конечная очередь заполнится. Нужны лимиты, срок ожидания и заранее выбранное поведение: ждать, отклонять, отбрасывать или деградировать.</p></div>
+    <div class="more">
+<pre class="wide"><span class="k">var</span> queue = <span class="k">new</span> <span class="t">ArrayBlockingQueue</span>&lt;<span class="t">String</span>&gt;(<span class="n">100</span>);
+<span class="k">boolean</span> accepted = queue.offer(<span class="s">"task"</span>);
+<span class="k">if</span> (!accepted) <span class="k">throw</span> <span class="k">new</span> <span class="t">RejectedExecutionException</span>();</pre>
+<pre class="narrow"><span class="k">var</span> queue =
+    <span class="k">new</span> <span class="t">ArrayBlockingQueue</span>&lt;<span class="t">String</span>&gt;(<span class="n">100</span>);
+<span class="k">boolean</span> accepted = queue.offer(<span class="s">"task"</span>);
+<span class="k">if</span> (!accepted) {
+    <span class="k">throw</span> <span class="k">new</span>
+        <span class="t">RejectedExecutionException</span>();
+}</pre><p>В примере отказ явный; очередь должна быть общей для производителей и работников. В HTTP его переводят в ответ по контракту, а не молча теряют работу. put блокировал бы производителя — это допустимо не на любом потоке, особенно не на event loop.</p><div class="table-wrap"><table><tr><th>Вариант</th><th>Цена</th></tr><tr><td>Ждать в ограниченном буфере</td><td>Задержка и занятые ресурсы; нужен deadline</td></tr><tr><td>Отклонять запросы</td><td>Клиент должен понимать, когда и безопасно ли повторять</td></tr><tr><td>Долговечная очередь</td><td>Нужны retention, бюджет диска, идемпотентность и контроль возраста</td></tr><tr><td>Сбросить второстепенные данные</td><td>Допустимо только там, где потеря согласована</td></tr></table></div><p class="follow"><b>Что важнее — длина очереди или возраст задачи?</b> Оба показателя. Возраст показывает нарушение пользовательского срока; одинаковая длина при разной скорости обработки означает разную задержку.</p>
+    </div></div></article>
+<article id="q267" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">267. Распределённый rate limiter <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Rate limiter ограничивает частоту, а не число одновременных вызовов.</b> Fixed window считает в окне, sliding window сглаживает границы, token bucket разрешает короткий burst при заданной средней скорости.</p><p>Для общей квоты решение принимают атомарно в общем хранилище либо раздают локальные доли. <b>Локальный лимит 100/с на десяти инстансах не равен глобальным 100/с.</b></p><p>При отказе возвращают 429 с понятным Retry-After; заранее выбирают поведение при недоступности хранилища лимитов.</p></div>
+    <div class="more">
+<p><b>Минимальное окно от первого запроса:</b> один Lua-вызов атомарно увеличивает счётчик и устанавливает TTL только при его создании. KEYS[1] — ключ клиента/операции, ARGV — положительные limit и windowMs.</p><pre>local limit = tonumber(<span class="t">ARGV</span>[<span class="n">1</span>])
+local count = redis.call('<span class="t">INCR</span>', <span class="t">KEYS</span>[<span class="n">1</span>])
+<span class="k">if</span> count == <span class="n">1</span> then
+  redis.call('<span class="t">PEXPIRE</span>', <span class="t">KEYS</span>[<span class="n">1</span>], <span class="t">ARGV</span>[<span class="n">2</span>])
+end
+local allowed = count &lt;= limit
+<span class="k">return</span> {allowed and <span class="n">1</span> or <span class="n">0</span>,
+        redis.call('<span class="t">PTTL</span>', <span class="t">KEYS</span>[<span class="n">1</span>])}</pre><p>Это простой fixed-duration вариант, не точный sliding window. Отказанные запросы тоже увеличивают счётчик, TTL не продлевается. На границе двух окон возможен всплеск почти в двойной лимит. Key eviction и failover также влияют на строгость гарантии.</p><div class="table-wrap"><table><tr><th>Сбой общего limiter</th><th>Возможное решение</th></tr><tr><td>Fail-open</td><td>Сохранить доступность, но разрешить превышение; нужна локальная аварийная защита</td></tr><tr><td>Fail-closed</td><td>Сохранить ограничение ценой отказа части штатных запросов</td></tr><tr><td>Локальная квота</td><td>Снизить зависимость от сети, приняв погрешность распределения</td></tr></table></div><p class="follow"><b>Хватит rate limit для защиты медленного API?</b> Нет. Даже разрешённый поток может накопить много параллельных вызовов при росте latency. Отдельно нужны bulkhead и таймауты.</p>
+    </div></div></article>
+<article id="q268" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">268. Распределённая блокировка и выбор лидера <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Блокировка выбирает владельца критической операции; lease ограничивает срок владения.</b> После паузы или потери связи старый процесс может продолжить работу уже без права на ресурс.</p><p><b>Fencing защищает сам ресурс:</b> каждая новая эпоха владения получает больший token, а хранилище отвергает старые. Один выбор лидера, в том числе через Kubernetes Lease, не обеспечивает этого автоматически.</p><p>Часто проще использовать транзакцию, уникальное ограничение или условный UPDATE вместо отдельного распределённого lock.</p></div>
+    <div class="more">
+<p><b>Пример защиты записи по эпохе:</b> новый владелец имеет token больше сохранённого. Сравнение и изменение выполняет сам ресурс атомарно.</p><pre><span class="k">UPDATE</span> resource
+<span class="k">SET</span> value = :value, fence = :token
+<span class="k">WHERE</span> id = :id
+  <span class="k">AND</span> fence &lt;= :token;</pre><p>После принятия token=12 запрос старого владельца с token=11 не изменит строку. <= допускает несколько действий текущего владельца; дедупликация самих действий и их порядок внутри эпохи — отдельная задача. Номер должен выдаваться надёжным монотонным протоколом, а не случайным UUID.</p><div class="table-wrap"><table><tr><th>Подход</th><th>Граница гарантии</th></tr><tr><td>Транзакционная блокировка БД</td><td>Действует в пределах соединения/транзакции; внешнее API не становится её участником</td></tr><tr><td>Redis NX + TTL</td><td>Аренда может истечь; random token помогает снять только свой lock, но не fencing</td></tr><tr><td>etcd / ZooKeeper / election</td><td>Согласуют владение в своей системе; внешний ресурс должен проверять эпоху</td></tr><tr><td>SKIP LOCKED</td><td>Распределяет текущий захват строк; после COMMIT нужна отдельная логика выполнения</td></tr></table></div><p class="follow"><b>Проверю lease перед каждой записью — fencing больше не нужен?</b> Между проверкой и записью процесс может остановиться и потерять аренду. Нужна атомарная проверка права именно там, где применяется защищаемый эффект.</p>
+    </div></div></article>
+<article id="q269" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">269. API Gateway и BFF <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>API Gateway</b> маршрутизирует внешние запросы и применяет общие политики: TLS, аутентификацию, квоты, ограничения размера и наблюдение.</p><p><b>BFF</b> готовит API под конкретного клиента: например, собирает экран мобильного приложения из нескольких сервисов и скрывает от клиента лишние запросы.</p><p>Бизнес-инварианты и право на конкретный ресурс остаются у владельца домена. BFF не должен превращать общий gateway в центр всех бизнес-процессов.</p></div>
+    <div class="more">
+<div class="table-wrap"><table><tr><th>Задача</th><th>Где обычно решается</th></tr><tr><td>Проверить токен, маршрут и входную квоту</td><td>Gateway</td></tr><tr><td>Собрать summary для мобильного экрана</td><td>BFF</td></tr><tr><td>Проверить возможность списания</td><td>Платёжный домен / владелец счёта</td></tr><tr><td>Удержать лимит на вызов провайдера</td><td>В сервисе, который реально делает вызов</td></tr></table></div><p>Агрегация BFF требует общего deadline: параллельные обращения не должны ждать бесконечно. Для необязательного блока экрана можно вернуть частичный результат, а обязательная информация должна иметь явную ошибку. Десять параллельных запросов к внутренним сервисам могут увеличить нагрузку, хотя внешнему клиенту стало удобнее.</p><p class="follow"><b>Один запрос клиента всегда быстрее нескольких?</b> Не обязательно. BFF экономит сетевые round trips клиента, но его внутренняя цепочка может стать медленной или дорогой. Нужны измерения критического пути и объёма fan-out.</p>
+    </div></div></article>
+<article id="q270" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">270. Полнотекстовый поиск рядом с основной БД <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Основная БД остаётся источником истины, поиск — восстанавливаемой проекцией.</b> Изменения доставляются через CDC или outbox, а не двумя независимыми записями «в БД и индекс».</p><p>Индекс обновляется с задержкой; допустимая свежесть входит в контракт. Повторы, удаление документов и перестановку событий нужно учитывать явно.</p><p>Для простых запросов сначала проверяю полнотекстовый поиск основной БД; отдельный движок добавляет эксплуатацию и согласование копий.</p></div>
+    <div class="more">
+<figure class="concept" aria-labelledby="sd-search-projection-caption"><svg viewBox="0 0 320 260" role="img" aria-labelledby="sd-search-projection-title sd-search-projection-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-search-projection-title">Поисковая проекция</title><desc id="sd-search-projection-desc">Изменение фиксируется в основной БД. Доставка изменений обновляет индекс, который можно восстановить заново.</desc><defs><marker id="sd-search-projection-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 62 V96" marker-end="url(#sd-search-projection-arrow)"/><path class="concept-edge" d="M160 150 V184" marker-end="url(#sd-search-projection-arrow)"/><rect class="concept-node accent" x="16" y="12" width="288" height="50" rx="9"/><text x="160.0" y="42.0" text-anchor="middle">Основная БД + outbox / WAL</text><rect class="concept-node plain" x="16" y="100" width="288" height="50" rx="9"/><text x="160.0" y="130.0" text-anchor="middle">CDC / доставка событий</text><rect class="concept-node plain" x="16" y="188" width="288" height="60" rx="9"/><text x="160.0" y="213.0" text-anchor="middle">Поисковый индекс</text><text x="160.0" y="233.0" text-anchor="middle">read-модель</text></svg><figcaption id="sd-search-projection-caption">Изменение фиксируется в основной БД. Доставка изменений обновляет индекс, который можно восстановить заново.</figcaption></figure><ol><li>Зафиксировать бизнес-изменение и надёжный источник события.</li><li>Обновлять документ с устойчивым id; старую версию не применять поверх новой.</li><li>Наблюдать lag и ошибки индексирования, уметь повторить доставку.</li><li>Для пересборки создать новый индекс, загрузить согласованный snapshot и догнать изменения.</li><li>После сверки переключить alias/маршрут чтения, затем удалить старый индекс.</li></ol><p>Нельзя просто запустить копирование таблицы и одновременно слать новые события без протокола границы: поздний snapshot может затереть свежую версию. Для read-your-writes можно временно читать конкретный объект из источника истины, пока проекция не догнала нужную версию.</p><p class="follow"><b>Успешная запись в индекс означает, что документ уже виден поиску?</b> Не обязательно: видимость зависит от refresh и настроек движка. Подтверждение записи и доступность через search — разные точки.</p>
+    </div></div></article>
+<article id="q271" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">271. Спроектируйте сокращатель ссылок <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Храним отображение code → URL, срок действия и владельца.</b> Код можно получить из уникального числового id через base62 либо случайной генерацией с проверкой уникальности.</p><p>Чтение: найти запись, проверить срок/политику и вернуть redirect; горячие ссылки кешируются. Аналитику переходов передают отдельно, чтобы не задерживать редирект.</p><p><b>Base62 — кодирование, не сокрытие данных.</b> Тип редиректа и Cache-Control выбирают под требования к изменению адреса и наблюдению переходов.</p></div>
+    <div class="more">
+<figure class="concept" aria-labelledby="sd-short-links-caption"><svg viewBox="0 0 320 256" role="img" aria-labelledby="sd-short-links-title sd-short-links-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-short-links-title">Чтение короткой ссылки</title><desc id="sd-short-links-desc">API находит целевой URL через кеш или хранилище. Метаданные и срок действия остаются в постоянной БД.</desc><defs><marker id="sd-short-links-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 56 V88" marker-end="url(#sd-short-links-arrow)"/><path class="concept-edge" d="M160 142 V166 H80 V186" marker-end="url(#sd-short-links-arrow)"/><path class="concept-edge" d="M160 142 V166 H240 V186" marker-end="url(#sd-short-links-arrow)"/><rect class="concept-node plain" x="16" y="12" width="288" height="44" rx="9"/><text x="160.0" y="39.0" text-anchor="middle">GET /{code}</text><rect class="concept-node accent" x="16" y="92" width="288" height="50" rx="9"/><text x="160.0" y="122.0" text-anchor="middle">Redirect API</text><rect class="concept-node plain" x="8" y="190" width="144" height="54" rx="9"/><text x="80.0" y="222.0" text-anchor="middle">Кеш</text><rect class="concept-node plain" x="168" y="190" width="144" height="54" rx="9"/><text x="240.0" y="222.0" text-anchor="middle">БД: code → URL</text></svg><figcaption id="sd-short-links-caption">API находит целевой URL через кеш или хранилище. Метаданные и срок действия остаются в постоянной БД.</figcaption></figure><pre class="wide"><span class="k">class</span> <span class="t">ShortCode</span> {
+    <span class="k">private</span> <span class="k">static</span> <span class="k">final</span> <span class="t">String</span> <span class="t">DIGITS</span> =
+        <span class="s">"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"</span>;
+
+    <span class="k">static</span> <span class="t">String</span> encode(<span class="k">long</span> id) {
+        <span class="k">if</span> (id &lt; <span class="n">0</span>) <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalArgumentException</span>();
+        <span class="k">var</span> code = <span class="k">new</span> <span class="t">StringBuilder</span>();
+        <span class="k">do</span> {
+            code.append(<span class="t">DIGITS</span>.charAt((<span class="k">int</span>) (id % <span class="n">62</span>)));
+            id /= <span class="n">62</span>;
+        } <span class="k">while</span> (id != <span class="n">0</span>);
+        <span class="k">return</span> code.reverse().toString();
     }
-    lastTs = now;
-    <span class="k">return</span> ((now - <span class="t">EPOCH</span>) &lt;&lt; <span class="n">22</span>)
-            | (workerId &lt;&lt; <span class="n">12</span>) | seq;
 }</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Способ</th><th>Размер</th><th>Сортируемость</th><th>Координация</th><th>Минусы</th></tr>
-        <tr><td>Sequence/identity БД</td><td>8 байт</td><td>да</td><td>центральная БД</td><td>точка отказа, нужен round-trip (смягчается pooled)</td></tr>
-        <tr><td>UUIDv4</td><td>16 байт</td><td>нет</td><td>не нужна</td><td>фрагментация B-tree, размер</td></tr>
-        <tr><td>UUIDv7 / ULID</td><td>16 байт</td><td>по времени</td><td>не нужна</td><td>размер; время создания видно из id</td></tr>
-        <tr><td>Snowflake</td><td>8 байт</td><td>по времени</td><td>уникальные id воркеров</td><td>часы, раздача workerId (в k8s — из ordinal StatefulSet или через лиз в БД)</td></tr>
-        <tr><td>Диапазоны (hi/lo)</td><td>8 байт</td><td>примерно</td><td>выдача диапазонов из БД</td><td>дыры при рестарте</td></tr>
-      </table></div>
-      <p>Внешние идентификаторы (видимые клиенту, в URL) лучше отделять от внутренних первичных ключей: внешний — непредсказуемый (UUID, случайная строка), внутренний — компактный и последовательный. Последовательный id в URL раскрывает объём бизнеса (номер заказа 1000234 вчера и 1000534 сегодня — 300 заказов в день) и облегчает перебор чужих ресурсов (IDOR).</p>
-<p class="follow"><b>Часы Snowflake-генератора ушли назад?</b> Ждать, пока время догонит последний выданный timestamp, или отказать — никогда не выдавать id «из прошлого».</p>
-    </div></div></article>
-<article id="q266" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">266. Backpressure: что делать, когда потребитель не успевает</h2><div class="answer" hidden><div class="short"><p>Четыре варианта:</p>
-<ul><li><b>буферизовать</b> — очередь вроде Kafka выдержит часы отставания;</li><li><b>замедлить источник</b> — ограниченная очередь блокирует продюсера, reactive streams запрашивают ровно столько, сколько готовы обработать, HTTP отвечает <b>429</b>;</li><li><b>отбросить лишнее</b> — load shedding;</li><li><b>деградировать</b> функциональность.</li></ul>
-<p><b>Неограниченная очередь в памяти</b> — не решение, а отложенный OutOfMemoryError.</p></div>
-    <div class="more">
-<ul>
-      <li>Неограниченная очередь в памяти — не решение, а отложенный OutOfMemoryError.</li>
-    </ul>
-<div class="table-wrap"><table>
-        <tr><th>Стратегия</th><th>Механизм</th><th>Цена</th></tr>
-        <tr><td>Буферизовать</td><td>Kafka, ограниченная очередь в памяти</td><td>задержка растёт; память/диск конечны</td></tr>
-        <tr><td>Замедлить источник</td><td>блокирующий put в BlockingQueue, CallerRunsPolicy, Reactive Streams request(n), TCP flow control, 429 + Retry-After</td><td>источник должен уметь ждать</td></tr>
-        <tr><td>Отбросить</td><td>load shedding, DiscardOldest, сэмплирование метрик и логов</td><td>потеря части данных — допустимо не везде</td></tr>
-        <tr><td>Объединить</td><td>батчинг, коалесценция (из 100 обновлений позиции хранить последнее)</td><td>подходит для идемпотентных обновлений состояния</td></tr>
-        <tr><td>Масштабировать потребителя</td><td>автоскейлинг по длине очереди (KEDA по lag)</td><td>время реакции, лимиты зависимостей потребителя</td></tr>
-      </table></div>
-<pre class="wide"><span class="c">// Reactor: потребитель запрашивает столько, сколько готов обработать</span>
-<span class="t">Flux</span>.from(source)
-    .onBackpressureBuffer(<span class="n">10_000</span>, dropped -&gt; metrics.dropped(), <span class="t">BufferOverflowStrategy</span>.<span class="t">DROP_OLDEST</span>)
-    .flatMap(<span class="k">this</span>::process, <span class="n">32</span>)               <span class="c">// не больше 32 параллельных обработок</span>
-    .subscribe();
+<pre class="narrow"><span class="k">class</span> <span class="t">ShortCode</span> {
+  <span class="k">private</span> <span class="k">static</span> <span class="k">final</span> <span class="t">String</span> <span class="t">DIGITS</span> =
+    <span class="s">"0123456789"</span> +
+    <span class="s">"ABCDEFGHIJKLMNOPQRSTUVWXYZ"</span> +
+    <span class="s">"abcdefghijklmnopqrstuvwxyz"</span>;
 
-<span class="c">// Tomcat: вместо бесконечного ожидания — быстрый отказ при перегрузке</span>
-server.tomcat.accept-count: <span class="n">100</span>              <span class="c">// очередь соединений сверх потоков</span>
-server.tomcat.threads.max: <span class="n">200</span></pre>
-<pre class="narrow"><span class="c">// Reactor: потребитель запрашивает столько,</span>
-<span class="c">// сколько готов обработать</span>
-<span class="t">Flux</span>.from(source)
-    .onBackpressureBuffer(<span class="n">10_000</span>,
-            dropped -&gt; metrics.dropped(),
-            <span class="t">DROP_OLDEST</span>)
-    <span class="c">// не больше 32 параллельных обработок</span>
-    .flatMap(<span class="k">this</span>::process, <span class="n">32</span>)
-    .subscribe();
-
-<span class="c">// Tomcat: вместо бесконечного ожидания —</span>
-<span class="c">// быстрый отказ при перегрузке</span>
-<span class="c">// очередь соединений сверх потоков:</span>
-server.tomcat.accept-count: <span class="n">100</span>
-server.tomcat.threads.max: <span class="n">200</span></pre>
-      <p>Ключевая мысль: перегрузка должна быть видна и обработана в одном месте, а не распространяться по системе в виде растущих очередей, таймаутов и OOM. Ограниченность всех очередей + метрики их заполнения + решение на границе системы (отказать, отложить, деградировать).</p>
-      <p>Закон Литтла пригодится в обсуждении: число запросов в системе = скорость поступления × время пребывания. Если поступает 1000/с, а обработка 50 мс, внутри одновременно ~50 запросов; если обработка деградировала до 2 с — уже 2000, и пулы на 200 потоков переполнены.</p>
-    </div></div></article>
-<article id="q267" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">267. Распределённый rate limiter <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li>Алгоритмы: <b>fixed window</b> — просто, но всплески на границе окон; <b>sliding window</b> — точнее; <b>token bucket</b> — короткие всплески при средней скорости; <b>leaky bucket</b> — выравнивает поток.</li><li>Распределённо — счётчик в <b>Redis</b> с атомарным Lua-скриптом и временем самого Redis, либо <b>локальные лимитеры</b> с долей квоты: менее точно, но без сетевого вызова.</li></ul>
-<p>При превышении — <b>429 с Retry-After</b>. Заранее решить, что делать, если Redis недоступен.</p></div>
-    <div class="more">
-<ul><li>Горячие ключи в Redis Cluster ложатся на один шард. Время берут из одного источника (TIME в Redis), иначе мешает расхождение часов.</li></ul>
-<div class="table-wrap"><table>
-        <tr><th>Алгоритм</th><th>Как</th><th>Плюсы</th><th>Минусы</th></tr>
-        <tr><td>Fixed window</td><td>счётчик на ключ + минуту</td><td>просто, один INCR</td><td>до 2× лимита на стыке окон</td></tr>
-        <tr><td>Sliding window log</td><td>метки времени всех запросов (sorted set)</td><td>точно</td><td>память на каждый запрос</td></tr>
-        <tr><td>Sliding window counter</td><td>текущее и прошлое окно, взвешенная сумма</td><td>почти точно, дёшево</td><td>приближение</td></tr>
-        <tr><td>Token bucket</td><td>ведро ёмкости B, пополняется со скоростью R</td><td>разрешает всплески до B, средняя скорость R</td><td>два параметра</td></tr>
-        <tr><td>Leaky bucket</td><td>очередь, обрабатываемая с постоянной скоростью</td><td>ровный исходящий поток</td><td>задержки, не отказы</td></tr>
-      </table></div>
-<pre class="wide"><span class="c">-- token bucket в Redis одним атомарным скриптом</span>
-<span class="c">-- KEYS[1] — ключ клиента; ARGV: ёмкость, скорость в токенах/сек, стоимость запроса</span>
-local t = redis.call(<span class="s">'TIME'</span>)
-local now = tonumber(t[<span class="n">1</span>]) + tonumber(t[<span class="n">2</span>]) / 1e6          <span class="c">-- время сервера Redis, не клиента</span>
-local cap, rate, cost = tonumber(ARGV[<span class="n">1</span>]), tonumber(ARGV[<span class="n">2</span>]), tonumber(ARGV[<span class="n">3</span>])
-local b = redis.call(<span class="s">'HMGET'</span>, KEYS[<span class="n">1</span>], <span class="s">'tokens'</span>, <span class="s">'ts'</span>)
-local tokens = tonumber(b[<span class="n">1</span>]) <span class="k">or</span> cap
-local ts = tonumber(b[<span class="n">2</span>]) <span class="k">or</span> now
-tokens = math.min(cap, tokens + (now - ts) * rate)          <span class="c">-- пополнить за прошедшее время</span>
-local allowed = tokens &gt;= cost
-<span class="k">if</span> allowed <span class="k">then</span> tokens = tokens - cost <span class="k">end</span>
-redis.call(<span class="s">'HSET'</span>, KEYS[<span class="n">1</span>], <span class="s">'tokens'</span>, tokens, <span class="s">'ts'</span>, now)
-redis.call(<span class="s">'PEXPIRE'</span>, KEYS[<span class="n">1</span>], math.ceil(cap / rate * <span class="n">1000</span>))
-return allowed <span class="k">and</span> <span class="n">1</span> <span class="k">or</span> <span class="n">0</span></pre>
-<pre class="narrow"><span class="c">-- token bucket в Redis одним атомарным</span>
-<span class="c">-- скриптом. KEYS[1] — ключ клиента;</span>
-<span class="c">-- ARGV: ёмкость, скорость в токенах/сек,</span>
-<span class="c">-- стоимость запроса</span>
-local t = redis.call(<span class="s">'TIME'</span>)
-<span class="c">-- время сервера Redis, не клиента</span>
-local now = tonumber(t[<span class="n">1</span>])
-          + tonumber(t[<span class="n">2</span>]) / 1e6
-local cap = tonumber(ARGV[<span class="n">1</span>])
-local rate = tonumber(ARGV[<span class="n">2</span>])
-local cost = tonumber(ARGV[<span class="n">3</span>])
-local b = redis.call(<span class="s">'HMGET'</span>, KEYS[<span class="n">1</span>],
-                     <span class="s">'tokens'</span>, <span class="s">'ts'</span>)
-local tokens = tonumber(b[<span class="n">1</span>]) <span class="k">or</span> cap
-local ts = tonumber(b[<span class="n">2</span>]) <span class="k">or</span> now
-<span class="c">-- пополнить за прошедшее время</span>
-tokens = math.min(cap,
-                  tokens + (now - ts) * rate)
-local allowed = tokens &gt;= cost
-<span class="k">if</span> allowed <span class="k">then</span> tokens = tokens - cost <span class="k">end</span>
-redis.call(<span class="s">'HSET'</span>, KEYS[<span class="n">1</span>],
-           <span class="s">'tokens'</span>, tokens, <span class="s">'ts'</span>, now)
-redis.call(<span class="s">'PEXPIRE'</span>, KEYS[<span class="n">1</span>],
-           math.ceil(cap / rate * <span class="n">1000</span>))
-return allowed <span class="k">and</span> <span class="n">1</span> <span class="k">or</span> <span class="n">0</span></pre>
-      <p>Где ставить: на API Gateway (защита от клиентов, по ключу API или пользователю), в сервисе перед дорогой зависимостью (защита downstream), в клиенте внешнего API (соблюдать лимиты партнёра). Ответ при превышении — <code><span class="n">429</span> <span class="t">Too</span> <span class="t">Many</span> <span class="t">Requests</span></code> с <code><span class="t">Retry</span>-<span class="t">After</span></code> и заголовками остатка (<code><span class="t">RateLimit</span>-<span class="t">Remaining</span></code>).</p>
-      <p>Компромисс точности и задержки: централизованный счётчик в Redis — точный глобальный лимит, но +1 сетевой вызов на запрос и зависимость от Redis. Локальные лимитеры (Resilience4j, Bucket4j в памяти) с квотой «глобальный лимит / число инстансов» — без сетевых вызовов, но неточно при неравномерном распределении трафика и меняющемся числе подов. Гибрид — локальный лимитер, периодически синхронизирующий использованную квоту.</p>
-<p class="follow"><b>Redis недоступен — пропускать или блокировать?</b> Для защиты downstream — откат на локальный лимитер; для платных квот — блокировать.</p>
-    </div></div></article>
-<article id="q268" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">268. Распределённая блокировка и выбор лидера <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li>База уже есть — блокировка в ней: <b>advisory lock</b> или строка-лок с арендой.</li><li><b>Redis SET NX</b> — когда двойное выполнение лишь неэффективно: при failover или долгой GC-паузе владельцев может оказаться двое.</li><li>Важна корректность — <b>etcd, ZooKeeper или Kubernetes Lease</b> плюс <b>fencing token</b>: монотонный номер, по которому ресурс отвергает запись старого владельца.</li></ul>
-<p>Часто лок не нужен вовсе — хватает <b>условного UPDATE</b> или SKIP LOCKED.</p></div>
-    <div class="more">
-<ul><li>Лок без TTL при падении владельца остаётся навсегда; лок с TTL требует fencing, если важна корректность.</li></ul>
-<pre class="wide"><span class="c">// проблема без fencing: клиент 1 взял лок, ушёл в GC-паузу на 40 с, лок истёк (TTL 30 с),</span>
-<span class="c">// клиент 2 взял лок и записал; клиент 1 проснулся и тоже записал — оба «владельцы»</span>
-<span class="c">//</span>
-<span class="c">// fencing token: при каждом захвате — монотонно растущий номер</span>
-<span class="c">// клиент 1: lock → token 33 ... пауза ...</span>
-<span class="c">// клиент 2: lock → token 34 → write(data, 34)   хранилище запоминает max = 34</span>
-<span class="c">// клиент 1: write(data, 33) → отказ: 33 &lt; 34</span>
-
-update resource set data = :data, fence = :token
- where id = :id and fence &lt; :token;        -- проверка на стороне ресурса</pre>
-<pre class="narrow"><span class="c">// проблема без fencing: клиент 1 взял лок,</span>
-<span class="c">// ушёл в GC-паузу на 40 с, лок истёк</span>
-<span class="c">// (TTL 30 с), клиент 2 взял лок и записал;</span>
-<span class="c">// клиент 1 проснулся и тоже записал —</span>
-<span class="c">// оба «владельцы»</span>
-<span class="c">//</span>
-<span class="c">// fencing token: при каждом захвате —</span>
-<span class="c">// монотонно растущий номер</span>
-<span class="c">// клиент 1: lock → token 33 ... пауза ...</span>
-<span class="c">// клиент 2: lock → token 34</span>
-<span class="c">//           → write(data, 34),</span>
-<span class="c">//           хранилище запоминает max = 34</span>
-<span class="c">// клиент 1: write(data, 33)</span>
-<span class="c">//           → отказ: 33 &lt; 34</span>
-
--- проверка на стороне ресурса
-update resource
-   set data = :data, fence = :token
- where id = :id and fence &lt; :token;</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Механизм</th><th>Корректность</th><th>Когда</th></tr>
-        <tr><td><code>pg_advisory_xact_lock(key)</code></td><td>хорошая, пока жива сессия; освобождается с транзакцией</td><td>БД уже есть, критичная секция короткая</td></tr>
-        <tr><td>Строка-лок в БД с lease (<code>locked_until</code>, <code>owner</code>, версия)</td><td>с fencing — хорошая</td><td>ShedLock, задачи планировщика</td></tr>
-        <tr><td>Redis <code><span class="t">SET</span> key token <span class="t">NX</span> <span class="t">PX</span> ttl</code></td><td>не гарантирует взаимного исключения при failover и паузах</td><td>когда двойное выполнение лишь неэффективно</td></tr>
-        <tr><td>etcd / ZooKeeper / Consul</td><td>консенсус (Raft/ZAB), сессии, ревизии как fencing token</td><td>выбор лидера, координация, когда корректность важна</td></tr>
-        <tr><td>Kubernetes Lease</td><td>через etcd API-сервера</td><td>лидер среди подов одного деплоймента</td></tr>
-      </table></div>
-      <p>Выбор лидера: кандидаты пытаются захватить один ресурс (lease с TTL), победитель продлевает его, пока жив; остальные следят и захватывают при истечении. Лидер должен прекращать работу, если не смог продлить lease вовремя (а не после истечения) — с запасом на расхождение часов и паузы. Spring Integration <code><span class="t">LockRegistryLeaderInitiator</span></code> и Spring Cloud Kubernetes leader election реализуют это готово.</p>
-      <p>Часто лок вообще не нужен: идемпотентная операция, условный UPDATE с проверкой статуса, SKIP LOCKED для распределения задач, партиционирование работы по ключу (Kafka) дают порядок без распределённых блокировок.</p>
-<p class="follow"><b>Когда достаточно Redis-лока?</b> Когда двойное выполнение лишь неэффективно, а не опасно.</p>
-    </div></div></article>
-<article id="q269" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">269. API Gateway и BFF <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li><b>API Gateway</b> — единая точка входа: маршрутизация, аутентификация, rate limiting, TLS, логирование.</li><li><b>BFF</b> (Backend for Frontend) — слой под конкретного клиента: агрегирует вызовы нескольких сервисов и отдаёт ровно ту форму, что нужна экрану, <b>за один запрос</b>; принадлежит команде клиента.</li></ul>
-<p><b>Бизнес-логику в gateway не кладут</b> — иначе он станет распределённым монолитом.</p></div>
-    <div class="more">
-<ul><li>Бизнес-логику в gateway не кладут — иначе он становится распределённым монолитом и точкой отказа.</li></ul>
-<div class="table-wrap"><table>
-        <tr><th>Задача gateway</th><th>Пример</th></tr>
-        <tr><td>Маршрутизация</td><td><code>/api/payments/**</code> → payments-service, канареечный процент трафика на новую версию</td></tr>
-        <tr><td>Аутентификация</td><td>проверка JWT, обмен сессионной cookie на токен для внутренних сервисов</td></tr>
-        <tr><td>Rate limiting, квоты</td><td>по API-ключу партнёра</td></tr>
-        <tr><td>TLS-терминация, CORS, сжатие</td><td></td></tr>
-        <tr><td>Наблюдаемость</td><td>access-логи, метрики по маршрутам, начало трейса</td></tr>
-        <tr><td>Трансформация протоколов</td><td>REST снаружи → gRPC внутри</td></tr>
-      </table></div>
-<pre class="wide"><span class="c">// BFF мобильного приложения: один экран — один запрос клиента, параллельные вызовы внутри</span>
-<span class="a">@GetMapping</span>(<span class="s">"/mobile/home"</span>)
-<span class="t">HomeScreen</span> home(<span class="a">@AuthenticationPrincipal</span> <span class="t">Jwt</span> user) {
-    <span class="k">var</span> accounts = supplyAsync(() -&gt; accountsClient.list(user.getSubject()), io);
-    <span class="k">var</span> offers   = supplyAsync(() -&gt; offersClient.top(user.getSubject()), io)
-                       .completeOnTimeout(<span class="t">List</span>.of(), <span class="n">300</span>, <span class="t">MILLISECONDS</span>);     <span class="c">// не критично — деградируем</span>
-    <span class="k">var</span> unread   = supplyAsync(() -&gt; notificationsClient.unreadCount(user.getSubject()), io);
-    <span class="k">return</span> <span class="k">new</span> <span class="t">HomeScreen</span>(accounts.join(), offers.join(), unread.join());
-}</pre>
-<pre class="narrow"><span class="c">// BFF мобильного приложения: один экран —</span>
-<span class="c">// один запрос клиента, параллельные вызовы</span>
-<span class="c">// внутри</span>
-<span class="a">@GetMapping</span>(<span class="s">"/mobile/home"</span>)
-<span class="t">HomeScreen</span> home(
-        <span class="a">@AuthenticationPrincipal</span> <span class="t">Jwt</span> user) {
-    <span class="t">String</span> id = user.getSubject();
-    <span class="k">var</span> accounts = supplyAsync(
-        () -&gt; accountsClient.list(id), io);
-    <span class="c">// не критично — деградируем</span>
-    <span class="k">var</span> offers = supplyAsync(
-        () -&gt; offersClient.top(id), io)
-        .completeOnTimeout(
-            <span class="t">List</span>.of(), <span class="n">300</span>, <span class="t">MILLISECONDS</span>);
-    <span class="k">var</span> unread = supplyAsync(
-        () -&gt; notifications.unreadCount(id),
-        io);
-    <span class="k">return</span> <span class="k">new</span> <span class="t">HomeScreen</span>(accounts.join(),
-            offers.join(), unread.join());
-}</pre>
-      <p>Зачем BFF: мобильному клиенту нужны компактные ответы и минимум запросов (медленная сеть), вебу — другое; у каждого клиента свой релизный цикл. BFF принадлежит команде клиента и меняется вместе с ним, не загромождая общий API доменных сервисов. Минус — дублирование логики агрегации между BFF, поэтому их число держат небольшим. GraphQL-шлюз — альтернатива, когда клиентов много и они хотят разные выборки.</p>
-      <p>Чего не делать в gateway: бизнес-правил и оркестрации процессов — он становится монолитом, через который проходят все изменения всех команд, и единой точкой отказа. Готовые решения: Spring Cloud Gateway (реактивный), Kong, Envoy-based (Istio ingress), nginx, облачные шлюзы.</p>
-    </div></div></article>
-<article id="q270" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">270. Полнотекстовый поиск рядом с основной БД <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p>Источник истины — <b>основная база</b>, поисковый индекс (OpenSearch, Elasticsearch) — <b>модель для чтения</b>.</p>
-<ul><li>Синхронизация — событиями <b>после коммита</b>: CDC через Debezium или outbox, а не двойной записью из приложения.</li><li>Индекс <b>отстаёт на секунды</b> — это часть контракта.</li><li>Переиндексация — в <b>новый индекс</b> с переключением алиаса.</li></ul>
-<p>Для простых случаев хватает полнотекстового поиска <b>PostgreSQL</b>.</p></div>
-    <div class="more">
-<ul><li>Переиндексация — в новый индекс с переключением алиаса. Для простых случаев хватает PostgreSQL: tsvector, pg_trgm.</li></ul>
-<pre class="wide"><span class="c">-- сначала проверить, не хватит ли PostgreSQL</span>
-<span class="k">alter</span> <span class="k">table</span> client <span class="k">add</span> column search tsvector
-    generated always <span class="k">as</span> (to_tsvector(<span class="s">'russian'</span>, coalesce(full_name, <span class="s">''</span>) || <span class="s">' '</span> || coalesce(email, <span class="s">''</span>))) stored;
-<span class="k">create</span> <span class="k">index</span> ix_client_search <span class="k">on</span> client <span class="k">using</span> gin (search);
-<span class="k">select</span> * <span class="k">from</span> client <span class="k">where</span> search @@ websearch_to_tsquery(<span class="s">'russian'</span>, <span class="s">'иванов петр'</span>);
-
-<span class="k">create</span> extension pg_trgm;                                  <span class="c">-- нечёткий поиск и LIKE '%...%'</span>
-<span class="k">create</span> <span class="k">index</span> ix_client_name_trgm <span class="k">on</span> client <span class="k">using</span> gin (full_name gin_trgm_ops);
-<span class="k">select</span> * <span class="k">from</span> client <span class="k">where</span> full_name % <span class="s">'Иваноф'</span> <span class="k">order</span> <span class="k">by</span> similarity(full_name, <span class="s">'Иваноф'</span>) <span class="k">desc</span> <span class="k">limit</span> <span class="n">10</span>;</pre>
-<pre class="narrow"><span class="c">-- сначала проверить, не хватит ли PostgreSQL</span>
-<span class="k">alter</span> <span class="k">table</span> client
-  <span class="k">add</span> column search tsvector
-  generated always <span class="k">as</span> (
-    to_tsvector(<span class="s">'russian'</span>,
-        coalesce(full_name, <span class="s">''</span>) || <span class="s">' '</span>
-        || coalesce(email, <span class="s">''</span>))
-  ) stored;
-<span class="k">create</span> <span class="k">index</span> ix_client_search
-    <span class="k">on</span> client <span class="k">using</span> gin (search);
-<span class="k">select</span> * <span class="k">from</span> client
- <span class="k">where</span> search @@ websearch_to_tsquery(
-           <span class="s">'russian'</span>, <span class="s">'иванов петр'</span>);
-
-<span class="c">-- нечёткий поиск и LIKE '%...%'</span>
-<span class="k">create</span> extension pg_trgm;
-<span class="k">create</span> <span class="k">index</span> ix_client_name_trgm
-    <span class="k">on</span> client <span class="k">using</span> gin
-       (full_name gin_trgm_ops);
-<span class="k">select</span> * <span class="k">from</span> client
- <span class="k">where</span> full_name % <span class="s">'Иваноф'</span>
- <span class="k">order</span> <span class="k">by</span> similarity(full_name, <span class="s">'Иваноф'</span>)
-          <span class="k">desc</span>
- <span class="k">limit</span> <span class="n">10</span>;</pre>
-      <div class="table-wrap"><table>
-        <tr><th>PostgreSQL FTS</th><th>OpenSearch / Elasticsearch</th></tr>
-        <tr><td>нет новой инфраструктуры, транзакционная согласованность</td><td>отдельный кластер, синхронизация, отставание</td></tr>
-        <tr><td>базовая морфология, ранжирование простое</td><td>анализаторы, синонимы, опечатки, подсветка, фасеты, сложное ранжирование</td></tr>
-        <tr><td>до миллионов документов и умеренной нагрузки</td><td>сотни миллионов документов, высокая нагрузка поиска</td></tr>
-        <tr><td>нагрузка поиска ложится на основную БД</td><td>изолирует поиск от OLTP</td></tr>
-      </table></div>
-      <p>Синхронизация с внешним индексом: двойная запись из приложения (в БД и в индекс) ненадёжна — одна из записей может упасть, и индекс навсегда разойдётся. Надёжно — события после коммита: outbox или CDC (Debezium) → Kafka → индексатор, идемпотентный по id документа и версии (не перезаписывать новую версию старой при обработке не по порядку — <code>version_type=external</code>).</p>
-      <p>Изменение маппинга (анализатор, тип поля) требует переиндексации: создать новый индекс, заполнить его (из БД или из компактного топика), во время заполнения дописывать новые изменения в оба, переключить алиас атомарно, удалить старый. Поиск должен работать через алиас, а не имя индекса.</p>
-    </div></div></article>
-<article id="q271" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">271. Спроектируйте сокращатель ссылок <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li>Код — <b>base62 от уникального id</b>: семь символов — триллионы кодов без коллизий; чтобы коды не шли подряд, биты id перемешивают.</li><li>Чтение превосходит запись в сотню раз — всё решает <b>кеш</b> (Redis), при промахе — база по ключу.</li><li>Редирект <b>302</b>, если нужна аналитика: 301 браузер закеширует навсегда.</li><li>Переходы для аналитики — <b>асинхронно</b> через очередь.</li></ul></div>
-    <div class="more">
-<ul><li>7 символов base62 ≈ 3,5 трлн кодов. Случайные коды требуют проверки коллизий; последовательные перебираемы — при необходимости перемешивают биты. 301 кешируется браузером (меньше нагрузки, но теряется аналитика), 302 — нет.</li></ul>
-<pre class="wide"><span class="t">POST</span> /links { <span class="s">"url"</span>: <span class="s">"https://..."</span> } → <span class="n">201</span> { <span class="s">"code"</span>: <span class="s">"aZ3kL9q"</span>, <span class="s">"short"</span>: <span class="s">"https://sh.rt/aZ3kL9q"</span> }
-<span class="t">GET</span>  /aZ3kL9q → <span class="n">302</span> <span class="t">Location</span>: https:<span class="c">//...</span>
-
-<span class="c">// код из id: base62 — компактно и без коллизий</span>
-<span class="t">String</span> encode(<span class="k">long</span> id) {
-    <span class="k">var</span> sb = <span class="k">new</span> <span class="t">StringBuilder</span>();
-    <span class="k">do</span> { sb.append(<span class="t">ALPHABET</span>.charAt((<span class="k">int</span>) (id % <span class="n">62</span>))); id /= <span class="n">62</span>; } <span class="k">while</span> (id &gt; <span class="n">0</span>);
-    <span class="k">return</span> sb.reverse().toString();
-}
-<span class="c">// чтобы коды не шли подряд (aZ3kL9q, aZ3kL9r...) — перемешать биты id обратимой функцией</span>
-<span class="c">// (умножение на нечётную константу по модулю 2^k, Feistel) до кодирования</span></pre>
-<pre class="narrow"><span class="t">POST</span> /links { <span class="s">"url"</span>: <span class="s">"https://..."</span> }
-→ <span class="n">201</span> { <span class="s">"code"</span>: <span class="s">"aZ3kL9q"</span>,
-        <span class="s">"short"</span>: <span class="s">"https://sh.rt/aZ3kL9q"</span> }
-<span class="t">GET</span> /aZ3kL9q
-→ <span class="n">302</span> <span class="t">Location</span>: https:<span class="c">//...</span>
-
-<span class="c">// код из id: base62 — компактно</span>
-<span class="c">// и без коллизий</span>
-<span class="t">String</span> encode(<span class="k">long</span> id) {
-    <span class="k">var</span> sb = <span class="k">new</span> <span class="t">StringBuilder</span>();
+  <span class="k">static</span> <span class="t">String</span> encode(<span class="k">long</span> id) {
+    <span class="k">if</span> (id &lt; <span class="n">0</span>) {
+      <span class="k">throw</span> <span class="k">new</span>
+        <span class="t">IllegalArgumentException</span>();
+    }
+    <span class="k">var</span> code = <span class="k">new</span> <span class="t">StringBuilder</span>();
     <span class="k">do</span> {
-        sb.append(<span class="t">ALPHABET</span>.charAt(
-                (<span class="k">int</span>) (id % <span class="n">62</span>)));
-        id /= <span class="n">62</span>;
-    } <span class="k">while</span> (id &gt; <span class="n">0</span>);
-    <span class="k">return</span> sb.reverse().toString();
-}
-<span class="c">// чтобы коды не шли подряд (aZ3kL9q,</span>
-<span class="c">// aZ3kL9r...) — перемешать биты id</span>
-<span class="c">// обратимой функцией (умножение на нечётную</span>
-<span class="c">// константу по модулю 2^k, Feistel)</span>
-<span class="c">// до кодирования</span></pre>
-      <p>Оценки: 100 млн новых ссылок в месяц ≈ 40 записей/с; чтений ×100 = 4 000/с, пики выше. За 5 лет — 6 млрд ссылок × ~500 байт ≈ 3 ТБ. Нагрузка на чтение огромная по отношению к записи — значит, всё решает кеш: популярные ссылки (распределение Ципфа — малая доля ссылок даёт большую часть переходов) в Redis, LRU-вытеснение; промах — чтение из БД по первичному ключу, которое легко шардируется по коду.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Решение</th><th>Варианты</th></tr>
-        <tr><td>Генерация кода</td><td>счётчик + base62 (нет коллизий, нужен генератор id); хеш URL (одинаковые URL → один код, коллизии); случайный код (проверка уникальности при вставке)</td></tr>
-        <tr><td>301 или 302</td><td>301 — браузер кеширует навсегда, переходы не доходят до сервиса (нет аналитики, нельзя изменить); 302/307 — каждый переход через сервис</td></tr>
-        <tr><td>Аналитика</td><td>событие перехода в Kafka асинхронно, не замедляя редирект; агрегаты — в колоночной БД</td></tr>
-        <tr><td>Злоупотребления</td><td>проверка URL по спискам фишинга, rate limit на создание, срок жизни ссылок</td></tr>
-        <tr><td>Пользовательские алиасы</td><td>отдельное пространство, проверка уникальности и запрещённых слов</td></tr>
-      </table></div>
+      <span class="k">int</span> digit = (<span class="k">int</span>) (id % <span class="n">62</span>);
+      code.append(
+        <span class="t">DIGITS</span>.charAt(digit));
+      id /= <span class="n">62</span>;
+    } <span class="k">while</span> (id != <span class="n">0</span>);
+    <span class="k">return</span> code.reverse().toString();
+  }
+}</pre><p>Разные неотрицательные id дают разные коды. 62⁷ ≈ 3,52 трлн вариантов длиной 7, но случайная выборка из них всё равно может столкнуться: нужна UNIQUE-проверка. Временное хранение кода и повторное использование после удаления также входят в контракт.</p><div class="table-wrap"><table><tr><th>Решение</th><th>Ограничение</th></tr><tr><td>302 / 307 с явным no-store при необходимости</td><td>Больше переходов дойдут до сервера; клиент всё равно может не выполнить переход</td></tr><tr><td>301 / 308</td><td>Постоянный redirect может обслуживаться кешем; это снижает полноту серверной аналитики</td></tr><tr><td>Непредсказуемый код</td><td>Сложнее перебор, но приватные ссылки всё равно требуют модели доступа</td></tr><tr><td>Асинхронная аналитика</td><td>Нужны допустимая потеря, лимиты буфера и отсутствие лишних персональных данных</td></tr></table></div><p class="follow"><b>Нужно ли скачивать целевой URL при создании?</b> Для самого сокращения нет. Если добавлены preview или проверки содержимого, это отдельный исходящий запрос с защитой от SSRF, редиректов и внутренних адресов.</p>
     </div></div></article>
-<article id="q272" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">272. Идемпотентная обработка платежа: двойное списание</h2><div class="answer" hidden><div class="short"><p>Клиент повторяет запрос по таймауту — платёж может прийти дважды. Защита <b>многослойная</b>:</p>
-<ul><li><b>ключ идемпотентности</b> и уникальный индекс: вторая вставка падает, возвращается результат первой;</li><li>статус — <b>машина состояний</b>, переходы только условным UPDATE из ожидаемого статуса;</li><li>провайдеру передаём <b>наш id как его ключ</b> идемпотентности;</li><li><b>неизвестный исход</b> после таймаута выясняют запросом статуса и сверкой, а не повтором вслепую.</li></ul></div>
+<article id="q272" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">272. Идемпотентная обработка платежа: двойное списание</h2><div class="answer" hidden><div class="short"><p><b>Защита от двойного списания начинается с идентичности операции.</b> Стабильный ключ запроса связывается с платёжным id и параметрами под уникальным ограничением; повтор получает прежний результат или статус.</p><p>Шаги фиксируются машиной состояний, провайдеру передаётся поддерживаемый им ключ идемпотентности. <b>Таймаут — неизвестный исход:</b> платёж мог пройти, поэтому новый запрос с новым ключом опасен.</p></div>
     <div class="more">
-<ul>
-      <li>С внешним провайдером — тот же ключ передаётся ему; неизвестный исход (таймаут) — сверкой, а не повтором вслепую.</li>
-    </ul>
-<pre class="wide"><span class="k">create</span> <span class="k">table</span> payment (
-    id               <span class="k">uuid</span> <span class="k">primary</span> <span class="k">key</span>,
-    client_id        <span class="k">bigint</span> <span class="k">not</span> <span class="k">null</span>,
-    idempotency_key  text   <span class="k">not</span> <span class="k">null</span>,
-    amount           <span class="k">numeric</span>(<span class="n">19</span>, <span class="n">4</span>) <span class="k">not</span> <span class="k">null</span>,
-    status           text   <span class="k">not</span> <span class="k">null</span>,              <span class="c">-- NEW → PROCESSING → SUCCEEDED | FAILED | UNKNOWN</span>
-    provider_ref     text,
-    <span class="k">unique</span> (client_id, idempotency_key)
-);
-
-<span class="c">-- переход статуса только из ожидаемого — защита от гонок и повторов</span>
-<span class="k">update</span> payment <span class="k">set</span> status = <span class="s">'SUCCEEDED'</span>, provider_ref = :ref
- <span class="k">where</span> id = :id <span class="k">and</span> status = <span class="s">'PROCESSING'</span>;         <span class="c">-- 0 строк → уже обработан кем-то</span></pre>
-<pre class="narrow"><span class="k">create</span> <span class="k">table</span> payment (
-    id              <span class="k">uuid</span> <span class="k">primary</span> <span class="k">key</span>,
-    client_id       <span class="k">bigint</span> <span class="k">not</span> <span class="k">null</span>,
-    idempotency_key text <span class="k">not</span> <span class="k">null</span>,
-    amount          <span class="k">numeric</span>(<span class="n">19</span>, <span class="n">4</span>) <span class="k">not</span> <span class="k">null</span>,
-    <span class="c">-- NEW → PROCESSING →</span>
-    <span class="c">--   SUCCEEDED | FAILED | UNKNOWN</span>
-    status          text <span class="k">not</span> <span class="k">null</span>,
-    provider_ref    text,
-    <span class="k">unique</span> (client_id, idempotency_key)
-);
-
-<span class="c">-- переход статуса только из ожидаемого —</span>
-<span class="c">-- защита от гонок и повторов</span>
-<span class="k">update</span> payment
-   <span class="k">set</span> status = <span class="s">'SUCCEEDED'</span>,
-       provider_ref = :ref
- <span class="k">where</span> id = :id <span class="k">and</span> status = <span class="s">'PROCESSING'</span>;
-<span class="c">-- 0 строк → уже обработан кем-то</span></pre>
-      <p>Полный путь с внешним провайдером:</p>
-      <ol>
-        <li>Запрос с ключом → вставка платежа в статусе NEW (уникальность ключа отсекает дубль; повтор получает сохранённый результат).</li>
-        <li>Перевод в PROCESSING и <i>коммит до</i> вызова провайдера — чтобы после падения было видно, что вызов мог состояться.</li>
-        <li>Вызов провайдера с нашим id платежа как идемпотентным ключом у провайдера.</li>
-        <li>Ответ: успех/отказ → SUCCEEDED/FAILED условным UPDATE. Таймаут → UNKNOWN: нельзя ни повторить вслепую (двойное списание, если провайдер не идемпотентен), ни объявить неуспехом (деньги могли уйти).</li>
-        <li>UNKNOWN разрешается запросом статуса у провайдера по нашему id, колбэком от провайдера или сверкой реестров в конце дня.</li>
-      </ol>
-      <p>Двойное списание чаще всего возникает не в одном месте, а на стыке: клиент повторил запрос, бэкенд создал новый платёж (нет idempotency key), или фоновый ретрай повторил вызов провайдера после таймаута, не проверив статус. Поэтому защита многослойная: ключ на входе, машина состояний с условными переходами, идемпотентность у провайдера, сверка как последний рубеж.</p>
+<ol><li>Атомарно зарегистрировать операцию по (clientId, idempotencyKey); другой payload с тем же ключом отклонить.</li><li>Сохранить платёж и намерение выполнения; повторная доставка использует тот же paymentId.</li><li>Согласованно перейти к выполнению, вызвать провайдера со стабильным ключом.</li><li>Зафиксировать подтверждённый результат или UNKNOWN; при неопределённости выяснить статус.</li><li>Доставлять события результата через outbox, применять callbacks идемпотентно.</li></ol><pre><span class="k">UPDATE</span> payment
+<span class="k">SET</span> status = <span class="s">'PROCESSING'</span>
+<span class="k">WHERE</span> id = :id <span class="k">AND</span> status = <span class="s">'NEW'</span>
+<span class="k">RETURNING</span> id;</pre><p>Это только захват шага: 0 строк означает, что переход уже недопустим; нельзя из этого автоматически заключить «платёж успешен». Если процесс упал после захвата, восстановитель обязан проверить состояние и неизвестный внешний результат, а не безусловно повторить списание.</p><p class="follow"><b>Провайдер не поддерживает ни ключ, ни запрос статуса — как гарантировать один эффект?</b> Локальная БД не устранит неопределённость внешнего действия после потери ответа. Нужны иной протокол/провайдер, ручная сверка или явно согласованная политика риска; обещать exactly-once нельзя.</p>
     </div></div></article>
-<article id="q273" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">273. Спроектируйте переводы между счетами <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li>Основа — <b>леджер с двойной записью</b>: перевод — проводки с нулевой суммой, журнал только дополняется, исправления — сторнированием.</li><li>API — <code><span class="t">POST</span> /transfers</code> с <b>ключом идемпотентности</b> и машиной состояний.</li><li>Внутри одной базы — <b>ACID-транзакция</b>: блокировка счетов в порядке id, условное списание.</li><li>Между сервисами и банками — <b>сага с холдом</b> и компенсацией, outbox для событий.</li></ul>
-<p>Неизвестный исход — запрос статуса и <b>ежедневная сверка</b>, а не повтор вслепую.</p></div>
+<article id="q273" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">273. Спроектируйте переводы между счетами <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Перевод фиксирую как сбалансированные проводки</b> и связанную операцию с ключом идемпотентности. Журнал сохраняет историю; исправление оформляется новой корректирующей записью.</p><p>В одной БД проверки, списание, зачисление и проводки выполняются одной транзакцией. Конкурентный расход защищают блокировкой или условным изменением, а не чтением баланса до транзакции.</p><p>Между независимыми системами нужен протокол резерва/подтверждения и компенсаций; неизвестный исход выясняется по статусу и сверке.</p></div>
     <div class="more">
-<ul><li>Деньги — decimal или минимальные единицы, никаких float. Горячие счета мерчантов — проводки без блокировки баланса, агрегация асинхронно. Фоновый процесс доводит «зависшие» переводы; сверка и аудит — часть дизайна с первого дня.</li></ul>
-<pre class="wide"><span class="k">CREATE</span> <span class="k">TABLE</span> ledger_entry (
-  id          <span class="k">bigint</span>         <span class="k">PRIMARY</span> <span class="k">KEY</span>,
-  transfer_id <span class="k">uuid</span>           <span class="k">NOT</span> <span class="k">NULL</span>,
-  account_id  <span class="k">bigint</span>         <span class="k">NOT</span> <span class="k">NULL</span>,
-  amount      <span class="k">numeric</span>(<span class="n">19</span>, <span class="n">4</span>) <span class="k">NOT</span> <span class="k">NULL</span>,   <span class="c">-- дебет &lt; 0, кредит &gt; 0</span>
-  created_at  <span class="k">timestamptz</span>    <span class="k">NOT</span> <span class="k">NULL</span> <span class="k">DEFAULT</span> now()
-);  <span class="c">-- инвариант: SUM(amount) по transfer_id = 0</span></pre>
-<pre class="narrow"><span class="k">CREATE</span> <span class="k">TABLE</span> ledger_entry (
-  id          <span class="k">bigint</span>      <span class="k">PRIMARY</span> <span class="k">KEY</span>,
-  transfer_id <span class="k">uuid</span>        <span class="k">NOT</span> <span class="k">NULL</span>,
-  account_id  <span class="k">bigint</span>      <span class="k">NOT</span> <span class="k">NULL</span>,
-  <span class="c">-- дебет &lt; 0, кредит &gt; 0</span>
-  amount      <span class="k">numeric</span>(<span class="n">19</span>, <span class="n">4</span>) <span class="k">NOT</span> <span class="k">NULL</span>,
-  created_at  <span class="k">timestamptz</span> <span class="k">NOT</span> <span class="k">NULL</span>
-              <span class="k">DEFAULT</span> now()
-);
-<span class="c">-- инвариант: SUM(amount) по transfer_id = 0</span></pre>
-<p>Уточняющие вопросы на старте: внутренние переводы в одном банке или межбанковские (СБП, SWIFT)? Мгновенные или с отложенным проведением? Мультивалютность? Объём (тысячи или миллионы в день), пиковая нагрузка, требования к доступности? Есть ли горячие счета (мерчанты, сборные счета)?</p>
-<pre class="wide"><span class="t">POST</span> /transfers
-<span class="t">Idempotency</span>-<span class="t">Key</span>: 6c1e…
-{ <span class="s">"from"</span>: <span class="s">"acc-1"</span>, <span class="s">"to"</span>: <span class="s">"acc-2"</span>, <span class="s">"amount"</span>: <span class="s">"1500.00"</span>, <span class="s">"currency"</span>: <span class="s">"RUB"</span> }
-→ <span class="n">202</span> { <span class="s">"id"</span>: <span class="s">"tr-9"</span>, <span class="s">"status"</span>: <span class="s">"CREATED"</span> }   <span class="c">// или 201 POSTED для мгновенных внутренних</span>
-
-<span class="t">GET</span> /transfers/tr-<span class="n">9</span> → { <span class="s">"status"</span>: <span class="s">"POSTED"</span>, ... }</pre>
-<pre class="narrow"><span class="t">POST</span> /transfers
-<span class="t">Idempotency</span>-<span class="t">Key</span>: 6c1e…
-{ <span class="s">"from"</span>: <span class="s">"acc-1"</span>, <span class="s">"to"</span>: <span class="s">"acc-2"</span>,
-  <span class="s">"amount"</span>: <span class="s">"1500.00"</span>, <span class="s">"currency"</span>: <span class="s">"RUB"</span> }
-→ <span class="n">202</span> { <span class="s">"id"</span>: <span class="s">"tr-9"</span>, <span class="s">"status"</span>: <span class="s">"CREATED"</span> }
-<span class="c">// или 201 POSTED для мгновенных внутренних</span>
-
-<span class="t">GET</span> /transfers/tr-<span class="n">9</span>
-→ { <span class="s">"status"</span>: <span class="s">"POSTED"</span>, ... }</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Таблица</th><th>Назначение</th></tr>
-        <tr><td>account(id, currency, status, balance, version)</td><td>баланс — кешированное значение, источник истины — проводки</td></tr>
-        <tr><td>transfer(id, idempotency_key unique, from, to, amount, status, created_at)</td><td>машина состояний перевода</td></tr>
-        <tr><td>ledger_entry(transfer_id, account_id, amount, …) append-only</td><td>двойная запись: сумма проводок перевода = 0</td></tr>
-        <tr><td>hold(account_id, amount, transfer_id, expires_at)</td><td>резерв средств для многошаговых переводов</td></tr>
-        <tr><td>outbox</td><td>события TransferPosted и т.п.</td></tr>
-      </table></div>
-<pre class="wide"><span class="c">-- внутренний перевод, одна БД, одна транзакция</span>
-BEGIN;
-<span class="k">SELECT</span> id <span class="k">FROM</span> account <span class="k">WHERE</span> id <span class="k">IN</span> (:a, :b) <span class="k">ORDER</span> <span class="k">BY</span> id <span class="k">FOR</span> <span class="k">UPDATE</span>;   <span class="c">-- порядок по id — без дедлоков</span>
-<span class="k">UPDATE</span> account <span class="k">SET</span> balance = balance - :x <span class="k">WHERE</span> id = :<span class="k">from</span> <span class="k">AND</span> balance &gt;= :x;   <span class="c">-- 0 строк → отказ</span>
-<span class="k">UPDATE</span> account <span class="k">SET</span> balance = balance + :x <span class="k">WHERE</span> id = :<span class="k">to</span>;
-<span class="k">INSERT</span> <span class="k">INTO</span> ledger_entry ... (-:x, :<span class="k">from</span>), (:x, :<span class="k">to</span>);
-<span class="k">UPDATE</span> transfer <span class="k">SET</span> status = <span class="s">'POSTED'</span> <span class="k">WHERE</span> id = :id <span class="k">AND</span> status = <span class="s">'CREATED'</span>;
-<span class="k">INSERT</span> <span class="k">INTO</span> outbox ...;
-COMMIT;</pre>
-<pre class="narrow"><span class="c">-- внутренний перевод, одна БД,</span>
-<span class="c">-- одна транзакция</span>
-BEGIN;
-<span class="c">-- порядок по id — без дедлоков</span>
-<span class="k">SELECT</span> id <span class="k">FROM</span> account
- <span class="k">WHERE</span> id <span class="k">IN</span> (:a, :b)
- <span class="k">ORDER</span> <span class="k">BY</span> id <span class="k">FOR</span> <span class="k">UPDATE</span>;
-<span class="c">-- 0 строк → отказ</span>
-<span class="k">UPDATE</span> account <span class="k">SET</span> balance = balance - :x
- <span class="k">WHERE</span> id = :<span class="k">from</span> <span class="k">AND</span> balance &gt;= :x;
-<span class="k">UPDATE</span> account <span class="k">SET</span> balance = balance + :x
- <span class="k">WHERE</span> id = :<span class="k">to</span>;
-<span class="k">INSERT</span> <span class="k">INTO</span> ledger_entry ...
-       (-:x, :<span class="k">from</span>), (:x, :<span class="k">to</span>);
-<span class="k">UPDATE</span> transfer <span class="k">SET</span> status = <span class="s">'POSTED'</span>
- <span class="k">WHERE</span> id = :id <span class="k">AND</span> status = <span class="s">'CREATED'</span>;
-<span class="k">INSERT</span> <span class="k">INTO</span> outbox ...;
-COMMIT;</pre>
-      <p>Если счета в разных сервисах или банках — сага: холд на счёте отправителя → отправка во внешнюю систему (с тем же idempotency key) → по подтверждению списание холда, по отказу — снятие холда. Неизвестный исход (таймаут внешней системы) — не повторять вслепую, а выяснять статус (запрос статуса, сверка), перевод остаётся в состоянии «в обработке».</p>
-      <p>Что обязательно назвать: идемпотентность на входе, атомарность внутри БД, аудит (журнал неизменяем, исправления — сторнирующими проводками, а не UPDATE), ежедневная сверка с внешними системами и внутренний инвариант «сумма всех проводок = 0», мониторинг зависших переводов, лимиты и антифрод перед проведением.</p>
+<ol><li>Проверить положительную сумму, валюту и разные допустимые счета; зарегистрировать transferId идемпотентно.</li><li>Заблокировать затрагиваемые счета в стабильном порядке, чтобы снизить риск deadlock.</li><li>Проверить доступность средств/холд и выполнить согласованное изменение остатков.</li><li>Добавить сбалансированные проводки, результат перевода и outbox в той же транзакции.</li><li>Сделать COMMIT; при любой неуспешной проверке откатить весь локальный перевод.</li></ol><pre><span class="k">INSERT</span> <span class="k">INTO</span> posting
+    (transfer_id, account_id, delta)
+<span class="k">VALUES</span>
+    (:id, :<span class="k">from</span>, -:amount),
+    (:id, :<span class="k">to</span>, :amount);</pre><p>Это иллюстрация пары проводок в минимальных единицах одной валюты, а не полный SQL перевода. В полной модели явно задают валюту, типы счетов, уникальность проводок и механизм проверки баланса журнала: CHECK одной строки не проверит сумму нескольких строк.</p><p class="follow"><b>Две проводки с нулевой суммой гарантируют отсутствие овердрафта?</b> Нет. Балансировка журнала и допустимость расхода — разные инварианты. Для расхода нужны проверки доступного остатка, холдов и политики кредита под конкурентной защитой.</p>
     </div></div></article>
-<article id="q274" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">274. История операций клиента на миллиарды строк <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p>Отдельная <b>модель для чтения</b>, наполняемая событиями: партиционирование по дате, индекс по клиенту и времени, <b>keyset-пагинация</b> — почти все запросы «последние N операций клиента».</p>
-<ul><li>На таких объёмах — <b>шардирование по клиенту</b>.</li><li>Свежее — в кеше, поиск — в OpenSearch, старые годы — в <b>холодном хранилище</b>.</li><li>Выписка за год — <b>асинхронно</b> файлом.</li></ul>
-<p>Модель отстаёт на секунды — это часть контракта.</p></div>
+<article id="q274" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">274. История операций клиента на миллиарды строк <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Модель истории проектирую под главный запрос:</b> последние операции клиента с сортировкой по времени и стабильному id. Нужны соответствующий индекс и keyset-пагинация.</p><p>Разбиение по времени упрощает retention и обслуживание, но не заменяет индекс и не распределяет запись по серверам. <b>Миллиард строк сам по себе не требует шардинга.</b> Его необходимость проверяют по объёму, скорости и запросам.</p><p>Большие выписки строят асинхронно; для проекции из событий определяют допустимую свежесть.</p></div>
     <div class="more">
-<ul><li>Почти все запросы — «последние N операций клиента»: дизайн оптимизируется под них. Read-модель отстаёт от источника: свежую операцию показывают из ответа API или помечают «в обработке».</li></ul>
-<pre class="wide"><span class="k">create</span> <span class="k">table</span> operation_history (
-    client_id   <span class="k">bigint</span>      <span class="k">not</span> <span class="k">null</span>,
-    created_at  <span class="k">timestamptz</span> <span class="k">not</span> <span class="k">null</span>,
-    id          <span class="k">bigint</span>      <span class="k">not</span> <span class="k">null</span>,
-    type        text        <span class="k">not</span> <span class="k">null</span>,
-    amount      <span class="k">numeric</span>(<span class="n">19</span>, <span class="n">4</span>),
-    description text,
-    <span class="k">primary</span> <span class="k">key</span> (client_id, created_at, id)
-) <span class="k">partition</span> <span class="k">by</span> range (created_at);          <span class="c">-- помесячные секции, старые — detach и в холодное хранилище</span>
-
-<span class="c">-- главный запрос — keyset по индексу первичного ключа</span>
-<span class="k">select</span> * <span class="k">from</span> operation_history
- <span class="k">where</span> client_id = :c <span class="k">and</span> (created_at, id) &lt; (:ts, :id)
- <span class="k">order</span> <span class="k">by</span> created_at <span class="k">desc</span>, id <span class="k">desc</span> <span class="k">limit</span> <span class="n">30</span>;</pre>
-<pre class="narrow"><span class="k">create</span> <span class="k">table</span> operation_history (
-    client_id   <span class="k">bigint</span> <span class="k">not</span> <span class="k">null</span>,
-    created_at  <span class="k">timestamptz</span> <span class="k">not</span> <span class="k">null</span>,
-    id          <span class="k">bigint</span> <span class="k">not</span> <span class="k">null</span>,
-    type        text <span class="k">not</span> <span class="k">null</span>,
-    amount      <span class="k">numeric</span>(<span class="n">19</span>, <span class="n">4</span>),
-    description text,
-    <span class="k">primary</span> <span class="k">key</span> (client_id, created_at, id)
-) <span class="k">partition</span> <span class="k">by</span> range (created_at);
-<span class="c">-- помесячные секции, старые — detach</span>
-<span class="c">-- и в холодное хранилище</span>
-
-<span class="c">-- главный запрос — keyset по индексу</span>
-<span class="c">-- первичного ключа</span>
-<span class="k">select</span> * <span class="k">from</span> operation_history
- <span class="k">where</span> client_id = :c
-   <span class="k">and</span> (created_at, id) &lt; (:ts, :id)
- <span class="k">order</span> <span class="k">by</span> created_at <span class="k">desc</span>, id <span class="k">desc</span>
- <span class="k">limit</span> <span class="n">30</span>;</pre>
-      <p>Оценка: 50 млн клиентов, в среднем 3 операции в день → 150 млн строк в день, ~55 млрд в год; по 300 байт — ~16 ТБ в год с индексами. Одна PostgreSQL такое держит с трудом — нужно шардирование по client_id (Citus или несколько кластеров), горячие месяцы на быстрых дисках, старые годы — в колоночном хранилище (ClickHouse) или объектном (Parquet в S3) с отдельным путём доступа.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Сценарий</th><th>Где обслуживается</th></tr>
-        <tr><td>Последние операции в приложении (95% запросов)</td><td>шардированная read-модель, keyset; самые свежие — кеш</td></tr>
-        <tr><td>Поиск по описанию, фильтры по категориям</td><td>OpenSearch по последним N месяцам</td></tr>
-        <tr><td>Выписка за год</td><td>асинхронная задача → PDF в объектном хранилище → уведомление</td></tr>
-        <tr><td>Аналитика по всем клиентам</td><td>DWH, не продуктовая БД</td></tr>
-      </table></div>
-      <p>Read-модель наполняется событиями из процессинга (Kafka) идемпотентно (UPSERT по id операции), события могут прийти не по порядку — сортировка по времени операции, а не по времени получения. Изменения статуса (холд → проведена → отменена) обновляют существующую запись. Задержка обновления — секунды; только что совершённую операцию клиент видит из ответа API, а не из истории.</p>
-<p class="follow"><b>Почему не OFFSET-пагинация?</b> Глубокие страницы читают и выбрасывают тысячи строк, а при вставках записи «съезжают».</p>
+<pre><span class="k">SELECT</span> id, occurred_at, amount
+<span class="k">FROM</span> operation
+<span class="k">WHERE</span> client_id = :client
+  <span class="k">AND</span> (occurred_at, id) &lt; (:time, :id)
+<span class="k">ORDER</span> <span class="k">BY</span> occurred_at <span class="k">DESC</span>, id <span class="k">DESC</span>
+<span class="k">LIMIT</span> <span class="n">50</span>;</pre><pre><span class="k">CREATE</span> <span class="k">INDEX</span> ix_operation_history
+<span class="k">ON</span> operation (client_id,
+    occurred_at <span class="k">DESC</span>, id <span class="k">DESC</span>);</pre><p>Это следующая страница после последней пары (time, id); для первой страницы условие курсора не нужно. Поля сортировки должны быть неизменяемыми и не NULL; при равном времени id устраняет неоднозначность. Обычный cursor не даёт автоматически snapshot всех страниц: поздно пришедшая операция может изменить состав.</p><div class="table-wrap"><table><tr><th>Рост</th><th>Следующий шаг</th></tr><tr><td>Большие старые периоды</td><td>Retention, партиции, архив с понятным способом чтения</td></tr><tr><td>Не хватает одного узла записи/хранения</td><td>Оценить шард по клиенту, перенос и неравномерных клиентов</td></tr><tr><td>Сложный текстовый поиск</td><td>Отдельный индекс, если возможностей БД недостаточно</td></tr><tr><td>Долгая выписка</td><td>Фоновая задача, статус, файл и контроль доступа</td></tr></table></div><p class="follow"><b>Почему не OFFSET на миллион строк?</b> База обычно должна пройти и отбросить предшествующие строки; новые вставки ещё и сдвигают страницы. Keyset продолжает диапазон индекса от заданного ключа.</p>
     </div></div></article>
-<article id="q275" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">275. Планировщик отложенных задач (автоплатежи) <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p>Задачи — в <b>таблице</b>: время запуска, статус, попытки, <b>аренда</b>.</p>
-<ul><li>Воркеры на всех инстансах забирают пачку через <b>FOR UPDATE SKIP LOCKED</b> — без конфликтов — и выполняют <b>идемпотентно</b>.</li><li>Воркер упал — аренда истекла, задачу берёт другой.</li><li>Следующий запуск автоплатежа создаётся <b>в той же транзакции</b>, что и завершение текущего.</li></ul>
-<p>Отдельно — часовые пояса, выходные и мониторинг просроченных задач.</p></div>
+<article id="q275" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">275. Планировщик отложенных задач (автоплатежи) <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Планировщик хранит задания и время запуска в БД.</b> Работники короткой транзакцией выбирают доступные строки через SKIP LOCKED и записывают lease, затем выполняют работу вне этой транзакции.</p><p><b>После истечения lease возможен повторный захват.</b> Старый работник не должен подтвердить чужую попытку: завершение проверяет claim token. Внешний эффект при этом отдельно защищается идемпотентностью.</p><p>Для периодической задачи уникальна логическая дата/период запуска; следующий запуск сохраняется согласованно с завершением текущего.</p></div>
     <div class="more">
-<pre class="wide"><span class="k">SELECT</span> id, payload <span class="k">FROM</span> scheduled_task
- <span class="k">WHERE</span> status = <span class="s">'READY'</span> <span class="k">AND</span> run_at &lt;= now()
- <span class="k">ORDER</span> <span class="k">BY</span> run_at <span class="k">LIMIT</span> <span class="n">100</span>
-   <span class="k">FOR</span> <span class="k">UPDATE</span> <span class="k">SKIP</span> <span class="k">LOCKED</span>;          <span class="c">-- индекс (run_at) WHERE status = 'READY'</span></pre>
-<pre class="narrow"><span class="c">-- индекс (run_at) WHERE status = 'READY'</span>
-<span class="k">SELECT</span> id, payload <span class="k">FROM</span> scheduled_task
- <span class="k">WHERE</span> status = <span class="s">'READY'</span> <span class="k">AND</span> run_at &lt;= now()
- <span class="k">ORDER</span> <span class="k">BY</span> run_at <span class="k">LIMIT</span> <span class="n">100</span>
-   <span class="k">FOR</span> <span class="k">UPDATE</span> <span class="k">SKIP</span> <span class="k">LOCKED</span>;</pre>
-    <ul><li>Альтернативы: Quartz в кластере, db-scheduler, Temporal; в Kafka нет нативной отложенной доставки. Часовые пояса и летнее время для расписаний; мониторинг просроченных задач.</li></ul>
-<pre class="wide"><span class="k">create</span> <span class="k">table</span> scheduled_task (
-    id           bigserial <span class="k">primary</span> <span class="k">key</span>,
-    type         text        <span class="k">not</span> <span class="k">null</span>,
-    payload      jsonb       <span class="k">not</span> <span class="k">null</span>,
-    run_at       <span class="k">timestamptz</span> <span class="k">not</span> <span class="k">null</span>,
-    status       text        <span class="k">not</span> <span class="k">null</span> <span class="k">default</span> <span class="s">'READY'</span>,   <span class="c">-- READY / RUNNING / DONE / FAILED</span>
-    attempts     int         <span class="k">not</span> <span class="k">null</span> <span class="k">default</span> <span class="n">0</span>,
-    locked_until <span class="k">timestamptz</span>,
-    locked_by    text,
-    <span class="k">unique</span> (type, payload -&gt;&gt; <span class="s">'autopaymentId'</span>, run_at)   <span class="c">-- не создать один запуск дважды</span>
-);
-<span class="k">create</span> <span class="k">index</span> ix_task_ready <span class="k">on</span> scheduled_task (run_at) <span class="k">where</span> status = <span class="s">'READY'</span>;
-
-<span class="c">-- захват пачки + lease одним запросом</span>
-<span class="k">update</span> scheduled_task t <span class="k">set</span> status = <span class="s">'RUNNING'</span>, locked_until = now() + <span class="k">interval</span> <span class="s">'5 min'</span>,
-       locked_by = :worker, attempts = attempts + <span class="n">1</span>
-  <span class="k">from</span> (<span class="k">select</span> id <span class="k">from</span> scheduled_task
-         <span class="k">where</span> status = <span class="s">'READY'</span> <span class="k">and</span> run_at &lt;= now()
-         <span class="k">order</span> <span class="k">by</span> run_at <span class="k">limit</span> <span class="n">100</span> <span class="k">for</span> <span class="k">update</span> <span class="k">skip</span> <span class="k">locked</span>) c
- <span class="k">where</span> t.id = c.id
-<span class="k">returning</span> t.*;
-
-<span class="c">-- «спасатель»: вернуть задачи упавших воркеров</span>
-<span class="k">update</span> scheduled_task <span class="k">set</span> status = <span class="s">'READY'</span>
- <span class="k">where</span> status = <span class="s">'RUNNING'</span> <span class="k">and</span> locked_until &lt; now();</pre>
-<pre class="narrow"><span class="k">create</span> <span class="k">table</span> scheduled_task (
-    id           bigserial <span class="k">primary</span> <span class="k">key</span>,
-    type         text <span class="k">not</span> <span class="k">null</span>,
-    payload      jsonb <span class="k">not</span> <span class="k">null</span>,
-    run_at       <span class="k">timestamptz</span> <span class="k">not</span> <span class="k">null</span>,
-    <span class="c">-- READY / RUNNING / DONE / FAILED</span>
-    status       text <span class="k">not</span> <span class="k">null</span>
-                 <span class="k">default</span> <span class="s">'READY'</span>,
-    attempts     int <span class="k">not</span> <span class="k">null</span> <span class="k">default</span> <span class="n">0</span>,
-    locked_until <span class="k">timestamptz</span>,
-    locked_by    text,
-    <span class="c">-- не создать один запуск дважды</span>
-    <span class="k">unique</span> (type,
-            payload -&gt;&gt; <span class="s">'autopaymentId'</span>,
-            run_at)
-);
-<span class="k">create</span> <span class="k">index</span> ix_task_ready
-    <span class="k">on</span> scheduled_task (run_at)
- <span class="k">where</span> status = <span class="s">'READY'</span>;
-
-<span class="c">-- захват пачки + lease одним запросом</span>
-<span class="k">update</span> scheduled_task t
-   <span class="k">set</span> status = <span class="s">'RUNNING'</span>,
-       locked_until = now()
-                    + <span class="k">interval</span> <span class="s">'5 min'</span>,
-       locked_by = :worker,
-       attempts = attempts + <span class="n">1</span>
-  <span class="k">from</span> (<span class="k">select</span> id <span class="k">from</span> scheduled_task
-         <span class="k">where</span> status = <span class="s">'READY'</span>
-           <span class="k">and</span> run_at &lt;= now()
-         <span class="k">order</span> <span class="k">by</span> run_at <span class="k">limit</span> <span class="n">100</span>
-           <span class="k">for</span> <span class="k">update</span> <span class="k">skip</span> <span class="k">locked</span>) c
- <span class="k">where</span> t.id = c.id
-<span class="k">returning</span> t.*;
-
-<span class="c">-- «спасатель»: вернуть задачи упавших</span>
-<span class="c">-- воркеров</span>
-<span class="k">update</span> scheduled_task <span class="k">set</span> status = <span class="s">'READY'</span>
- <span class="k">where</span> status = <span class="s">'RUNNING'</span>
-   <span class="k">and</span> locked_until &lt; now();</pre>
-      <p>Автоплатёж поверх этого: задача «оплатить счёт по автоплатежу X за период P» — идемпотентна по (X, P): если платёж за период уже создан, повторное выполнение ничего не делает. Следующая задача (следующий период) создаётся в той же транзакции, что и завершение текущей, — цепочка не рвётся при падении.</p>
-      <p>Нюансы расписаний: «каждое 31-е число» в месяцах без 31-го; «в 9 утра по времени клиента» — хранить часовой пояс клиента и вычислять run_at в UTC в момент планирования; переход на летнее время (час, которого нет, или который повторяется); выходные и праздники (перенос по производственному календарю).</p>
-      <p>Масштаб: при миллионах задач в день — партиционирование по run_at, удаление выполненных; при всплеске (все автоплатежи 1-го числа в 00:00) — размазывание по времени (джиттер), иначе всё упрётся в лимиты процессинга одновременно. Мониторинг: число просроченных задач (run_at в прошлом и всё ещё READY) и возраст самой старой.</p>
-<p class="follow"><b>Почему не @Scheduled и обычный SELECT?</b> Несколько инстансов возьмут одни и те же задачи, а FOR UPDATE без SKIP LOCKED заставит воркеры ждать друг друга.</p>
+<p>Минимальные поля task: id, run_at, status, locked_until и claim_token. :token — новый уникальный token каждой попытки; поля времени имеют тип timestamptz. Захват выполняют и сразу коммитят:</p><pre class="wide"><span class="k">WITH</span> due <span class="k">AS</span> (
+    <span class="k">SELECT</span> id <span class="k">FROM</span> task
+    <span class="k">WHERE</span> status = <span class="s">'READY'</span>
+      <span class="k">AND</span> run_at &lt;= now()
+    <span class="k">ORDER</span> <span class="k">BY</span> run_at, id
+    <span class="k">LIMIT</span> <span class="n">100</span> <span class="k">FOR</span> <span class="k">UPDATE</span> <span class="k">SKIP</span> <span class="k">LOCKED</span>
+)
+<span class="k">UPDATE</span> task t
+<span class="k">SET</span> status = <span class="s">'RUNNING'</span>,
+    claim_token = :token,
+    locked_until = now() + <span class="k">interval</span> <span class="s">'1 min'</span>
+<span class="k">FROM</span> due
+<span class="k">WHERE</span> t.id = due.id
+<span class="k">RETURNING</span> t.*;</pre>
+<pre class="narrow"><span class="k">WITH</span> due <span class="k">AS</span> (
+    <span class="k">SELECT</span> id <span class="k">FROM</span> task
+    <span class="k">WHERE</span> status = <span class="s">'READY'</span>
+      <span class="k">AND</span> run_at &lt;= now()
+    <span class="k">ORDER</span> <span class="k">BY</span> run_at, id
+    <span class="k">LIMIT</span> <span class="n">100</span> <span class="k">FOR</span> <span class="k">UPDATE</span> <span class="k">SKIP</span> <span class="k">LOCKED</span>
+)
+<span class="k">UPDATE</span> task t
+<span class="k">SET</span> status = <span class="s">'RUNNING'</span>,
+    claim_token = :token,
+    locked_until = now()
+        + <span class="k">interval</span> <span class="s">'1 min'</span>
+<span class="k">FROM</span> due
+<span class="k">WHERE</span> t.id = due.id
+<span class="k">RETURNING</span> t.*;</pre><p>Для активной выборки нужен индекс по (run_at, id) для READY. Отдельный процесс возвращает просроченные RUNNING в READY по условию locked_until; истечение времени не останавливает старую работу. Подтверждение:</p><pre><span class="k">UPDATE</span> task <span class="k">SET</span> status = <span class="s">'DONE'</span>
+<span class="k">WHERE</span> id = :id
+  <span class="k">AND</span> status = <span class="s">'RUNNING'</span>
+  <span class="k">AND</span> claim_token = :token;</pre><p>После нового захвата token меняется, поэтому поздний ответ старой попытки не завершит новую. Для строгого владения дополнительно проверяют непросроченность аренды; долгие операции продлевают её условно по token. Для платежа логический ключ автоплатежа остаётся тем же при всех попытках.</p><p class="follow"><b>Что кроме cron-выражения нужно хранить для «в 9 утра клиента»?</b> Часовой пояс и бизнес-правила календаря: пропущенный/повторный час, выходной, короткий месяц и пропуски после простоя. run_at хранит конкретный момент, но не заменяет эти правила.</p>
     </div></div></article>
-<article id="q276" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">276. Сервис уведомлений на десятки миллионов сообщений в сутки <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li>API принимает запрос с <b>ключом идемпотентности</b>, проверяет настройки и тихие часы, сохраняет уведомление и кладёт в Kafka — <b>топики по каналам и приоритетам</b>, чтобы коды не ждали маркетинг.</li><li>Воркеры ходят к провайдерам через адаптеры с <b>rate limit</b>, circuit breaker, ретраями и DLQ.</li><li>Статусы — <b>колбэками</b>, есть <b>fallback</b> (push, потом SMS).</li></ul>
-<p>Exactly-once к SMS-шлюзу <b>невозможен</b> — редкие дубли принимают.</p></div>
+<article id="q276" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">276. Сервис уведомлений на десятки миллионов сообщений в сутки <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Приём уведомления отделяю от доставки.</b> API проверяет запрос и сохраняет notification + outbox, а работники отправляют через адаптеры провайдеров с их квотами и таймаутами.</p><p><b>OTP и массовые рассылки изолируются ресурсами</b>: очередью, работниками и квотами провайдера. Статусы «принято провайдером» и «доставлено получателю» различаются.</p><p>Повторы и fallback учитывают неизвестный исход: переключение провайдера после таймаута может создать второе сообщение.</p></div>
     <div class="more">
-<ul><li>50 млн в сутки ≈ 600 сообщений/с, пик ×10; провайдеры часто медленнее — нужна очередь. Exactly-once к внешнему SMS-шлюзу невозможен — редкие дубли принимают осознанно. Шаблоны, локализация, настройки пользователя и «тихие часы».</li></ul>
-<pre class="wide">Клиенты (сервисы) ──<span class="t">POST</span> /notifications (idempotency key, шаблон, получатель, канал, приоритет)──▶ <span class="t">Notification</span> <span class="t">API</span>
-   <span class="t">Notification</span> <span class="t">API</span>: валидация, настройки пользователя (подписки, тихие часы), рендер шаблона,
-                     сохранение notification(status=<span class="t">ACCEPTED</span>) + outbox
-        ▼
-   <span class="t">Kafka</span>: topic по каналу и приоритету — otp.sms (высокий) | transactional.push | marketing.email (низкий)
-        ▼
-   Воркеры канала ──▶ адаптеры провайдеров (rate limit партнёра, circuit breaker, ретраи с backoff)
-        ▼                                   ▲
-   статусы: <span class="t">SENT</span> → <span class="t">DELIVERED</span> / <span class="t">FAILED</span>  ◀── колбэки провайдеров (<span class="t">DLR</span>), сверка
-   fallback: push не доставлен за <span class="t">N</span> секунд → <span class="t">SMS</span></pre>
-<pre class="narrow">Клиенты (сервисы)
-  │ <span class="t">POST</span> /notifications (idempotency key,
-  │ шаблон, получатель, канал, приоритет)
-  ▼
-<span class="t">Notification</span> <span class="t">API</span>
-  валидация, настройки пользователя
-  (подписки, тихие часы), рендер шаблона,
-  сохранение notification(status=<span class="t">ACCEPTED</span>)
-  + outbox
-  ▼
-<span class="t">Kafka</span>: topic по каналу и приоритету
-  otp.sms (высокий)
-  transactional.push
-  marketing.email (низкий)
-  ▼
-Воркеры канала
-  ▼
-Адаптеры провайдеров
-  rate limit партнёра, circuit breaker,
-  ретраи с backoff
-  ▼                     ▲
-статусы:                колбэки
-<span class="t">SENT</span> → <span class="t">DELIVERED</span> /      провайдеров (<span class="t">DLR</span>),
-       <span class="t">FAILED</span>  ◀──────  сверка
-fallback: push не доставлен за <span class="t">N</span> секунд
-→ <span class="t">SMS</span></pre>
-      <div class="table-wrap"><table>
-        <tr><th>Вопрос</th><th>Решение</th></tr>
-        <tr><td>OTP не должен ждать маркетинговую рассылку на 10 млн</td><td>раздельные топики, воркеры и квоты у провайдера</td></tr>
-        <tr><td>Провайдер медленный или лежит</td><td>circuit breaker, переключение на резервного провайдера, очередь копится в Kafka</td></tr>
-        <tr><td>Дубли</td><td>idempotency key на входе; уникальный id сообщения к провайдеру; дубли при неизвестном исходе принимаются как редкость</td></tr>
-        <tr><td>Не слать ночью</td><td>тихие часы по часовому поясу пользователя — отложенная отправка (для маркетинга), OTP — всегда</td></tr>
-        <tr><td>Отписка и согласия</td><td>проверка на входе, хранение согласий, обязательная ссылка отписки для email</td></tr>
-        <tr><td>Объёмы истории</td><td>статусы — в партиционированной таблице с ретенцией, тексты с персональными данными — коротко</td></tr>
-      </table></div>
-      <p>Оценка: 50 млн/сутки ≈ 580/с в среднем, маркетинговые рассылки дают пики в десятки тысяч в секунду — их сглаживает очередь и лимит провайдера (у SMS-шлюза может быть 100–500 SMS/с на аккаунт). Значит, большая рассылка физически растягивается на часы — это нужно сказать заказчику, а не пытаться «ускорить».</p>
-<p class="follow"><b>Как не отправить одну SMS дважды?</b> Idempotency key к провайдеру, если он поддерживается; сохранять состояние до отправки.</p>
+<figure class="concept" aria-labelledby="sd-notification-flow-caption"><svg viewBox="0 0 320 270" role="img" aria-labelledby="sd-notification-flow-title sd-notification-flow-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-notification-flow-title">Доставка уведомления</title><desc id="sd-notification-flow-desc">Приём сохраняется надёжно. Изолированные очереди и лимиты не дают массовой рассылке занять ресурсы критичных уведомлений.</desc><defs><marker id="sd-notification-flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 62 V96" marker-end="url(#sd-notification-flow-arrow)"/><path class="concept-edge" d="M160 160 V194" marker-end="url(#sd-notification-flow-arrow)"/><rect class="concept-node accent" x="16" y="12" width="288" height="50" rx="9"/><text x="160.0" y="42.0" text-anchor="middle">API → notification + outbox</text><rect class="concept-node plain" x="16" y="100" width="288" height="60" rx="9"/><text x="160.0" y="125.0" text-anchor="middle">Очереди по классу работы</text><text x="160.0" y="145.0" text-anchor="middle">OTP отдельно от маркетинга</text><rect class="concept-node plain" x="16" y="198" width="288" height="60" rx="9"/><text x="160.0" y="223.0" text-anchor="middle">Воркеры → провайдер</text><text x="160.0" y="243.0" text-anchor="middle">Callback / запрос статуса</text></svg><figcaption id="sd-notification-flow-caption">Приём сохраняется надёжно. Изолированные очереди и лимиты не дают массовой рассылке занять ресурсы критичных уведомлений.</figcaption></figure><div class="table-wrap"><table><tr><th>Задача</th><th>Решение</th></tr><tr><td>Клиент повторил команду</td><td>Дедупликация по логическому notificationId</td></tr><tr><td>Провайдер отвечает медленно</td><td>Bulkhead, timeout, ограниченные retry и контроль backlog</td></tr><tr><td>Согласия/тихие часы изменились после приёма</td><td>Перепроверить актуальные правила перед отправкой, где это требуется</td></tr><tr><td>Callback повторён или пришёл позже</td><td>Проверять отправителя и переход состояния, обрабатывать идемпотентно</td></tr><tr><td>Токен OTP протух в очереди</td><td>Не отправлять бессмысленное сообщение; контролировать deadline</td></tr></table></div><p>50 млн/сутки — около 579/с в среднем, но квота провайдера и длительность пика определят реальное время рассылки. Если он поддерживает idempotency key и статус, это используют; без такого протокола нельзя локальным флагом гарантировать отсутствие дубля после обрыва ответа.</p><p class="follow"><b>Достаточно разных топиков для приоритета?</b> Нет. Если у них один забитый пул или общая исчерпанная квота провайдера, OTP всё равно ждёт. Изоляция должна доходить до ограниченного ресурса.</p>
     </div></div></article>
-<article id="q277" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">277. Спроектируйте сверку проводок: 100 млн в день <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p>Каждой проводке нужно найти <b>пару по ключу</b> (номер транзакции + операционный день), а несматченные к концу дня — в отчёт. 100 млн в день — ~1 200/с, с пиками больше.</p>
-<ul><li>Проводки идут в Kafka и <b>перекладываются по ключу пары</b> — обе половины в одной партиции.</li><li>Ожидающая половина — в <b>state store Kafka Streams</b>, без запроса в базу на каждую проводку.</li><li>Закрытие дня — <b>внешний сигнал</b>, опоздавшие — на ручной разбор.</li></ul></div>
+<article id="q277" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">277. Спроектируйте сверку проводок: 100 млн в день <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Обе проводки пары направляю по одному составному ключу</b>, например (операционный день, transactionId). Обработчик хранит ещё не найденные половины и сравнивает атрибуты при получении второй.</p><p>Kafka Streams может держать локальное состояние с восстановлением из changelog. Результаты пишутся в matched/unmatched и далее идемпотентно в отчётную БД.</p><p><b>Закрытие дня должно учитывать полноту входа.</b> Отдельный сигнал в другом топике сам по себе не доказывает, что все проводки уже обработаны.</p></div>
     <div class="more">
-<ul>
-      <li>Граница дня — внешний сигнал в global store; каждая задача выгружает свои несматченные. Опоздавшие за закрытый день — на ручной разбор.</li>
-      <li>Запись результатов в БД — отдельный сервис, идемпотентно; масштаб — партиции.</li>
-    </ul>
-<p>Постановка: две системы (например, процессинг и АБС) независимо фиксируют одни и те же операции; каждая проводка из одного источника должна найти пару в другом с совпадением ключевых атрибутов (сумма, счёт, дата). Результат — сматченные пары и список расхождений к закрытию операционного дня.</p>
-<pre class="wide">source-<span class="t">A</span> ─┐                       ┌─▶ matched   ─▶ writer ─▶ <span class="t">Postgres</span> (отчёты)
-          ├─▶ postings ─▶ repartition by (operDay:transactionId) ─▶ <span class="t">PairMatcher</span> ─┤
-source-<span class="t">B</span> ─┘                                     state store: ожидающие пару      └─▶ unmatched ─▶ writer
-                                    oper-day-closed (global store) ─▶ punctuator: при закрытии дня
-                                                                       выгрузить всё несматченное за день</pre>
-<pre class="narrow">source-<span class="t">A</span> ─┐
-          ├─▶ postings
-source-<span class="t">B</span> ─┘      │
-                 ▼
-  repartition by (operDay:transactionId)
-                 │
-                 ▼
-  <span class="t">PairMatcher</span>
-    state store: ожидающие пару
-    oper-day-closed (global store)
-      ─▶ punctuator: при закрытии дня
-         выгрузить всё несматченное за день
-     │                    │
-     ▼                    ▼
-  matched              unmatched
-     │                    │
-     ▼                    ▼
-  writer ─▶ <span class="t">Postgres</span>   writer
-            (отчёты)</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Вопрос</th><th>Решение</th></tr>
-        <tr><td>Почему не SQL JOIN по таблицам в конце дня</td><td>100 млн × 2 строк — тяжёлый батч в конце дня, расхождения видны поздно; потоковое сопоставление даёт результат сразу и равномерно нагружает систему</td></tr>
-        <tr><td>Почему перекладка по ключу пары</td><td>обе проводки пары должны попасть в одну задачу и её локальное состояние — иначе нужен общий распределённый поиск</td></tr>
-        <tr><td>Где хранится ожидающая половина</td><td>state store (RocksDB) с changelog-топиком — переживает падение инстанса</td></tr>
-        <tr><td>Как понять, что пары не будет</td><td>внешний сигнал закрытия операционного дня; ключи хранятся с префиксом дня — выгрузка range-сканом по префиксу</td></tr>
-        <tr><td>Опоздавшая проводка за закрытый день</td><td>в отдельный поток на ручной разбор, а не в матчинг</td></tr>
-        <tr><td>Дубли и повторы</td><td>exactly_once_v2 внутри Kafka; запись в БД — insert … on conflict do nothing</td></tr>
-        <tr><td>Нечёткое совпадение (суммы с комиссией, разные даты)</td><td>правила сопоставления как конфигурация, кандидаты на ручное подтверждение</td></tr>
-      </table></div>
-      <p>Нагрузка: 100 млн в день ≈ 1 200/с в среднем, но потоки неравномерны (пики днём, выгрузки пачками) — закладывать ×5–10. Масштаб — числом партиций; размер state store определяется числом несматченных в моменте (если пары приходят быстро, он невелик), а не дневным объёмом. Время восстановления после падения — время перечитывания changelog, отсюда standby-реплики.</p>
+<figure class="concept" aria-labelledby="sd-posting-matcher-caption"><svg viewBox="0 0 320 356" role="img" aria-labelledby="sd-posting-matcher-title sd-posting-matcher-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-posting-matcher-title">Потоковое сопоставление</title><desc id="sd-posting-matcher-desc">Общий ключ направляет обе стороны пары в одно состояние. Закрытие дня применяется с учётом полноты входных данных.</desc><defs><marker id="sd-posting-matcher-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M80 56 V76 H160 V92" marker-end="url(#sd-posting-matcher-arrow)"/><path class="concept-edge" d="M240 56 V76 H160" marker-end="url(#sd-posting-matcher-arrow)"/><path class="concept-edge" d="M160 150 V186" marker-end="url(#sd-posting-matcher-arrow)"/><path class="concept-edge" d="M160 250 V272 H80 V290" marker-end="url(#sd-posting-matcher-arrow)"/><path class="concept-edge" d="M160 250 V272 H240 V290" marker-end="url(#sd-posting-matcher-arrow)"/><rect class="concept-node plain" x="8" y="12" width="144" height="44" rx="9"/><text x="80.0" y="39.0" text-anchor="middle">Источник A</text><rect class="concept-node plain" x="168" y="12" width="144" height="44" rx="9"/><text x="240.0" y="39.0" text-anchor="middle">Источник B</text><rect class="concept-node accent" x="16" y="96" width="288" height="54" rx="9"/><text x="160.0" y="128.0" text-anchor="middle">Repartition по ключу пары</text><rect class="concept-node plain" x="16" y="190" width="288" height="60" rx="9"/><text x="160.0" y="215.0" text-anchor="middle">Matcher + state store</text><text x="160.0" y="235.0" text-anchor="middle">ожидающие половины</text><rect class="concept-node plain" x="8" y="294" width="144" height="50" rx="9"/><text x="80.0" y="324.0" text-anchor="middle">matched</text><rect class="concept-node warning" x="168" y="294" width="144" height="50" rx="9"/><text x="240.0" y="324.0" text-anchor="middle">unmatched</text></svg><figcaption id="sd-posting-matcher-caption">Общий ключ направляет обе стороны пары в одно состояние. Закрытие дня применяется с учётом полноты входных данных.</figcaption></figure><ol><li>Определить идентичность проводки и пары, правила дублей, исправлений и сравнения.</li><li>Переложить по ключу пары; одна задача обрабатывает её состояние последовательно.</li><li>Сохранить первую половину; при второй проверить сумму, валюту и прочие атрибуты.</li><li>После согласованной границы дня вывести оставшиеся; более поздние события обрабатывать отдельной политикой.</li><li>Восстанавливать состояние после сбоя и писать отчёт с устойчивым id результата.</li></ol><p>Для полноты могут использоваться границы offsets каждого входного потока, протокол watermark/барьера или подтверждённое догоняние после остановки входа. Одного wall-clock таймера недостаточно. Global store с флагом закрытия также не создаёт порядка между разными топиками.</p><p>100 млн записей/сутки — около 1 160/с в среднем. Размер состояния определяется не только дневным объёмом, но и временем ожидания пары, перекосом ключей и долей unmatched. Exactly-once обработки Kafka не удаляет бизнес-дубли, которые источник отправил как разные записи.</p><p class="follow"><b>SQL JOIN в конце дня заведомо плох?</b> Нет. Для пакетного SLO и подходящего хранилища это может быть проще. Потоковое решение полезно, когда результат нужен в течение дня и нагрузку выгодно распределить во времени.</p>
     </div></div></article>
-<article id="q278" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">278. Как выдержать пик ×10: зарплатный день или распродажа <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li><b>Заранее</b>: нагрузочный тест на реальный профиль пика, <b>плановое масштабирование</b> до начала (автоскейлинг не успеет, JVM нужно прогреть), прогретые кеши, лимиты базы и провайдеров, заморозка релизов.</li><li><b>Во время пика</b>: rate limiting на входе с <b>приоритетом критичным операциям</b>, очереди для всего, что можно отложить, отключение второстепенного <b>флагами</b>.</li></ul>
-<p>Узкое место почти всегда — <b>база и внешние интеграции</b>.</p></div>
+<article id="q278" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">278. Как выдержать пик ×10: зарплатный день или распродажа <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Готовлюсь по профилю пика, а не только множителю RPS.</b> Нужны смесь операций, размер payload, длительность всплеска, холодные кеши и отказы зависимостей.</p><p>Заранее проверяю запас и прогрев, масштабирую ограничивающий ресурс и согласую квоты. Во время пика защищаю критичные сценарии лимитами, очередью допустимой работы и отключением второстепенных функций.</p><p><b>Больше Pod не означает больше мощности БД или провайдера.</b> Общий лимит соединений и параллельных вызовов должен оставаться контролируемым.</p></div>
     <div class="more">
-<ul><li>Узкое место почти всегда — БД и внешние интеграции, а не stateless-сервисы. Заморозка релизов и дежурная команда с runbook-ами.</li></ul>
-<div class="table-wrap"><table>
-        <tr><th>Когда</th><th>Действия</th></tr>
-        <tr><td>За недели</td><td>прогноз по прошлым пикам; нагрузочный тест на профиле пика (не равномерная нагрузка, а реальное соотношение операций); найти первое узкое место, исправить, повторить</td></tr>
-        <tr><td>За дни</td><td>заранее поднять реплики/поды (HPA реагирует минутами, а холодный JVM ещё и медленный); увеличить пулы и лимиты; предупредить внешних провайдеров о росте трафика; прогреть кеши; заморозить релизы</td></tr>
-        <tr><td>Во время</td><td>rate limiting на входе с приоритетами (оплаты важнее истории операций); асинхронизация всего, что можно отложить (уведомления, кешбэк, аналитика); отключение тяжёлых второстепенных функций флагами; дежурство с готовыми runbook-ами</td></tr>
-        <tr><td>После</td><td>разбор метрик: где был запас, где нет; обновить прогноз</td></tr>
-      </table></div>
-      <p>Почему узкое место — БД и внешние системы: stateless-сервисы масштабируются горизонтально добавлением подов, а одна мастер-БД — нет; пулы соединений к ней ограничены. Каждый новый под добавляет ещё N соединений — масштабирование приложения может положить БД. Внешний провайдер (процессинг, SMS) имеет свои жёсткие лимиты.</p>
-      <p>Приёмы для БД под пик: вынести чтение на реплики и кеш; убрать тяжёлые отчёты и выгрузки на время пика; батчевая запись вместо поштучной; очередь перед записью с ограниченным числом писателей (сгладить пик в БД, приняв задержку обработки); проверить, что autovacuum и бэкапы не запланированы на пиковое время.</p>
-      <p>Деградация должна быть спроектирована заранее: какие функции можно выключить, как это сделать без деплоя, что увидит пользователь («история операций временно недоступна» лучше, чем падение оплаты).</p>
+<div class="table-wrap"><table><tr><th>Этап</th><th>Что сделать</th></tr><tr><td>До пика</td><td>Нагрузочный тест, измерение первого узкого места, проверка восстановления и лимитов</td></tr><tr><td>Перед началом</td><td>Плановое масштабирование, безопасный прогрев, проверка квот и runbook</td></tr><tr><td>Во время</td><td>SLO и burn rate, возраст очередей, быстрый отказ лишнему потоку, приоритет критичных операций</td></tr><tr><td>После</td><td>Контролируемо догнать backlog, вернуть режимы и разобрать фактические пределы</td></tr></table></div><pre><span class="n">20</span> <span class="t">Pod</span> × <span class="n">30</span> соединений = <span class="n">600</span>
+<span class="n">50</span> <span class="t">Pod</span> × <span class="n">30</span> соединений = <span class="n">1</span> <span class="n">500</span>
+
+Число <span class="t">Pod</span> выросло в <span class="n">2</span>,<span class="n">5</span> раза,
+лимит БД сам от этого не изменился.</pre><p>Увеличение пулов без проверки может ухудшить конкуренцию и latency. Для очереди рассчитывают и фазу догоняния: если после пика вся мощность снова занята текущим потоком, backlog не исчезнет. Массовый прогрев тоже ограничивают, чтобы не устроить пик до основного пика.</p><p class="follow"><b>Нужно ли отключать autovacuum ради пика?</b> Не автоматически. Остановка обслуживания может накопить bloat и усилить следующую проблему. Проверяют реальную конкуренцию ресурсов и заранее выбирают режим обслуживания по измерениям.</p>
     </div></div></article>
-<article id="q279" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">279. Несколько дата-центров: RPO, RTO, active-passive и active-active <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>RPO</b> — сколько данных можно потерять, <b>RTO</b> — за сколько восстановиться.</p>
-<ul><li><b>Active-passive</b>: асинхронная репликация — RPO в секунды, синхронная — ноль, но каждый коммит ждёт второй ДЦ.</li><li><b>Active-active</b>: данные по «домашнему» региону или разрешение конфликтов; для денег «последняя запись выигрывает» опасно.</li><li>Для автопереключения нужен <b>третий голос</b>, иначе split-brain.</li></ul>
-<p>Переключение регулярно проверяют <b>учениями</b>.</p></div>
+<article id="q279" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">279. Несколько дата-центров: RPO, RTO, active-passive и active-active <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>RPO — допустимая потеря данных, RTO — допустимое время восстановления.</b> Это требования; фактические значения подтверждают проверками восстановления, а не названием репликации.</p><p><b>Active-passive</b> держит резерв для переключения. <b>Active-active</b> принимает работу в нескольких площадках, но всё равно требует правила владения записью или разрешения конфликтов.</p><p>Синхронное подтверждение удалённой копии может обеспечить нулевую потерю подтверждённых записей в предусмотренном сценарии отказа. Оно не заменяет fencing старого лидера и не защищает от любой катастрофы.</p></div>
     <div class="more">
-<ul><li>Кворуму нужен третий участник (witness), иначе split-brain. Failover нужно регулярно проверять — иначе в день аварии он не сработает.</li></ul>
-<div class="table-wrap"><table>
-        <tr><th>Схема</th><th>RPO</th><th>RTO</th><th>Сложность</th></tr>
-        <tr><td>Бэкапы в другом регионе</td><td>часы (время последнего бэкапа + WAL-архив)</td><td>часы</td><td>низкая</td></tr>
-        <tr><td>Active-passive, асинхронная репликация</td><td>секунды (лаг репликации)</td><td>минуты (автоматический failover)</td><td>средняя</td></tr>
-        <tr><td>Active-passive, синхронная репликация</td><td>0</td><td>минуты</td><td>средняя; +RTT между ДЦ к каждому коммиту</td></tr>
-        <tr><td>Active-active с разбиением по «домашнему» региону</td><td>0–секунды для своих данных</td><td>секунды–минуты</td><td>высокая: маршрутизация пользователя в свой регион</td></tr>
-        <tr><td>Active-active с мультимастер-записью</td><td>зависит от разрешения конфликтов</td><td>секунды</td><td>очень высокая, для денег почти не применяется</td></tr>
-      </table></div>
-      <p>Синхронная репликация между ДЦ в одном городе (RTT 1–2 мс) — приемлемая цена для финансовых систем; между регионами (RTT 30–100 мс) — каждый коммит становится в десятки раз медленнее, поэтому межрегиональная — асинхронная, с осознанным RPO.</p>
-      <p>Split-brain и кворум: при двух ДЦ и разрыве связи каждая сторона не может отличить «соседа нет» от «связи нет». Автоматический failover без третьего голоса (witness в третьей площадке, облаке) приведёт к двум мастерам. Patroni использует DCS (etcd/Consul) с кворумом, старый мастер должен быть «огорожен» (fencing): отключён от записи, понижен до реплики, отрезан от сети.</p>
-      <p>Что ещё проверяют: stateless-часть легко поднять в любом ДЦ, сложность всегда в данных (БД, Kafka — MirrorMaker 2/Cluster Linking, кеши, файлы); DNS/GSLB для переключения трафика и TTL записей; регулярные учения переключения (game days) — непроверенный failover в день аварии не работает; после аварии — обратное переключение и сверка данных, которые успели записаться в обе стороны.</p>
-<p class="follow"><b>Что такое split-brain?</b> После разрыва связи обе стороны считают себя главными и принимают записи. Защита — кворум и fencing старого лидера.</p>
+<div class="table-wrap"><table><tr><th>Подход</th><th>Что определяет результат</th></tr><tr><td>Backup + журнал изменений</td><td>Частота копирования, сохранность журналов и измеренная скорость restore</td></tr><tr><td>Асинхронный резерв</td><td>Реальный lag к моменту аварии, выбор точки продолжения и сохранность прежнего лидера</td></tr><tr><td>Синхронная репликация</td><td>Кто обязан подтвердить COMMIT и какие отказы покрывает схема</td></tr><tr><td>Домашний регион данных</td><td>Маршрутизация и процедура передачи владения при потере региона</td></tr><tr><td>Запись в нескольких регионах</td><td>Доменный протокол конфликтов; last-write-wins не сохраняет любой денежный инвариант</td></tr></table></div><ol><li>Убедиться, что решение о failover принимается по согласованному протоколу.</li><li>Запретить прежнему владельцу запись или оградить её fencing.</li><li>Выбрать подтверждённую точку данных, поднять зависимости и переключить трафик.</li><li>Проверить бизнес-результат, обработать неопределённые операции и backlog.</li><li>Подготовить обратное переключение после сверки.</li></ol><p>Третий независимый голос — распространённый способ разместить кворум по площадкам; важен весь failure-domain дизайн, а не магическое число серверов. Репликация не заменяет backup: ошибочное удаление может быстро распространиться на резерв.</p><p class="follow"><b>RTO заканчивается, когда поднялся Pod?</b> Нет. Восстановление считается по согласованной пользовательской функции: данные доступны, зависимости работают, нужная нагрузка обслуживается, целостность проверена.</p>
     </div></div></article>
 <article id="q280" hidden><div class="crumbs">Kubernetes и эксплуатация</div><h2 tabindex="-1">280. Docker-образ для Java-сервиса</h2><div class="answer" hidden><div class="short"><ul><li><b>Multi-stage</b>: собрать в образе с JDK, в итоговый взять только JRE и приложение.</li><li><b>Слои</b> от редко меняющихся к частым: зависимости отдельно от своего кода — правка кода выкачивает только тонкий слой (Spring Boot раскладывает jar на слои сам).</li><li><b>Не от root</b>, фиксированные теги базовых образов.</li><li>ENTRYPOINT в <b>exec-форме</b>, чтобы java получала SIGTERM.</li></ul>
 <p>Без Dockerfile — <b>Buildpacks</b> или Jib.</p></div>
