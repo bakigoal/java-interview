@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <script>try { const t = localStorage.getItem('faq.theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#eaeaeb">
+<meta name="theme-color" content="#f2f4f8">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Java-собес">
@@ -25,9 +25,9 @@
 :root {
   --radius: 14px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   /* светлая тема — палитра Atom One Light */
-  --bg: #eaeaeb; --surface: #fafafa; --fg: #383a42; --muted: #5d6069; --line: #e0e0e2; --chip: #e5e5e6;
+  --bg: #f2f4f8; --surface: #ffffff; --fg: #383a42; --muted: #5d6069; --line: #e0e0e2; --chip: #e5e5e6;
   --chip-pressed: #d4d4d6; --accent: #2c62cf; --accent-soft: rgba(64, 120, 242, .09); --code-bg: #f0f0f1;
-  --head-bg: rgba(234, 234, 235, .88); --shadow: 0 1px 2px rgba(56, 58, 66, .06); --tag-fg: #855a00;
+  --head-bg: rgba(242, 244, 248, .96); --shadow: 0 1px 2px rgba(56, 58, 66, .06); --tag-fg: #855a00;
   --edge: rgba(0, 0, 0, .22); --tag-bg: rgba(193, 132, 1, .13); --mark: rgba(193, 132, 1, .24); --code-fg: #c43a2e;
   /* цвета Atom One Light, затемнённые до контраста 4.5:1 на фоне кода */
   --hl-k: #a626a4; --hl-s: #387a37; --hl-c: #696c77; --hl-n: #a0490c; --hl-a: #2f68d8; --hl-t: #8a5f00; --hl-p: #c43a2e;
@@ -86,8 +86,8 @@ button { font: inherit; color: inherit; }
 .theme svg { width: 20px; height: 20px; }
 .list-head .total { color: var(--muted); font-size: 13px; margin: 2px 0 10px; }
 .search { position: relative; }
-.search input { width: 100%; height: 44px; border: 0; border-radius: 12px; background: var(--chip);
-                padding: 0 14px 0 40px; font-size: 16px; outline: none; -webkit-appearance: none; }
+.search input { width: 100%; height: 44px; border: 0; border-radius: 12px; background: var(--surface);
+                box-shadow: inset 0 0 0 1px var(--line); padding: 0 14px 0 40px; font-size: 16px; outline: none; -webkit-appearance: none; }
 .search input:focus { background: var(--surface); box-shadow: 0 0 0 2px var(--accent); }
 .search svg { position: absolute; left: 13px; top: 13px; width: 18px; height: 18px; color: var(--muted); }
 .empty { color: var(--muted); text-align: center; padding: 32px 16px; }
@@ -208,7 +208,7 @@ pre.wide { display: none; }
   .list { border-right: 1px solid var(--line); }
   .back { display: none; }
   .bar-row { padding: 10px 16px; }
-  .content { max-width: 1120px; padding: 28px 40px 40px; }   /* 780px оставлял половину широкого экрана пустой */
+  .content { max-width: 880px; padding: 28px 40px 40px; }
   article h2 { font-size: 26px; }
   .chap a:hover { background: var(--chip); }
   .chap a.active:hover { background: var(--accent-soft); }
@@ -247,11 +247,11 @@ kbd { min-width: 20px; height: 20px; box-sizing: border-box; display: inline-fle
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .legend .ico { width: 14px; height: 14px; }
-.filters { display: flex; gap: 8px; margin: 10px -16px 0; padding: 0 16px; overflow-x: auto; scrollbar-width: none; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; padding: 0; }
 .filters::-webkit-scrollbar { display: none; }
-.filters button { flex: none; height: 40px; padding: 0 14px; border: 0; border-radius: 999px; background: var(--chip);
+.filters button { flex: none; min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface);
                   font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; }
-.filters button[aria-pressed="true"] { background: var(--fg); color: var(--surface); }
+.filters button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 .filters .n { font-weight: 500; color: var(--muted); }
 .filters [aria-pressed="true"] .n { color: inherit; opacity: .8; }
 
@@ -370,6 +370,36 @@ kbd { min-width: 20px; height: 20px; box-sizing: border-box; display: inline-fle
   .pager[data-state="done"] .pg-prev, .pager[data-state="done"] .pg-next { visibility: hidden; }
 }
 
+
+/* Иерархия каталога и одинаковый вес вариантов самооценки. */
+.chap { box-shadow: none; border: 1px solid var(--line); }
+.chap summary { padding: 10px 14px; }
+.chap summary .count { background: none; padding: 1px 4px; }
+.chap[data-marked="0"] summary .mini { display: none; }
+.progress.is-empty .bar, .progress.is-empty .legend { display: none; }
+.progress.is-empty .prog-row { font-size: 13px; color: var(--muted); }
+.progress.is-empty #marked { font-weight: 400; }
+.progress.is-empty #percent { display: none; }
+.first-tip, .results { margin: 0 16px 12px; color: var(--muted); font-size: 13px; }
+.chap a .q { flex: 1; min-width: 0; }
+.snippet { display: block; margin-top: 6px; font-size: 13px; line-height: 1.5; color: var(--muted); font-weight: 400; }
+.snippet mark { background: var(--mark); color: var(--fg); border-radius: 2px; }
+.rate-btns button { border: 1px solid var(--line); background: var(--surface); }
+.rate-btns button:hover { background: var(--accent-soft); border-color: var(--accent); }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 959px) {
+  .list-head { top: calc(-1 * var(--intro-height, 0px)); border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+  .head-intro { display: flow-root; }
+  .filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .filters button { padding: 0 8px; }
+  .pager[data-state="rate"] { padding: 4px 12px calc(8px + env(safe-area-inset-bottom)); }
+  .rate-head { font-size: 12px; gap: 8px; }
+  .rate-head .link { min-height: 44px; font-size: 12px; padding: 0; }
+  .rate-btns button { height: 48px; font-size: 14px; flex-direction: row; gap: 5px; }
+  .rate-btns .ico { width: 16px; height: 16px; }
+  .upnext { display: none; }
+}
+
 @media print {
   .app { position: static; display: block; overflow: visible; }
   .pane { position: static; transform: none !important; }
@@ -390,7 +420,7 @@ kbd { min-width: 20px; height: 20px; box-sizing: border-box; display: inline-fle
 <div class="app" id="app">
 <nav class="pane list" id="list">
 <div class="list-head">
-<div class="title"><h1>Java-собеседование</h1><button class="theme" type="button"></button></div>
+<div class="head-intro"><div class="title"><h1>Java-собеседование</h1><button class="theme" type="button"></button></div>
 <div class="total">352 вопроса · Middle+ / Senior</div>
 <div class="modes" role="group" aria-label="Режим"><button type="button" data-mode="read">Чтение</button><button type="button" data-mode="train">Тренировка</button></div>
 <div class="progress">
@@ -398,11 +428,14 @@ kbd { min-width: 20px; height: 20px; box-sizing: border-box; display: inline-fle
 <div class="bar" id="totalbar" role="img"></div>
 <div class="legend"><span><i class="ico known"></i>Знаю <span id="n-known"></span></span><span><i class="ico partial"></i>Частично <span id="n-partial"></span></span><span><i class="ico unknown"></i>Не знал <span id="n-unknown"></span></span></div>
 </div>
+</div>
 <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="search" type="search" placeholder="Поиск по вопросам и ответам"
-     autocomplete="off" enterkeyhint="search"></div>
+     aria-label="Поиск по вопросам и ответам" autocomplete="off" enterkeyhint="search"></div>
 <div class="filters" role="group" aria-label="Фильтр"><button type="button" data-f="all" aria-pressed="true">Все</button><button type="button" data-f="repeat" aria-pressed="false">Повторить <span class="n" id="f-repeat"></span></button><button type="button" data-f="top" aria-pressed="false">★ Топ</button><button type="button" data-f="new" aria-pressed="false">Не открывал <span class="n" id="f-new"></span></button></div>
 </div>
 <a class="cont" id="cont" href="#" hidden><span class="cont-text"><span class="cont-pos"></span><span class="cont-q"></span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></a>
+<p id="first-tip" class="first-tip">Выберите тему и начните тренировку. Отмечайте ответы, чтобы видеть прогресс.</p>
+<p id="results" class="results" role="status" hidden></p>
 <div id="empty" class="empty" hidden>Ничего не найдено</div>
 <details class="chap"><summary><span class="ct">Java Core</span><span class="count">34</span><span class="mini" role="img"></span></summary>
 <a href="#q1" data-k="ad14a7ee8f" data-ci="0"><span class="num">1</span><span class="q">Как передаются параметры в Java?</span><i class="st ico none"></i><span class="sr st-t"></span></a>
@@ -19362,7 +19395,7 @@ db.orders.updateOne(
 <div class="pg-mid">
 <button type="button" class="pg-show primary" id="show" aria-expanded="false">Показать ответ</button>
 <div class="pg-rate"><div class="rate-head"><span>Как вы ответили?</span><button type="button" class="link" id="hide">Скрыть ответ</button><button type="button" class="link" id="skip">Пропустить</button></div>
-<div class="rate-btns"><button type="button" data-mark="unknown"><i class="ico unknown"></i>Не знал<kbd>1</kbd></button><button type="button" data-mark="partial"><i class="ico partial"></i>Частично<kbd>2</kbd></button><button type="button" class="primary" data-mark="known"><i class="ico known"></i>Знаю<kbd>3</kbd></button></div>
+<div class="rate-btns"><button type="button" data-mark="unknown"><i class="ico unknown"></i>Не знал<kbd>1</kbd></button><button type="button" data-mark="partial"><i class="ico partial"></i>Частично<kbd>2</kbd></button><button type="button" data-mark="known"><i class="ico known"></i>Знаю<kbd>3</kbd></button></div>
 <div class="upnext">Дальше: <span id="upnext"></span></div></div>
 <div class="pg-done"><button type="button" class="primary" id="again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 21v-5h-5"/></svg><span></span></button><button type="button" id="unmarked"><span></span></button><button type="button" id="nextchap"><span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>
 </div>
@@ -19380,13 +19413,14 @@ const summary = document.getElementById('summary');
 const lastmark = document.getElementById('lastmark');
 const tip = document.getElementById('tip');
 const links = [...list.querySelectorAll('.chap a')];
+links.forEach(a => { a.dataset.title = a.querySelector('.q').textContent; });
 const ids = links.map(a => a.hash.slice(1));
 const byId = new Map(links.map(a => [a.hash.slice(1), a]));
 const byKey = new Map(links.map(a => [a.dataset.k, a]));
 const chaps = [...list.querySelectorAll('.chap')];
 const chapLinks = chaps.map(c => [...c.querySelectorAll('a')]);
 const chapName = ci => chaps[ci].querySelector('.ct').textContent;
-const title = id => { const a = byId.get(id); return a.querySelector('.num').textContent + '. ' + a.querySelector('.q').textContent; };
+const title = id => { const a = byId.get(id); return a.querySelector('.num').textContent + '. ' + a.dataset.title; };
 const desktop = matchMedia('(min-width: 960px)');
 const LABEL = { known: 'знаю', partial: 'частично', unknown: 'не знал' };
 const RATES = ['unknown', 'partial', 'known'];                         // клавиши 1, 2, 3
@@ -19447,6 +19481,7 @@ function renderProgress() {
   document.getElementById('marked').textContent = `Отмечено ${marked} из ${links.length}`;
   const pct = Math.round(marked * 100 / links.length);
   document.getElementById('percent').textContent = marked && !pct ? '<1%' : pct + '%';
+  document.querySelector('.progress').classList.toggle('is-empty', !marked);
   bar(document.getElementById('totalbar'), all, links.length);
   for (const s of RATES) document.getElementById('n-' + s).textContent = all[s];
   chaps.forEach((c, ci) => {
@@ -19464,9 +19499,10 @@ function resumeLink() {                                                // пос
   return [...links.slice(i), ...links.slice(0, i)].find(a => !mark(a)) || null;
 }
 function renderSeen() {
+  document.getElementById('first-tip').hidden = words.length > 0 || filter !== 'all' || Object.keys(progress.seen).length > 0 || Object.keys(progress.marks).length > 0;
   document.getElementById('f-new').textContent = links.filter(a => !progress.seen[a.dataset.k]).length;
   const a = resumeLink(), cont = document.getElementById('cont');
-  cont.hidden = !a;
+  cont.hidden = !a || words.length > 0 || filter !== 'all';
   if (!a) return;
   const ci = +a.dataset.ci;
   cont.href = a.hash;
@@ -19476,6 +19512,10 @@ function renderSeen() {
 
 // ---------- список: поиск и фильтры вместе ----------
 const search = document.getElementById('search');
+const intro = document.querySelector('.head-intro');
+new ResizeObserver(() => {
+  list.style.setProperty('--intro-height', intro.getBoundingClientRect().height + 'px');
+}).observe(intro);
 const norm = t => t.toLowerCase().replace(/ё/g, 'е');
 // индекс строится при первом поиске; широкая копия кода (pre.wide) и вставки тренажёра не индексируются
 function articleText(el) {
@@ -19484,13 +19524,13 @@ function articleText(el) {
     acceptNode: n => n.parentElement.closest('pre.wide, .lastmark, .tip') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
   });
   for (let n; (n = walker.nextNode());) text += n.data;
-  return norm(text);
+  return text.replace(/\s+/g, ' ').trim();
 }
 let index = null;
 function applyList(reset) {
   const searching = words.length > 0;
   if (searching) index ??= new Map(links.map(a => [a, {
-    q: norm(a.querySelector('.q').textContent), body: articleText(document.getElementById(a.hash.slice(1))) }]));
+    q: norm(a.dataset.title), body: norm(articleText(document.getElementById(a.hash.slice(1)))), text: articleText(document.getElementById(a.hash.slice(1)).querySelector('.answer')) }]));
   for (const a of links) {
     let ok = true, inQuestion = true;
     if (searching) {
@@ -19503,7 +19543,26 @@ function applyList(reset) {
     if (filter === 'top') ok &&= 'top' in a.dataset;
     if (filter === 'new') ok &&= !progress.seen[a.dataset.k];
     if (a.hidden !== !ok) a.hidden = !ok;
-    a.classList.toggle('in-answer', searching && !inQuestion);         // нашлось только в тексте ответа
+    a.classList.toggle('in-answer', searching && !inQuestion);
+    a.querySelector('.snippet')?.remove();
+    if (searching && ok) {
+      const text = index.get(a).text, lower = norm(text);
+      const at = Math.min(...words.map(w => lower.indexOf(w)).filter(i => i >= 0));
+      const start = Number.isFinite(at) ? Math.max(0, at - 45) : 0;
+      const excerpt = (start ? '…' : '') + text.slice(start, start + 150) + (text.length > start + 150 ? '…' : '');
+      const snippet = document.createElement('span');
+      snippet.className = 'snippet';
+      for (let i = 0; i < excerpt.length;) {
+        const word = words.find(w => norm(excerpt).startsWith(w, i));
+        if (word) {
+          const mark = document.createElement('mark');
+          mark.textContent = excerpt.slice(i, i + word.length);
+          snippet.append(mark);
+          i += word.length;
+        } else snippet.append(document.createTextNode(excerpt[i++]));
+      }
+      a.querySelector('.q').append(snippet);
+    }
   }
   const narrowed = searching || filter !== 'all';
   chaps.forEach((c, ci) => {
@@ -19512,7 +19571,12 @@ function applyList(reset) {
     c.querySelector('.count').textContent = narrowed ? visible : `${c.dataset.marked} / ${chapLinks[ci].length}`;
     if (reset) c.open = narrowed && visible > 0;                       // при поиске и фильтре главы раскрыты
   });
-  document.getElementById('empty').hidden = links.some(a => !a.hidden);
+  const visibleCount = links.filter(a => !a.hidden).length;
+  document.getElementById('empty').hidden = visibleCount > 0;
+  const results = document.getElementById('results');
+  results.hidden = !searching;
+  results.textContent = `Найдено: ${visibleCount} из ${links.length}`;
+  renderSeen();
   if (reset) {
     if (narrowed) list.scrollTop = 0;                                  // результаты — с начала, а не над экраном
     else revealActive();
@@ -19672,7 +19736,7 @@ function showSummary(ci) {
     row.href = a.hash;
     row.innerHTML = '<span class="num"></span><span class="q"></span><i class="ico"></i>';
     row.querySelector('.num').textContent = a.querySelector('.num').textContent;
-    row.querySelector('.q').textContent = a.querySelector('.q').textContent;
+    row.querySelector('.q').textContent = a.dataset.title;
     row.querySelector('.ico').className = 'ico ' + mark(a);
     row.insertAdjacentHTML('beforeend', '<span class="sr"></span>');
     row.lastChild.textContent = ' — ' + LABEL[mark(a)];
@@ -19752,7 +19816,7 @@ function renderTheme() {
     b.innerHTML = dark ? SUN : MOON;
     b.setAttribute('aria-label', dark ? 'Светлая тема' : 'Тёмная тема');
   });
-  document.querySelector('meta[name="theme-color"]').content = dark ? '#21252b' : '#eaeaeb';
+  document.querySelector('meta[name="theme-color"]').content = dark ? '#21252b' : '#f2f4f8';
 }
 document.querySelectorAll('.theme').forEach(b => b.addEventListener('click', () => {
   root.dataset.theme = isDark() ? 'light' : 'dark';
