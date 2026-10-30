@@ -13470,61 +13470,19 @@ DROP <span class="k">TABLE</span> payment_2024_10;</pre>
       <p>Выбор ключа шарда: высокая кардинальность (client_id, а не страна), равномерное распределение (нет «гигантского» клиента на одном шарде), локальность — все данные одной бизнес-операции на одном шарде (счёт и его проводки по client_id). Хеш по ключу даёт равномерность, диапазоны — эффективные range-запросы. Решардинг дешевле с большим числом виртуальных шардов, разложенных на меньшее число узлов, или с консистентным хешированием.</p>
 <p class="follow"><b>Когда достаточно реплик?</b> Когда нагрузка в основном на чтение. Шарды — когда упираетесь в объём записи или данных одного узла.</p>
     </div></div></article>
-<article id="q217" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">217. Kafka или RabbitMQ</h2><div class="answer" hidden><div class="short"><ul><li><b>Kafka</b> — распределённый <b>лог</b>: сообщения хранятся по retention независимо от чтения, консюмеры сами двигают offset и могут <b>перечитать историю</b>; высокая пропускная способность, порядок в партиции.</li><li><b>RabbitMQ</b> — брокер <b>очередей</b>: сообщение удаляется после подтверждения, гибкая маршрутизация, приоритеты, TTL и задержки.</li></ul>
-<p>Kafka — потоки событий с несколькими потребителями и историей, RabbitMQ — <b>очереди задач</b> и сложная маршрутизация.</p></div>
+<article id="q217" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">217. Kafka или RabbitMQ</h2><div class="answer" hidden><div class="short"><p><b>Kafka — журнал событий:</b> запись хранится по политике retention, а чтение её не удаляет. Разные группы читают историю независимо и могут вернуться к старому offset.</p><p><b>RabbitMQ с обычными очередями — доставка задач:</b> брокер отслеживает подтверждение каждого сообщения, поддерживает маршрутизацию через exchange. После ack сообщение удаляется из очереди.</p><p>Kafka выбираю для истории и нескольких независимых подписчиков; RabbitMQ — для задач с отдельным подтверждением, маршрутизацией и ретраями.</p></div>
     <div class="more">
-<ul><li>В Rabbit число консюмеров не ограничено партициями, но порядок при нескольких консюмерах не гарантируется. Удалить конкретное сообщение из Kafka нельзя — только retention, compaction или удаление топика.</li></ul>
-<div class="table-wrap"><table>
-        <tr><th></th><th>Kafka</th><th>RabbitMQ</th></tr>
-        <tr><td>Модель</td><td>распределённый лог; консюмер управляет позицией (offset)</td><td>брокер очередей; брокер отслеживает доставку каждого сообщения (ack)</td></tr>
-        <tr><td>Хранение</td><td>по retention, независимо от чтения</td><td>до подтверждения</td></tr>
-        <tr><td>Перечитать историю</td><td>да — сбросить offset</td><td>нет (кроме Streams-плагина)</td></tr>
-        <tr><td>Масштабирование потребления</td><td>до числа партиций</td><td>любым числом конкурирующих консюмеров</td></tr>
-        <tr><td>Порядок</td><td>в партиции</td><td>в очереди при одном консюмере</td></tr>
-        <tr><td>Маршрутизация</td><td>по топику и ключу; остальное — в коде консюмера</td><td>exchanges, binding, routing key, заголовки</td></tr>
-        <tr><td>Приоритеты, TTL на сообщение, задержки</td><td>нет из коробки</td><td>да</td></tr>
-        <tr><td>Пропускная способность</td><td>очень высокая (сотни тысяч–миллионы/с на кластер)</td><td>высокая, но ниже, особенно с persistent + confirms</td></tr>
-        <tr><td>Потоковая обработка</td><td>Kafka Streams, ksqlDB, Connect</td><td>нет экосистемы</td></tr>
-      </table></div>
-      <p>Как выбирать на практике: Kafka — когда события — источник для многих независимых потребителей, нужна история и перечитывание (новый сервис догоняет с начала), CDC, аналитика, высокий поток, порядок по ключу. RabbitMQ — очередь задач (отправить письмо, сгенерировать отчёт), RPC поверх брокера, сложная маршрутизация, приоритеты, отложенная доставка, когда объёмы умеренные.</p>
-      <p>Частое заблуждение — «Kafka для всего». Очередь задач на Kafka упирается в число партиций (нельзя просто добавить воркеров), одна долгая задача блокирует партицию, нет приоритетов и подтверждения отдельных сообщений (offset — это «всё до сюда»). Share groups (KIP-932, Queues for Kafka): консюмеры читают одну партицию совместно и подтверждают отдельные сообщения, это сближает модели. В Kafka 4.0 они вышли в раннем доступе, в 4.2 (2026) объявлены готовыми к проду, но клиентская поддержка в Spring есть только со Spring Kafka 4.0 — на Boot 3 ими не воспользоваться.</p>
+<div class="table-wrap"><table><tr><th>Сценарий</th><th>Что подходит</th></tr><tr><td>Платежи нужны аналитике, аудиту и уведомлениям</td><td>Kafka: у каждой группы своя позиция чтения</td></tr><tr><td>Распределить генерацию отчётов между работниками</td><td>RabbitMQ: ack/nack отдельного задания</td></tr><tr><td>Новый сервис должен обработать события за неделю</td><td>Kafka, если история ещё сохранена</td></tr><tr><td>Раздать события по маскам routing key</td><td>RabbitMQ: topic exchange</td></tr></table></div><p><b>Различается единица подтверждения:</b> в обычной Kafka consumer group коммит offset отмечает всю предыдущую часть партиции. В RabbitMQ можно подтвердить отдельную доставку. В обоих случаях падение после бизнес-эффекта, но до подтверждения, приводит к повтору.</p><p>Сравнение относится к обычным consumer groups и очередям RabbitMQ. Kafka share groups и RabbitMQ Streams имеют другую модель; ограничения классической модели нельзя автоматически переносить на них.</p><p class="follow"><b>Kafka всегда быстрее RabbitMQ?</b> Без одинакового сценария это бессодержательное сравнение. Важны размер сообщений, репликация, подтверждения, маршрутизация и измерения под нужной нагрузкой.</p>
     </div></div></article>
-<article id="q218" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">218. Как Kafka хранит данные и почему она быстрая</h2><div class="answer" hidden><div class="short"><ul><li>Партиция — <b>append-only лог</b> из сегментов с индексами по offset и времени; запись только <b>последовательная</b>.</li><li>Данные не в куче JVM: чтение через <b>page cache</b> ОС, отдача консюмерам — <b>zero-copy</b>.</li><li>Всё работает <b>пачками со сжатием</b>.</li><li>Брокер не помнит, кому что отдано: <b>offset хранит консюмер</b>.</li></ul></div>
+<article id="q218" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">218. Как Kafka хранит данные и почему она быстрая</h2><div class="answer" hidden><div class="short"><p><b>Партиция — лог, в который записи добавляются в конец.</b> Он разбит на файлы-сегменты; индексы помогают найти запись по offset или времени.</p><p><b>Скорость дают последовательная запись, page cache ОС и пачки со сжатием.</b> При подходящем транспорте zero-copy позволяет отдавать файл без лишнего копирования через память приложения.</p><p>Kafka хранит события независимо от чтения. Позиция группы сохраняется отдельно — обычно в служебном топике <code>__consumer_offsets</code>.</p></div>
     <div class="more">
-<ul><li>Retention и compaction работают целыми закрытыми сегментами — поэтому удаление не мгновенное.</li></ul>
-<pre class="wide">/<span class="k">var</span>/lib/kafka/payments-<span class="n">3</span>/                    # партиция <span class="n">3</span> топика payments
-  <span class="n">00000000000000000000</span>.log        # сегмент: сами пачки сообщений
-  <span class="n">00000000000000000000</span>.index      # разреженный индекс offset → позиция в файле
-  <span class="n">00000000000000000000</span>.timeindex  # время → offset (для поиска по времени)
-  <span class="n">00000000000012345678</span>.log        # следующий сегмент начинается с этого offset
-  <span class="n">00000000000012345678</span>.index
-  ...</pre>
-<pre class="narrow"># партиция <span class="n">3</span> топика payments
-/<span class="k">var</span>/lib/kafka/payments-<span class="n">3</span>/
-  # сегмент: сами пачки сообщений
+<pre>payments-<span class="n">0</span>/
   <span class="n">00000000000000000000</span>.log
-  # разреженный индекс offset → позиция
   <span class="n">00000000000000000000</span>.index
-  # время → offset (поиск по времени)
   <span class="n">00000000000000000000</span>.timeindex
-  # следующий сегмент начинается
-  # с этого offset
-  <span class="n">00000000000012345678</span>.log
-  <span class="n">00000000000012345678</span>.index
-  ...</pre>
-      <p>Почему быстро:</p>
-      <ul>
-        <li><b>Последовательная запись</b>: только дописывание в конец файла — диски (и HDD, и SSD) делают это на порядки быстрее случайной записи.</li>
-        <li><b>Page cache</b>: Kafka не держит данные в куче JVM, пишет в файлы и полагается на кеш ОС. Консюмеры, читающие «хвост», получают данные из памяти. Нет GC-давления от данных.</li>
-        <li><b>Zero-copy</b>: при отдаче консюмеру <code>sendfile()</code> передаёт данные из page cache прямо в сокет, без копирования в пространство пользователя (не работает с TLS — там нужно шифрование в user space).</li>
-        <li><b>Пачки</b>: продюсер шлёт пачки, брокер хранит их как есть, консюмер получает пачками — накладные расходы распределяются на тысячи сообщений; сжатие на уровне пачки эффективнее.</li>
-        <li><b>Нет учёта доставки на брокере</b>: консюмер сам хранит offset — брокеру не нужно помнить, что кому отдано.</li>
-      </ul>
-      <p>Поиск по offset: в имени файла сегмента — его базовый offset, нужный сегмент находится бинарным поиском по именам, внутри — по разреженному индексу до ближайшей позиции и дочитывание. Поиск по времени (<code>offsetsForTimes</code>) — через timeindex; так работает «перемотать группу на вчерашние 10:00».</p>
-      <p>Tiered storage (появился в 3.6, готов к продакшену с 3.9): старые сегменты выгружаются в объектное хранилище (S3), на брокерах остаётся только горячая часть — можно хранить месяцы без огромных дисков.</p>
+  <span class="n">00000000000000100000</span>.log</pre><ul><li><b>.log</b> — пачки записей. Имя сегмента содержит его начальный offset.</li><li><b>.index</b> — разреженный индекс: offset → позиция в файле. После ближайшей позиции данные дочитываются.</li><li><b>.timeindex</b> — индекс для поиска по времени.</li><li><b>Page cache:</b> недавно записанные данные часто уже в памяти ОС. Это уменьшает дисковое чтение; Kafka всё равно использует heap для запросов и служебных объектов.</li><li><b>Пачки:</b> меньше запросов и системных вызовов на запись; сжатие повторяющихся полей эффективнее.</li></ul><p>Обычный retention удаляет подходящие закрытые сегменты, а не сообщения сразу после чтения. Compaction отдельно переписывает сегменты, убирая старые значения ключей. При TLS обычный путь sendfile ограничен необходимостью шифрования.</p><p class="follow"><b>Почему offset не равен номеру строки в файле?</b> Он обозначает позицию в логе партиции. После compaction остаются пропуски, а одна пачка содержит несколько записей.</p>
     </div></div></article>
-<article id="q219" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">219. Kafka: partition key и порядок. 3 партиции и 4 консюмера — что будет? <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><p>Порядок гарантирован только <b>внутри партиции</b>. Одинаковый ключ — одна партиция (по хешу ключа), поэтому порядок по бизнес-ключу (счёту) сохраняется.</p>
-<p>В consumer group партицию читает <b>ровно один консюмер</b>: при 3 партициях и 4 консюмерах <b>один простаивает</b>. Число партиций — <b>потолок параллелизма</b> группы, а увеличение числа партиций ломает порядок для существующих ключей.</p></div>
+<article id="q219" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">219. Kafka: partition key и порядок. 3 партиции и 4 консюмера — что будет? <span class="tag">★ топ</span></h2><div class="answer" hidden><div class="short"><p><b>Порядок есть внутри партиции, общего порядка между партициями нет.</b> При стандартном распределении одинаковые сериализованные ключи попадают в одну партицию, пока её число не меняется.</p><p><b>В обычной consumer group одну партицию назначают одному консюмеру.</b> При 3 партициях и 4 консюмерах с одинаковой подпиской один не получит партиций. Чтобы сохранить порядок обработки, нельзя затем бездумно раздать записи пулу потоков.</p></div>
     <div class="more">
 <figure class="concept" aria-labelledby="kafka-partitions-caption">
 <svg viewBox="0 0 320 288" role="img" aria-labelledby="kafka-partitions-title kafka-partitions-desc" xmlns="http://www.w3.org/2000/svg">
@@ -13553,42 +13511,13 @@ DROP <span class="k">TABLE</span> payment_2024_10;</pre>
 <text x="160.0" y="251.0" text-anchor="middle">C4 → нет назначенных партиций</text>
 </svg>
 <figcaption id="kafka-partitions-caption">В одной consumer group партиция назначается одному консюмеру. При трёх партициях четвёртый консюмер не получает работу.</figcaption>
-</figure>
-<ul>
-      <li>Увеличение числа партиций меняет распределение ключей и ломает порядок для существующих ключей.</li>
-      <li>Обработка дольше <code>max.poll.interval.ms</code> — консюмера выкидывают, ребалансировка. Cooperative-sticky и static membership её смягчают.</li>
-      <li>Горячий ключ перегружает одну партицию — больше партиций не поможет. Идемпотентный продюсер (по умолчанию с Kafka 3.0) не переупорядочивает при ретраях.</li>
-    </ul>
-<pre class="wide"><span class="c">// DefaultPartitioner: ключ есть — murmur2(key) % numPartitions; ключа нет — «липкая» партиция на батч</span>
-kafkaTemplate.send(<span class="s">"payments"</span>, payment.accountId().toString(), event);   <span class="c">// все события счёта — по порядку</span>
-
-<span class="c">// 3 партиции, группа из 4 консюмеров</span>
-<span class="c">// p0 → c1, p1 → c2, p2 → c3, c4 — idle (горячий резерв: подхватит партицию при падении соседа)</span></pre>
-<pre class="narrow"><span class="c">// DefaultPartitioner: ключ есть —</span>
-<span class="c">// murmur2(key) % numPartitions;</span>
-<span class="c">// ключа нет — «липкая» партиция на батч</span>
-<span class="c">// все события счёта — по порядку:</span>
-<span class="t">String</span> key = payment.accountId().toString();
-kafkaTemplate.send(<span class="s">"payments"</span>, key, event);
-
-<span class="c">// 3 партиции, группа из 4 консюмеров</span>
-<span class="c">// p0 → c1, p1 → c2, p2 → c3,</span>
-<span class="c">// c4 — idle (горячий резерв: подхватит</span>
-<span class="c">// партицию при падении соседа)</span></pre>
-      <p>Почему порядок только в партиции: партиции — независимые логи на разных брокерах, общего глобального порядка у них нет. Чтобы события одной сущности (счёт, заказ) обрабатывались в порядке появления, все они должны попасть в одну партицию — отсюда выбор ключа = id агрегата.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Что ломает порядок</th><th>Почему</th></tr>
-        <tr><td>Увеличение числа партиций</td><td>hash % N меняется: новые события ключа идут в другую партицию, пока старые ещё не обработаны</td></tr>
-        <tr><td>Неблокирующие ретраи (retry-топики)</td><td>упавшее сообщение уходит в другой топик, следующие по ключу обрабатываются раньше</td></tr>
-        <tr><td>Параллельная обработка внутри консюмера без учёта ключа</td><td>пачка из poll раздаётся пулу потоков</td></tr>
-        <tr><td>Продюсер без идемпотентности, max.in.flight &gt; 1</td><td>ретрай пачки ложится после следующей</td></tr>
-        <tr><td>Разные продюсеры одного ключа</td><td>порядок между ними определяется временем прихода на брокер</td></tr>
-      </table></div>
-      <p>Параллелить сильнее, чем позволяют партиции, можно внутри консюмера, сохраняя порядок по ключу: Confluent Parallel Consumer или своя раздача по <code>hash(key) % threads</code> с коммитом offset только после обработки всех предыдущих сообщений партиции.</p>
-      <p>Если нужен порядок между разными ключами (например, «событие создания клиента раньше события его счёта») — либо общий ключ (id клиента), либо консюмер должен уметь ждать/откладывать события, пришедшие раньше зависимостей.</p>
-<p class="follow"><b>Две группы читают один топик?</b> Каждая получит все сообщения: pub/sub между группами, очередь внутри группы.</p>
+</figure><p><b>Ключ выбирают по сущности, для которой нужен порядок:</b> accountId — для счёта, orderId — для заказа. Это порядок поступления записей в партицию, а не гарантия порядка бизнес-действий разных продюсеров.</p><pre class="wide"><span class="k">var</span> <span class="k">record</span> = <span class="k">new</span> <span class="t">ProducerRecord</span>&lt;&gt;(<span class="s">"payments"</span>, <span class="s">"account-42"</span>, <span class="s">"paid"</span>);
+producer.send(<span class="k">record</span>).get();</pre>
+<pre class="narrow"><span class="k">var</span> <span class="k">record</span> = <span class="k">new</span> <span class="t">ProducerRecord</span>&lt;&gt;(
+    <span class="s">"payments"</span>, <span class="s">"account-42"</span>, <span class="s">"paid"</span>);
+producer.send(<span class="k">record</span>).get();</pre><p>Здесь ожидание подтверждения показано для простоты. Ключ <code>account-<span class="n">42</span></code> направляет события счёта в одну партицию. При увеличении числа партиций хеш может выбрать другую: новые записи начнут обрабатываться параллельно со старыми.</p><div class="table-wrap"><table><tr><th>Что нарушает ожидаемый порядок</th><th>Почему</th></tr><tr><td>Retry-топик</td><td>Следующие записи основной партиции обгоняют отложенную</td></tr><tr><td>Пул работников внутри консюмера</td><td>Поздняя запись может завершиться раньше</td></tr><tr><td>Несколько продюсеров</td><td>Брокер упорядочивает по поступлению, а не по бизнес-времени</td></tr><tr><td>Ретраи без идемпотентности при нескольких запросах в полёте</td><td>Повтор первой пачки может попасть после второй</td></tr></table></div><p class="follow"><b>Если другой сервис читает тот же топик?</b> Ему задают другой group.id: он получает независимые назначения и offsets. Чтение первой группой не удаляет события.</p>
     </div></div></article>
-<article id="q220" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">220. Как назначаются партиции консьюмерам группы</h2><div class="answer" hidden><div class="short"><ul><li>В группе партицию читает <b>один консюмер</b>, консюмер может читать несколько партиций; лишние консюмеры простаивают и подхватывают работу при падении соседа.</li><li>Разные группы читают топик <b>независимо</b>, каждая со своими offset: внутри группы — очередь, между группами — pub/sub.</li><li>Распределение задаёт стратегия: фактически по умолчанию <b>RangeAssignor</b>, рекомендуемая — <b>CooperativeSticky</b> (её включают явно).</li></ul></div>
+<article id="q220" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">220. Как назначаются партиции консьюмерам группы</h2><div class="answer" hidden><div class="short"><p><b>Координатор группы организует распределение партиций.</b> При входе, выходе или потере участника назначения пересчитываются: консюмер может получить несколько партиций, а лишние участники — ни одной.</p><p><b>Кто считает распределение, зависит от протокола.</b> В classic это выбранный консюмер-лидер группы; в новом consumer-протоколе — брокер. Разные group.id читают независимо, со своими offsets.</p></div>
     <div class="more">
 <figure class="concept" aria-labelledby="kafka-groups-caption">
 <svg viewBox="0 0 320 252" role="img" aria-labelledby="kafka-groups-title kafka-groups-desc" xmlns="http://www.w3.org/2000/svg">
@@ -13612,268 +13541,49 @@ kafkaTemplate.send(<span class="s">"payments"</span>, key, event);
 <text x="240.0" y="221.0" text-anchor="middle">Свои offsets</text>
 </svg>
 <figcaption id="kafka-groups-caption">Обе группы читают один топик напрямую, каждая со своими offsets. Группа B не ждёт обработки в группе A.</figcaption>
-</figure>
-<ul>
-      <li>Поэтому число партиций — потолок параллелизма группы, и увеличить его позже можно, а уменьшить — нет.</li>
-    </ul>
-<p>Процесс: консюмеры отправляют координатору группы (один из брокеров) JoinGroup; один консюмер становится лидером группы и по выбранной стратегии считает распределение; координатор раздаёт его остальным через SyncGroup. В новом протоколе KIP-848 распределение считает брокер.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Стратегия</th><th>Как делит</th><th>Особенность</th></tr>
-        <tr><td>RangeAssignor (фактически по умолчанию: с Kafka 3.0 дефолт — <code>[RangeAssignor, CooperativeStickyAssignor]</code>, и группа берёт первый, который поддерживают все)</td><td>по каждому топику отдельно — непрерывными диапазонами</td><td>при нескольких топиках первые консюмеры получают больше</td></tr>
-        <tr><td>RoundRobinAssignor</td><td>по кругу все партиции всех топиков</td><td>равномерно, но всё перетасовывает при изменении</td></tr>
-        <tr><td>StickyAssignor</td><td>равномерно и минимум переездов</td><td>eager-протокол</td></tr>
-        <tr><td>CooperativeStickyAssignor</td><td>то же, кооперативно</td><td>рекомендуемый для классического протокола</td></tr>
-      </table></div>
-<pre class="wide"><span class="c">// одинаковое распределение нужно для co-partitioning: джойн двух топиков по ключу</span>
-<span class="c">// требует одинакового числа партиций и одного партиционера у обоих — тогда партиция N</span>
-<span class="c">// обоих топиков достаётся одному консюмеру (RangeAssignor это гарантирует, Streams проверяет сам)</span></pre>
-<pre class="narrow"><span class="c">// одинаковое распределение нужно для</span>
-<span class="c">// co-partitioning: джойн двух топиков по</span>
-<span class="c">// ключу требует одинакового числа партиций</span>
-<span class="c">// и одного партиционера у обоих — тогда</span>
-<span class="c">// партиция N обоих топиков достаётся одному</span>
-<span class="c">// консюмеру (RangeAssignor это гарантирует,</span>
-<span class="c">// Streams проверяет сам)</span></pre>
-      <p>Ручное назначение — <code>consumer.assign(partitions)</code> без группы: нет ребалансировок и координации, offset’ы ведёте сами. Применяется в утилитах (перечитать партицию с offset), в Kafka Connect воркерах, в тестах.</p>
+</figure><ol><li><b>subscribe:</b> консюмер сообщает подписку и участвует в группе.</li><li><b>Назначение:</b> стратегия распределяет подходящие партиции между участниками.</li><li><b>poll:</b> консюмер получает записи назначенных партиций.</li><li><b>Изменение состава:</b> группа перераспределяет нужные назначения.</li></ol><div class="table-wrap"><table><tr><th>Classic-стратегия</th><th>Как делит</th></tr><tr><td>RangeAssignor</td><td>Диапазоны отдельно по каждому топику; нагрузка по нескольким топикам может распределиться неровно</td></tr><tr><td>RoundRobinAssignor</td><td>Партиции по кругу между подходящими участниками</td></tr><tr><td>StickyAssignor</td><td>Старается сохранить прежние назначения при балансировке</td></tr><tr><td>CooperativeStickyAssignor</td><td>Сохраняет назначения и отзывает переносимые партиции поэтапно</td></tr></table></div><p>Настройка <code>partition.assignment.strategy</code> относится к classic-протоколу. При <code>group.protocol=consumer</code> назначение выполняется на стороне брокера; клиентскую стратегию classic туда переносить не нужно.</p><p class="follow"><b>Что меняет consumer.assign(...)?</b> Партиции задаёт приложение: автоматического распределения и ребалансировок нет. При наличии group.id offsets всё ещё можно коммитить в Kafka; единственного владельца приложение обеспечивает само.</p>
     </div></div></article>
-<article id="q221" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">221. Как выбрать число партиций <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p>Считают от нагрузки: <b>пиковый поток ÷ пропускная способность одного консюмера</b>, с запасом в 2–3 раза. Партиций не меньше, чем консюмеров на пике — это <b>потолок параллелизма</b>.</p>
-<p>Запас важен: увеличение позже <b>ломает порядок по ключам</b>. Но слишком много партиций — дольше ребалансировки и восстановление после отказа брокера. <b>Горячий ключ</b> числом партиций не лечится.</p></div>
+<article id="q221" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">221. Как выбрать число партиций <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Число партиций выбираю по пиковой нагрузке и измеренной скорости обработки.</b> Если нужно 6 000 сообщений/с, а один последовательный обработчик устойчиво даёт 500, потребуется минимум 12 одновременно обрабатываемых партиций — ещё без запаса.</p><p>Учитываю также скорость записи, размер сообщений, перекос ключей и ресурсы зависимостей. <b>Горячий ключ не распараллелится от добавления партиций.</b> Избыточное число партиций увеличивает метаданные, файлы и стоимость восстановления.</p></div>
     <div class="more">
-<ul><li>Слишком много партиций — дольше ребалансировки и выбор лидеров, больше файлов и памяти на брокерах. Число партиций не исправит горячий ключ.</li></ul>
-<p>Расчёт для интервью: целевой поток 20 000 сообщений/с в пике, один экземпляр консюмера обрабатывает 1 000/с (с записью в БД) → нужно минимум 20 консюмеров → 20 партиций; запас на рост ×2 → 40; удобное число с хорошими делителями для распределения по консюмерам — 48. Проверить и со стороны продюсера: одна партиция на брокере принимает десятки МБ/с — обычно ограничивает консюмер.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Слишком мало партиций</th><th>Слишком много партиций</th></tr>
-        <tr><td>потолок параллелизма консюмеров</td><td>дольше ребалансировки и выбор лидеров при отказе брокера</td></tr>
-        <tr><td>не увеличить без поломки порядка по ключам</td><td>больше открытых файлов и памяти на брокере, больше метаданных</td></tr>
-        <tr><td>неравномерность при горячих ключах сильнее</td><td>продюсер копит батч на каждую партицию — меньшие батчи, хуже сжатие, выше задержка</td></tr>
-        <tr><td></td><td>end-to-end задержка репликации растёт с числом партиций на брокер</td></tr>
-      </table></div>
-      <p>Почему увеличение ломает порядок: ключ k был в партиции <code>hash(k) % <span class="n">12</span> = <span class="n">5</span></code>, после увеличения до 16 — <code>hash(k) % <span class="n">16</span> = <span class="n">9</span></code>. Новые события k идут в 9, пока в 5 могли остаться необработанные старые — другой консюмер обработает их позже новых. Если порядок важен: заложить запас сразу, или создать новый топик с нужным числом партиций и мигрировать (дождаться, пока старый вычитан, переключить продюсеров).</p>
-      <p>Уменьшить число партиций нельзя вообще — только новым топиком.</p>
+<ol><li>Измерить пиковый поток и размер записей.</li><li>Нагрузочным тестом получить пропускную способность обработки в пределах SLO по задержке.</li><li>Оценить нижнюю границу: поток / скорость одной партиции; отдельно проверить предел записи на партицию.</li><li>Добавить запас, обоснованный всплесками и работой при отказе части инстансов.</li><li>Проверить, выдержат ли БД и API выбранное число параллельных обработчиков.</li></ol><p><b>Пример:</b> 24 партиции и 6 инстансов с concurrency=2 дают 12 консюмеров. В среднем каждому достанется по 2 партиции; это не 24 независимых потока обработки.</p><p>Увеличить число партиций можно, уменьшить существующий топик штатно нельзя. При изменении числа партиций меняется распределение ключей, поэтому миграцию с требованиями к порядку планируют отдельно.</p><p class="follow"><b>Что делать с одним очень горячим счётом?</b> Сначала выяснить, обязателен ли строгий порядок всех его событий. Если да, ускорять последовательную обработку; разбиение ключа на части меняет эту гарантию.</p>
     </div></div></article>
-<article id="q222" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">222. Локальная инфраструктура: Kafka и Kafka UI в docker-compose</h2><div class="answer" hidden><div class="short"><ul><li>Один брокер в режиме <b>KRaft</b> (брокер и контроллер в одном процессе, без ZooKeeper) и <b>kafka-ui</b> рядом.</li><li>Главное — <b>два listener'а</b>: <code>localhost:<span class="n">9092</span></code> для приложения на хосте и <code>kafka:<span class="n">29092</span></code> для контейнеров в сети compose. Брокер отдаёт клиенту адрес из <code>advertised.listeners</code>, и он должен быть достижим именно оттуда, откуда клиент подключается.</li><li>Брокер один — служебные топики (<code>__consumer_offsets</code>, лог транзакций) с <b>RF=1</b>, свои топики тоже с <code>replicas(<span class="n">1</span>)</code> и без <code>min.insync.replicas=<span class="n">2</span></code>.</li></ul></div>
+<article id="q222" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">222. Локальная инфраструктура: Kafka и Kafka UI в docker-compose</h2><div class="answer" hidden><div class="short"><p><b>Локально достаточно одного брокера KRaft и Kafka UI.</b> KRaft хранит метаданные без ZooKeeper; здесь брокер и контроллер работают в одном процессе.</p><p><b>Приложению на хосте и контейнерам нужны разные адреса:</b> localhost:9092 и kafka:29092. Брокер возвращает адреса из advertised.listeners, и клиент должен уметь до них дойти.</p><p>На одном брокере у обычных и служебных топиков <b>replication factor = 1</b>. Такой стенд подходит для разработки, но не проверки отказоустойчивости.</p></div>
     <div class="more">
-<pre><span class="p">services</span>:
-  <span class="p">kafka</span>:
-    <span class="p">image</span>: apache/kafka:4.1.0
-    <span class="p">ports</span>:
-      - <span class="s">"9092:9092"</span>
-    <span class="p">environment</span>:
-      <span class="p">CLUSTER_ID</span>: MkU3OEVBNTcwNTJENDM2Qk
-      <span class="p">KAFKA_NODE_ID</span>: 1
-      <span class="p">KAFKA_PROCESS_ROLES</span>: broker,controller
-      <span class="p">KAFKA_CONTROLLER_QUORUM_VOTERS</span>: 1@kafka:9093
-      <span class="p">KAFKA_LISTENERS</span>: EXT://:9092,INT://:29092,CTRL://:9093
-      <span class="p">KAFKA_ADVERTISED_LISTENERS</span>: EXT://localhost:9092,INT://kafka:29092
-      <span class="p">KAFKA_LISTENER_SECURITY_PROTOCOL_MAP</span>: EXT:PLAINTEXT,INT:PLAINTEXT,CTRL:PLAINTEXT
-      <span class="p">KAFKA_INTER_BROKER_LISTENER_NAME</span>: INT
-      <span class="p">KAFKA_CONTROLLER_LISTENER_NAMES</span>: CTRL
-      <span class="c"># один брокер — служебные топики с RF=1</span>
-      <span class="p">KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR</span>: 1
-      <span class="p">KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR</span>: 1
-      <span class="p">KAFKA_TRANSACTION_STATE_LOG_MIN_ISR</span>: 1
-      <span class="c"># топики создаёт приложение (NewTopic), а не первый send</span>
-      <span class="p">KAFKA_AUTO_CREATE_TOPICS_ENABLE</span>: <span class="s">"false"</span>
-      <span class="p">KAFKA_LOG_DIRS</span>: /var/lib/kafka/data
-    <span class="p">volumes</span>:
-      - kafka-data:/var/lib/kafka/data
-    <span class="p">healthcheck</span>:
-      <span class="p">test</span>: [<span class="s">"CMD-SHELL"</span>, <span class="s">"/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"</span>]
-      <span class="p">interval</span>: 5s
-      <span class="p">timeout</span>: 10s
-      <span class="p">retries</span>: 20
+<p><b>docker-compose.yml:</b> зафиксированные версии из локального примера, plaintext-соединения для разработки.</p><pre style="white-space:pre-wrap;overflow-wrap:anywhere">docker compose up -d
+# <span class="t">Kafka</span> <span class="t">UI</span>: http:<span class="c">//localhost:8090</span></pre><div class="table-wrap"><table><tr><th>Клиент</th><th>bootstrap-адрес</th></tr><tr><td>Приложение из IDE</td><td>localhost:9092</td></tr><tr><td>Kafka UI / приложение в compose</td><td>kafka:29092</td></tr><tr><td>Контроллер KRaft</td><td>kafka:9093 — не клиентский listener</td></tr></table></div><p>Bootstrap нужен для получения метаданных. Если брокер затем сообщит контейнеру адрес localhost:9092, контейнер пойдёт к самому себе. Поэтому успешное подключение к bootstrap ещё не доказывает, что адреса настроены правильно.</p><pre>docker compose up -d
+# <span class="t">Kafka</span> <span class="t">UI</span>: http:<span class="c">//localhost:8090</span></pre><p>Топики здесь не создаются автоматически. Пример создания после запуска:</p><pre>docker compose exec kafka \
+  /opt/kafka/bin/kafka-topics.sh \
+  --bootstrap-server kafka:<span class="n">29092</span> \
+  --create --topic payments \
+  --partitions <span class="n">3</span> \
+  --replication-factor <span class="n">1</span></pre><p class="follow"><b>Почему нельзя оставить min.insync.replicas=2?</b> С единственной репликой acks=all не сможет успешно завершить запись. RF=3 на одном брокере также недопустим.</p>
+    </div></div></article>
+<article id="q223" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">223. Настройки продюсера: acks, retries, linger.ms, batch.size</h2><div class="answer" hidden><div class="short"><ul><li><b>acks=all</b> — подтверждение после репликации на все текущие ISR; min.insync.replicas задаёт минимально допустимое число таких реплик.</li><li><b>enable.idempotence=true</b> — защита от дублей при внутренних ретраях продюсера.</li><li><b>linger.ms и batch.size</b> — сколько ждать накопления пачки и её целевой размер; сжатие уменьшает сетевой трафик.</li></ul><p><b>send асинхронный:</b> успешный возврат метода ещё не подтверждает запись в Kafka. Результат проверяют через callback или future.</p></div>
+    <div class="more">
+<div class="table-wrap"><table><tr><th>Настройка</th><th>За что отвечает</th></tr><tr><td>acks=0 / 1 / all</td><td>Не ждать ответа / ждать лидера / ждать ISR</td></tr><tr><td>delivery.timeout.ms</td><td>Общий бюджет доставки: ожидание пачки, запросы и ретраи</td></tr><tr><td>retries</td><td>Допустимое число повторных попыток в пределах бюджета доставки</td></tr><tr><td>linger.ms</td><td>Время ожидания наполнения пачки; полная пачка может уйти раньше</td></tr><tr><td>batch.size</td><td>Целевой размер пачки на партицию, а не жёсткий предел записи</td></tr><tr><td>compression.type</td><td>Сжатие пачки, например lz4 или zstd</td></tr></table></div><pre>acks=all
+enable.idempotence=<span class="k">true</span>
+delivery.timeout.ms=<span class="n">120000</span>
+linger.ms=<span class="n">5</span>
+batch.size=<span class="n">32768</span>
+compression.type=zstd</pre><p>Это пример native Kafka properties. Идемпотентности нужны acks=all, retries &gt; 0 и max.in.flight.requests.per.connection ≤ 5. Если включить её явно и задать несовместимые настройки, клиент завершится с ошибкой конфигурации.</p><p>У <code><span class="t">KafkaProducer</span>.send</code> возможны и синхронные ошибки — например, сериализация или истечение max.block.ms при нехватке буфера/метаданных. Ошибку асинхронной доставки тоже нужно довести до бизнес-логики: один log.error не гарантирует повторную отправку.</p><p class="follow"><b>Если приложение заново вызовет send для того же события?</b> Это новая отправка, которую producer idempotence не обязана устранить. Для бизнес-дублей нужен стабильный eventId и дедупликация у получателя.</p>
+    </div></div></article>
+<article id="q224" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">224. Порядок при ретраях продюсера</h2><div class="answer" hidden><div class="short"><p><b>Без идемпотентности ретраи могут изменить порядок.</b> Пачка A не прошла, пачка B записалась, затем повтор A попал в лог: получилось B → A.</p><p><b>Идемпотентный продюсер нумерует пачки по партиции.</b> Брокер проверяет последовательность и распознаёт повтор уже принятой пачки. Порядок сохраняется при допустимом max.in.flight ≤ 5.</p><p>Это гарантия для отправок продюсера, а не глобальный порядок между разными продюсерами или обработчиками.</p></div>
+    <div class="more">
+<pre>Без идемпотентности:
+<span class="t">A</span> → ошибка, <span class="t">B</span> → успех, <span class="t">A</span> → повтор
+Лог: <span class="t">B</span>, <span class="t">A</span>
 
-  <span class="p">kafka-ui</span>:
-    <span class="p">image</span>: kafbat/kafka-ui:v1.3.0
-    <span class="p">ports</span>:
-      <span class="c"># 8080 занят самим приложением</span>
-      - <span class="s">"8090:8080"</span>
-    <span class="p">environment</span>:
-      <span class="p">KAFKA_CLUSTERS_0_NAME</span>: local
-      <span class="p">KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS</span>: kafka:29092
-    <span class="p">depends_on</span>:
-      <span class="p">kafka</span>:
-        <span class="p">condition</span>: service_healthy
-
-<span class="p">volumes</span>:
-  <span class="p">kafka-data</span>:</pre>
-      <p>Зачем два listener'а. Клиент по bootstrap-адресу получает метаданные кластера и дальше ходит по адресам из <code>advertised.listeners</code>. Приложение на хосте не знает имени <code>kafka</code>, а kafka-ui в контейнере не достучится до <code>localhost:<span class="n">9092</span></code> (это он сам). С одним listener'ом одна из сторон подключится к bootstrap, а потом зависнет или упадёт на <code><span class="t">UnknownHostException</span></code> / <code><span class="t">Connection</span> refused</code>.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Listener</th><th>Адрес</th><th>Кто ходит</th></tr>
-        <tr><td><code><span class="t">EXT</span></code></td><td><code>localhost:<span class="n">9092</span></code> (проброшен порт)</td><td>приложение из IDE, CLI на хосте</td></tr>
-        <tr><td><code><span class="t">INT</span></code></td><td><code>kafka:<span class="n">29092</span></code> (сеть compose)</td><td>kafka-ui, другие контейнеры, связь между брокерами</td></tr>
-        <tr><td><code><span class="t">CTRL</span></code></td><td><code>kafka:<span class="n">9093</span></code></td><td>контроллер KRaft, клиентам не нужен</td></tr>
-      </table></div>
-      <p>Приложение в профиле <code>local</code>:</p>
-<pre><span class="p">spring</span>:
-  <span class="p">kafka</span>:
-    <span class="p">bootstrap-servers</span>: localhost:9092
-    <span class="p">admin</span>:
-      <span class="c"># не стартовать, если топик не создался</span>
-      <span class="p">fail-fast</span>: <span class="k">true</span></pre>
-<pre><span class="a">@Bean</span>
-<span class="a">@Profile</span>(<span class="s">"local"</span>)
-<span class="t">NewTopic</span> processTopic() {
-    <span class="k">return</span> <span class="t">TopicBuilder</span>.name(<span class="s">"process-events"</span>)
-            .partitions(<span class="n">12</span>)
-            .replicas(<span class="n">1</span>)
-            .build();
-}</pre>
-<pre># поднять и проверить
-docker compose up -d
-docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
-    --bootstrap-server localhost:<span class="n">9092</span> --list
-# <span class="t">UI</span>: http:<span class="c">//localhost:8090</span>
-# остановить и удалить данные
-docker compose down -v</pre>
-      <ul>
-        <li><b>Почему не <code>replicas(<span class="n">3</span>)</code> и <code>min.insync.replicas=<span class="n">2</span></code></b>: на одном брокере топик с RF=3 не создастся (<code><span class="t">InvalidReplicationFactorException</span></code>), а с RF=1 и min.ISR=2 каждый <code>send</code> с <code>acks=all</code> упадёт с <code><span class="t">NotEnoughReplicasException</span></code>. Настройки продюсера (<code>acks=all</code>, идемпотентность) при этом те же, что в проде.</li>
-        <li><b><code>auto.create.topics.enable=<span class="k">false</span></code></b>: иначе при ошибке создания топика первый <code>send</code> молча создаст его с дефолтами брокера (1 партиция), и локально будет не тот топик, что задуман.</li>
-        <li><b>Образ <code>apache/kafka</code></b>: если задать хоть одну переменную <code><span class="t">KAFKA_</span>*</code>, его встроенный конфиг по умолчанию не применяется — нужен полный набор, как выше. По умолчанию данные лежат в <code>/tmp/kraft-combined-logs</code>, поэтому <code><span class="t">KAFKA_LOG_DIRS</span></code> и volume — чтобы топики переживали пересоздание контейнера.</li>
-        <li><b>kafka-ui</b>: <code>provectuslabs/kafka-ui</code> больше не развивается, актуальный форк — <code>kafbat/kafka-ui</code>, те же переменные окружения. Тег фиксированный, не <code>latest</code>.</li>
-        <li><b>Проверить отказоустойчивость</b> (падение брокера, <code>min.insync.replicas</code>) на таком стенде нельзя — нужен отдельный compose с тремя брокерами. Для тестов вместо compose — Testcontainers (<code><span class="t">KafkaContainer</span></code>), он сам настроен на один брокер.</li>
-      </ul>
+С идемпотентностью:
+пачки имеют sequence number
+повторы распознаются брокером</pre><p><b>Практические настройки:</b></p><pre style="white-space:pre-wrap;overflow-wrap:anywhere">enable.idempotence=<span class="k">true</span>
+acks=all
+max.in.flight.requests.per.connection=<span class="n">5</span></pre><p>Без идемпотентности max.in.flight=1 убирает обгон запросов одного соединения, но снижает параллелизм и не устраняет дубли. Самостоятельный повтор send после неопределённого результата — уже новая отправка; eventId всё равно нужен.</p><p class="follow"><b>Можно ли случайно отключить идемпотентность?</b> Да. Если полагаться на default и задать конфликтующий acks или другой параметр, она может отключиться. Явное enable.idempotence=true превращает такой конфликт в ошибку конфигурации.</p>
     </div></div></article>
-<article id="q223" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">223. Настройки продюсера: acks, retries, linger.ms, batch.size</h2><div class="answer" hidden><div class="short"><ul><li><b>acks=all</b> — ждать все реплики из ISR (надёжность); acks=1 — только лидера.</li><li><b>Ретраи с идемпотентностью</b> не создают дублей и не нарушают порядок.</li><li><b>linger.ms и batch.size</b> копят сообщения в пачки: больше throughput ценой небольшой задержки; плюс сжатие <b>lz4 или zstd</b>.</li><li><b>send асинхронный</b> — ошибку обрабатывают в callback, иначе она потеряется.</li></ul></div>
+<article id="q225" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">225. Kafka изнутри: ISR, high watermark, min.insync.replicas, unclean election <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>У партиции есть лидер и реплики-фолловеры.</b> ISR — реплики, которые считаются достаточно синхронизированными с лидером. High watermark ограничивает подтверждённую часть лога, доступную обычному чтению.</p><p><b>acks=all ждёт все текущие ISR, а не все настроенные реплики.</b> min.insync.replicas=2 запрещает успешную запись с acks=all, когда синхронных реплик меньше двух.</p><p><b>Unclean election</b> разрешает выбрать отставшую реплику лидером: доступность восстанавливается ценой возможной потери записей.</p></div>
     <div class="more">
-<ul><li>delivery.timeout.ms — общий лимит на доставку с ретраями; send() асинхронный — ошибки смотрят в callback.</li></ul>
-<pre class="wide"><span class="p">spring</span>:
-  <span class="p">kafka</span>:
-    <span class="p">producer</span>:
-      <span class="p">acks</span>: all
-      <span class="p">properties</span>:
-        <span class="p">enable.idempotence</span>: <span class="k">true</span>          <span class="c"># по умолчанию с 3.0, если не мешают другие настройки</span>
-        <span class="p">max.in.flight.requests.per.connection</span>: 5
-        <span class="p">delivery.timeout.ms</span>: 120000       <span class="c"># всего на доставку, включая ретраи</span>
-        <span class="p">request.timeout.ms</span>: 30000         <span class="c"># на один запрос к брокеру</span>
-        <span class="p">linger.ms</span>: 10                     <span class="c"># подождать до 10 мс, собирая пачку</span>
-        <span class="p">batch.size</span>: 65536                 <span class="c"># размер пачки на партицию, байт</span>
-        <span class="p">compression.type</span>: zstd
-        <span class="p">buffer.memory</span>: 67108864           <span class="c"># буфер неотправленного; переполнен — send блокируется на max.block.ms</span></pre>
-<pre class="narrow"><span class="p">spring</span>:
-  <span class="p">kafka</span>:
-    <span class="p">producer</span>:
-      <span class="p">acks</span>: all
-      <span class="p">properties</span>:
-        <span class="c"># по умолчанию с 3.0, если не мешают</span>
-        <span class="c"># другие настройки</span>
-        <span class="p">enable.idempotence</span>: <span class="k">true</span>
-        max.in.flight.requests
-          <span class="p">.per.connection</span>: 5
-        <span class="c"># всего на доставку, включая ретраи</span>
-        <span class="p">delivery.timeout.ms</span>: 120000
-        <span class="c"># на один запрос к брокеру</span>
-        <span class="p">request.timeout.ms</span>: 30000
-        <span class="c"># подождать до 10 мс, собирая пачку</span>
-        <span class="p">linger.ms</span>: 10
-        <span class="c"># размер пачки на партицию, байт</span>
-        <span class="p">batch.size</span>: 65536
-        <span class="p">compression.type</span>: zstd
-        <span class="c"># буфер неотправленного; переполнен —</span>
-        <span class="c"># send блокируется на max.block.ms</span>
-        <span class="p">buffer.memory</span>: 67108864</pre>
-      <p>Как идёт отправка: <code>send()</code> сериализует, выбирает партицию и кладёт запись в аккумулятор (пачка на партицию) — сразу возвращает Future. Фоновый поток Sender отправляет пачку, когда она заполнилась до batch.size или прошло linger.ms. При ошибке — ретраи до delivery.timeout.ms, потом callback/Future с исключением.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Цель</th><th>Настройки</th></tr>
-        <tr><td>Надёжность</td><td>acks=all, идемпотентность, replication.factor=3, min.insync.replicas=2, обработка ошибки в callback</td></tr>
-        <tr><td>Пропускная способность</td><td>linger.ms 10–100, batch.size 64–256 КБ, сжатие lz4/zstd</td></tr>
-        <tr><td>Минимальная задержка</td><td>linger.ms 0, небольшие пачки, acks=1 (жертвуя надёжностью)</td></tr>
-      </table></div>
-<pre class="wide"><span class="c">// типичная ошибка: «отправили» и забыли — исключение потеряется</span>
-kafkaTemplate.send(topic, key, event);
-<span class="c">// правильно для важных событий: реакция на результат</span>
-kafkaTemplate.send(topic, key, event).whenComplete((res, ex) -&gt; {
-    <span class="k">if</span> (ex != <span class="k">null</span>) log.error(<span class="s">"send failed key={}"</span>, key, ex);   <span class="c">// + метрика / повтор / outbox</span>
-});</pre>
-<pre class="narrow"><span class="c">// типичная ошибка: «отправили» и забыли —</span>
-<span class="c">// исключение потеряется</span>
-kafkaTemplate.send(topic, key, event);
-
-<span class="c">// правильно для важных событий:</span>
-<span class="c">// реакция на результат</span>
-kafkaTemplate.send(topic, key, event)
-    .whenComplete((res, ex) -&gt; {
-        <span class="k">if</span> (ex != <span class="k">null</span>) {
-            <span class="c">// + метрика / повтор / outbox</span>
-            log.error(<span class="s">"send failed key={}"</span>,
-                    key, ex);
-        }
-    });</pre>
-      <p>Linger по умолчанию в Kafka 4.0 стал 5 мс (раньше 0) — батчинг включён из коробки.</p>
+<div class="table-wrap"><table><tr><th>Пример RF=3, min ISR=2</th><th>Что произойдёт с acks=all</th></tr><tr><td>ISR: A, B, C</td><td>Подтверждение после репликации на все три</td></tr><tr><td>ISR: A, B</td><td>Запись допустима; отставшая C не задерживает подтверждение</td></tr><tr><td>ISR: только A</td><td>Запись не получит успешного подтверждения</td></tr><tr><td>Потеря лидера, осталась ISR-реплика</td><td>Можно выбрать синхронного лидера</td></tr><tr><td>Остались только отставшие реплики</td><td>При запрете unclean election запись недоступна до восстановления подходящей реплики</td></tr></table></div><p><b>High watermark — граница, а не последний видимый номер:</b> читать можно записи с offset ниже HW. Для read_committed дополнительно действует last stable offset: открытая транзакция может задержать видимость даже уже реплицированных записей.</p><p>Ошибка отправки не всегда означает, что запись отсутствует: лидер мог принять её, а подтверждение не дошло. Поэтому ретраи должны учитывать неопределённый результат. Репликация также не равна fsync каждой записи: Kafka обычно полагается на несколько реплик и page cache.</p><p class="follow"><b>min.insync.replicas защитит продюсер с acks=1?</b> Нет. Эта проверка надёжности работает вместе с acks=all. При acks=1 лидер может подтвердить запись до её репликации.</p>
     </div></div></article>
-<article id="q224" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">224. Порядок при ретраях продюсера</h2><div class="answer" hidden><div class="short"><p>Без идемпотентности при нескольких запросах в полёте <b>ретрай первой пачки может лечь после второй</b> — порядок нарушен.</p>
-<p><b>Идемпотентный продюсер</b> (по умолчанию с Kafka 3.0) нумерует пачки, брокер принимает их только по порядку и отбрасывает дубли — порядок сохраняется при 5 запросах в полёте. Ловушка: явное <b>acks=1</b> в старом конфиге тихо выключает идемпотентность.</p></div>
-    <div class="more">
-<pre class="wide"><span class="c">// без идемпотентности, max.in.flight = 5:</span>
-<span class="c">// пачка 1 (offset 100..109) — ошибка сети, ретрай</span>
-<span class="c">// пачка 2 (offset 100..109 вместо неё!) — успешно записана</span>
-<span class="c">// пачка 1 при ретрае записана после → порядок 2, 1</span>
-<span class="c">//</span>
-<span class="c">// с идемпотентностью: у каждой пачки — producerId и sequence number на партицию</span>
-<span class="c">// брокер принимает только sequence = последний + 1; пришла 2 раньше 1 → OutOfOrderSequence,</span>
-<span class="c">// продюсер повторит в правильном порядке; дубль (уже записанный sequence) — отбрасывается</span></pre>
-<pre class="narrow"><span class="c">// без идемпотентности, max.in.flight = 5:</span>
-<span class="c">// пачка 1 — ошибка сети, ретрай</span>
-<span class="c">// пачка 2 — успешно записана (offset 100..109</span>
-<span class="c">//   вместо пачки 1!)</span>
-<span class="c">// пачка 1 при ретрае записана после →</span>
-<span class="c">//   порядок 2, 1</span>
-<span class="c">//</span>
-<span class="c">// с идемпотентностью: у каждой пачки —</span>
-<span class="c">// producerId и sequence number на партицию;</span>
-<span class="c">// брокер принимает только</span>
-<span class="c">// sequence = последний + 1;</span>
-<span class="c">// пришла 2 раньше 1 → OutOfOrderSequence,</span>
-<span class="c">// продюсер повторит в правильном порядке;</span>
-<span class="c">// дубль (уже записанный sequence) —</span>
-<span class="c">// отбрасывается</span></pre>
-      <div class="table-wrap"><table>
-        <tr><th>Настройки</th><th>Порядок</th><th>Дубли от ретраев</th><th>Производительность</th></tr>
-        <tr><td>idempotence=false, max.in.flight=1</td><td>сохраняется</td><td>возможны</td><td>низкая</td></tr>
-        <tr><td>idempotence=false, max.in.flight&gt;1</td><td>может нарушиться</td><td>возможны</td><td>высокая</td></tr>
-        <tr><td>idempotence=true, max.in.flight≤5</td><td>сохраняется</td><td>нет (в рамках сессии продюсера)</td><td>высокая</td></tr>
-      </table></div>
-      <p>Идемпотентность по умолчанию включается, только если настройки совместимы (<code>acks=all</code>, <code>retries &gt; <span class="n">0</span></code>, <code>max.in.flight ≤ <span class="n">5</span></code>); явное <code>acks=<span class="n">1</span></code> в конфиге тихо её отключит — частая ловушка при копировании старых настроек.</p>
-      <p>Границы гарантии: состояние идемпотентности живёт в рамках producerId. Рестарт приложения = новый producerId — повторная отправка того же события после рестарта (например, из outbox) создаст дубль. Транзакционный продюсер с постоянным <code>transactional.id</code> закрывает и этот случай для записи в Kafka (fencing старого экземпляра).</p>
-    </div></div></article>
-<article id="q225" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">225. Kafka изнутри: ISR, high watermark, min.insync.replicas, unclean election <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li>У партиции <b>лидер и фолловеры</b>; <b>ISR</b> — реплики, успевающие за лидером.</li><li>Сообщение <b>закоммичено</b>, когда его получили все реплики ISR; консюмеры видят данные только до <b>high watermark</b>.</li><li><b>acks=all</b> ждёт все реплики ISR, но ISR может <b>сжаться до лидера</b>. <b>min.insync.replicas=2</b> при трёх репликах запрещает запись, если синхронных меньше двух: продюсер получит ошибку вместо тихой потери.</li><li><b>Unclean leader election</b> выключен: отставшая реплика лидером не станет — консистентность вместо доступности.</li></ul>
-<p>Потеря возможна при <b>acks=1</b>, min.insync.replicas=1 или включённом unclean election. С Kafka 4.0 вместо ZooKeeper — <b>KRaft</b>.</p></div>
-    <div class="more">
-<ul><li>Retention — по времени или размеру; log compaction хранит последнее значение по ключу. Надёжность строится на репликации, а не на fsync каждой записи.</li></ul>
-<p>Как идёт запись с <code>acks=all</code>: продюсер отправляет пачку лидеру партиции → лидер дописывает в свой лог → фолловеры сами забирают данные запросами fetch (pull) → когда все реплики из ISR подтвердили получение (их fetch-offset продвинулся), лидер сдвигает <b>high watermark</b> и отвечает продюсеру. Консюмеры видят только сообщения до HW — то, что гарантированно есть на всех ISR-репликах.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Понятие</th><th>Смысл</th></tr>
-        <tr><td>LEO (log end offset)</td><td>следующий offset для записи на конкретной реплике</td></tr>
-        <tr><td>High watermark</td><td>минимальный LEO среди ISR — граница «закоммиченного»</td></tr>
-        <tr><td>ISR</td><td>реплики, отставшие не больше <code>replica.lag.time.max.ms</code> (30 с)</td></tr>
-        <tr><td>Last stable offset</td><td>для read_committed: до первой незавершённой транзакции</td></tr>
-        <tr><td>Controller</td><td>брокер (в KRaft — кворум контроллеров), который выбирает лидеров и хранит метаданные</td></tr>
-      </table></div>
-      <p>Сценарии потери данных:</p>
-      <ul>
-        <li><code>acks=<span class="n">1</span></code>: лидер подтвердил и упал до репликации — новый лидер этих сообщений не имеет;</li>
-        <li><code>acks=all</code> + <code>min.insync.replicas=<span class="n">1</span></code>: ISR сжался до лидера, запись принимается одной машиной;</li>
-        <li>unclean leader election: отставшая реплика становится лидером, «лишние» сообщения на старом лидере обрезаются;</li>
-        <li>одновременная потеря питания всех реплик до сброса page cache на диск (Kafka не делает fsync на каждую запись — поэтому реплики размещают в разных стойках/зонах).</li>
-      </ul>
-      <p>KRaft вместо ZooKeeper: метаданные кластера хранятся в собственном внутреннем топике, реплицируемом Raft-кворумом контроллеров. Выигрыш — одна система вместо двух, быстрый failover контроллера, поддержка миллионов партиций. С Kafka 4.0 режим ZooKeeper удалён полностью.</p>
-<ul>
-      <li>С Kafka 4.1 на новых кластерах включены Eligible Leader Replicas (KIP-966): реплика, выпавшая из ISR, но гарантированно имеющая закоммиченные данные, может стать лидером без unclean election. Это свойство брокера, от версии клиента не зависит.</li>
-    </ul>
-<p>Сколько отказов переживёт топик:</p>
-<div class="table-wrap"><table>
-        <tr><th>RF / min.insync.replicas</th><th>Переживёт без потери подтверждённых</th><th>Запись доступна при</th></tr>
-        <tr><td>3 / 1</td><td>не гарантирует: подтверждение может дать одна реплика</td><td>1 живой реплике</td></tr>
-        <tr><td>3 / 2 (стандарт)</td><td>отказ 1 брокера</td><td>2 живых в ISR; при 1 — NotEnoughReplicasException</td></tr>
-        <tr><td>3 / 3</td><td>отказ 2 брокеров</td><td>только когда все 3 в ISR — любой отказ останавливает запись</td></tr>
-        <tr><td>5 / 3</td><td>отказ 2 брокеров</td><td>3 живых</td></tr>
-      </table></div>
-      <p>Важно: <code>min.insync.replicas</code> действует только для продюсеров с <code>acks=all</code>. С acks=1 продюсер его не учитывает.</p>
-      <p><b>Unclean leader election</b>: все реплики из ISR недоступны, жива только отставшая реплика. Варианты: ждать возвращения ISR-реплики (партиция недоступна — consistency) или сделать лидером отставшую (сообщения, которых на ней нет, потеряны навсегда, а консюмеры могли их уже прочитать — availability). По умолчанию false — для платежей правильно. Для метрик, логов, кликов можно включить на уровне топика.</p>
-      <p>Это прямая иллюстрация CAP-компромисса на уровне одного параметра — хороший мостик к вопросу о CAP на интервью.</p>
-    </div></div></article>
-<article id="q226" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">226. Коммит offset: auto, sync, async и AckMode в Spring Kafka</h2><div class="answer" hidden><div class="short"><ul><li><b>Auto-commit</b> коммитит по таймеру независимо от обработки — и потери, и дубли; его выключают.</li><li>Ручной: <b>commitSync</b> надёжен, но блокирует; <b>commitAsync</b> быстрее, но не повторяется при ошибке.</li><li><b>Spring Kafka AckMode</b>: BATCH (по умолчанию, после всей пачки), RECORD (после каждого), MANUAL (Acknowledgment в коде).</li></ul>
-<p>Коммитится всегда <b>номер следующего</b> сообщения к чтению.</p></div>
+<article id="q226" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">226. Коммит offset: auto, sync, async и AckMode в Spring Kafka</h2><div class="answer" hidden><div class="short"><p><b>Коммит offset сохраняет позицию, с которой группа продолжит чтение после перезапуска.</b> Обработали запись 42 — обычно коммитим 43, то есть следующую позицию.</p><ul><li><b>commitSync</b> ждёт результата и сообщает об ошибке.</li><li><b>commitAsync</b> не блокирует ожиданием ответа; ошибку проверяют в callback.</li><li><b>Spring Kafka</b> коммитит через контейнер по AckMode: после записи, пачки или явного acknowledge.</li></ul><p>Коммит должен происходить <b>после завершения нужного бизнес-эффекта</b>; иначе можно пропустить необработанные записи.</p></div>
     <div class="more">
 <figure class="concept" aria-labelledby="kafka-offset-caption">
 <svg viewBox="0 0 320 392" role="img" aria-labelledby="kafka-offset-title kafka-offset-desc" xmlns="http://www.w3.org/2000/svg">
@@ -13897,53 +13607,25 @@ kafkaTemplate.send(topic, key, event)
 <text x="160.0" y="361.0" text-anchor="middle">Чтение с offset 43</text>
 </svg>
 <figcaption id="kafka-offset-caption">Offset 42 — позиция обработанной записи. Commit 43 означает: после перезапуска читать начиная с 43. Если падение случилось после эффекта обработки, но до commit, запись 42 придёт повторно.</figcaption>
-</figure>
-<ul><li>Коммит — это «следующий offset к чтению»: коммитят offset + 1 последнего обработанного.</li></ul>
-<pre class="wide"><span class="p">spring</span>:
+</figure><div class="table-wrap"><table><tr><th>Режим без Kafka-транзакции</th><th>Когда коммитится</th></tr><tr><td>BATCH</td><td>После обработки записей, возвращённых poll; стандартный режим контейнера</td></tr><tr><td>RECORD</td><td>После успешного возврата record-listener</td></tr><tr><td>MANUAL</td><td>Listener вызывает acknowledge, далее действует логика BATCH</td></tr><tr><td>MANUAL_IMMEDIATE</td><td>При acknowledge на consumer-потоке — сразу</td></tr></table></div><p><b>Согласованный пример MANUAL:</b> сначала заканчивается синхронная обработка, затем подтверждается запись.</p><pre><span class="p">spring</span>:
   <span class="p">kafka</span>:
     <span class="p">consumer</span>:
-      <span class="p">enable-auto-commit</span>: <span class="k">false</span>           <span class="c"># Spring Kafka так и ставит по умолчанию</span>
-    <span class="p">listener</span>:
-      <span class="p">ack-mode</span>: record                    <span class="c"># коммит после каждого сообщения (медленнее, меньше повторов)</span>
-
-@KafkaListener(topics = <span class="s">"payments"</span>)
-public void on(ConsumerRecord&lt;String, Payment&gt; rec, Acknowledgment ack) {   // <span class="p">ack-mode</span>: manual
-    process(rec.value());
-    ack.acknowledge();                    // коммит будет выполнен контейнером
-}</pre>
-<pre class="narrow"><span class="p">spring</span>:
-  <span class="p">kafka</span>:
-    <span class="p">consumer</span>:
-      <span class="c"># Spring Kafka так и ставит по умолчанию</span>
       <span class="p">enable-auto-commit</span>: <span class="k">false</span>
     <span class="p">listener</span>:
-      <span class="c"># коммит после каждого сообщения</span>
-      <span class="c"># (медленнее, меньше повторов)</span>
-      <span class="p">ack-mode</span>: record
-
-// <span class="p">ack-mode</span>: manual
-@KafkaListener(topics = <span class="s">"payments"</span>)
-public void on(
-        ConsumerRecord&lt;String, Payment&gt; rec,
-        Acknowledgment ack) {
-    process(rec.value());
-    // коммит выполнит контейнер
+      <span class="p">ack-mode</span>: manual</pre><pre class="wide"><span class="a">@KafkaListener</span>(topics = <span class="s">"payments"</span>)
+<span class="k">public</span> <span class="k">void</span> on(<span class="t">ConsumerRecord</span>&lt;<span class="t">String</span>, <span class="t">String</span>&gt; <span class="k">record</span>, <span class="t">Acknowledgment</span> ack) {
+    process(<span class="k">record</span>.value());
     ack.acknowledge();
 }</pre>
-      <div class="table-wrap"><table>
-        <tr><th>AckMode</th><th>Когда коммит</th><th>Повторов при падении</th></tr>
-        <tr><td>RECORD</td><td>после каждой записи</td><td>до 1 сообщения</td></tr>
-        <tr><td>BATCH (по умолчанию)</td><td>после обработки всей пачки из poll</td><td>до max.poll.records</td></tr>
-        <tr><td>TIME / COUNT / COUNT_TIME</td><td>по времени/числу</td><td>соответственно</td></tr>
-        <tr><td>MANUAL</td><td>acknowledge() копится, коммит при следующем poll</td><td>как BATCH, но под контролем кода</td></tr>
-        <tr><td>MANUAL_IMMEDIATE</td><td>acknowledge() коммитит сразу</td><td>до 1</td></tr>
-      </table></div>
-      <p>Почему auto-commit опасен: <code>enable.auto.commit=<span class="k">true</span></code> коммитит при очередном poll offset’ы всего, что было получено предыдущим poll, раз в <code>auto.commit.interval.ms</code>. Если обработка асинхронная (отдали в пул и вернулись к poll), offset закоммитится до обработки — при падении сообщения потеряются. Если упасть между обработкой и автокоммитом — дубли.</p>
-      <p>Коммит хранится в <code>__consumer_offsets</code> как «следующий offset к чтению» для пары (группа, партиция). Коммит «вперёд» через сообщение (обработали 10, 11 упало, 12 обработали и закоммитили 13) теряет 11 — поэтому при параллельной обработке коммитят только непрерывный обработанный префикс.</p>
-      <p><code>auto.offset.reset</code> (earliest/latest) применяется, только когда у группы нет закоммиченного offset’а или он вышел за retention — новая группа с latest пропустит всё, что было до её старта.</p>
+<pre class="narrow"><span class="a">@KafkaListener</span>(topics = <span class="s">"payments"</span>)
+<span class="k">public</span> <span class="k">void</span> on(
+  <span class="t">ConsumerRecord</span>&lt;<span class="t">String</span>, <span class="t">String</span>&gt; <span class="k">record</span>,
+    <span class="t">Acknowledgment</span> ack) {
+    process(<span class="k">record</span>.value());
+    ack.acknowledge();
+}</pre><p>Auto-commit не знает, завершилась ли бизнес-операция. Особенно опасно передать пачку в executor и продолжить poll: позиция может закоммититься раньше обработки. При последовательной обработке всей пачки до следующего poll auto-commit не означает неизбежную потерю, но контроль момента коммита менее явный.</p><p class="follow"><b>Можно коммитить 45, если 43 ещё обрабатывается?</b> Нет: коммит закрывает весь предшествующий диапазон партиции. При параллельной обработке нужно отслеживать непрерывно завершённую часть, иначе после падения 43 будет пропущен.</p>
     </div></div></article>
-<article id="q227" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">227. Гарантии доставки и exactly-once</h2><div class="answer" hidden><div class="short"><ul><li><b>At-most-once</b> — offset коммитится до обработки, при падении сообщение теряется.</li><li><b>At-least-once</b> — после обработки, возможны дубли; это стандарт.</li><li><b>Exactly-once</b> в Kafka — идемпотентный продюсер, транзакции и <b>read_committed</b>, но только для цепочки «Kafka → Kafka».</li></ul>
-<p>Если обработка пишет во внешнюю базу — at-least-once плюс <b>идемпотентная обработка</b>: дедупликация по id события в той же транзакции.</p></div>
+<article id="q227" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">227. Гарантии доставки и exactly-once</h2><div class="answer" hidden><div class="short"><ul><li><b>At-most-once:</b> подтвердили до обработки — падение может потерять бизнес-эффект.</li><li><b>At-least-once:</b> подтвердили после обработки — падение между эффектом и подтверждением даёт повтор.</li><li><b>Exactly-once в Kafka:</b> выходные записи и offsets входа фиксируются одной Kafka-транзакцией; получатель использует read_committed.</li></ul><p><b>Kafka-транзакция не включает внешнюю БД или HTTP.</b> Для них нужна идемпотентная обработка либо отдельный протокол согласования.</p></div>
     <div class="more">
 <figure class="concept" aria-labelledby="kafka-delivery-caption">
 <svg viewBox="0 0 320 344" role="img" aria-labelledby="kafka-delivery-title kafka-delivery-desc" xmlns="http://www.w3.org/2000/svg">
@@ -13976,338 +13658,92 @@ public void on(
 <text x="240.0" y="313.0" text-anchor="middle">Нужна дедупликация</text>
 </svg>
 <figcaption id="kafka-delivery-caption">Это два независимых сценария падения. Для Kafka → Kafka транзакция может атомарно зафиксировать выходные записи и offsets; внешняя БД в такую атомарность автоматически не входит.</figcaption>
-</figure>
-<pre class="wide"><span class="c">-- в той же транзакции, что и бизнес-изменение</span>
-<span class="k">INSERT</span> <span class="k">INTO</span> processed_message (message_id) <span class="k">VALUES</span> (:id)
-<span class="k">ON</span> CONFLICT (message_id) <span class="k">DO</span> NOTHING;      <span class="c">-- 0 строк → дубль, пропускаем</span></pre>
-<pre class="narrow"><span class="c">-- в той же транзакции,</span>
-<span class="c">-- что и бизнес-изменение</span>
-<span class="k">INSERT</span> <span class="k">INTO</span> processed_message (message_id)
-<span class="k">VALUES</span> (:id)
-<span class="k">ON</span> CONFLICT (message_id) <span class="k">DO</span> NOTHING;
-<span class="c">-- 0 строк → дубль, пропускаем</span></pre>
-    <ul><li>Надёжная запись: <code>acks=all</code>, replication.factor=3, min.insync.replicas=2. Ключ дедупликации — id события, а не offset. Auto-commit может закоммитить offset до обработки.</li></ul>
-<div class="table-wrap"><table>
-        <tr><th>Семантика</th><th>Как получается</th><th>Риск</th></tr>
-        <tr><td>At-most-once</td><td>коммит offset до обработки</td><td>падение после коммита — сообщение потеряно</td></tr>
-        <tr><td>At-least-once</td><td>коммит после обработки</td><td>падение после обработки, до коммита — повтор</td></tr>
-        <tr><td>Exactly-once (внутри Kafka)</td><td>транзакция продюсера включает и выходные сообщения, и коммит offset входа (<code>sendOffsetsToTransaction</code>); консюмеры с read_committed</td><td>только Kafka → Kafka</td></tr>
-        <tr><td>«Effectively once» с БД</td><td>at-least-once + идемпотентная обработка (дедупликация по id в той же транзакции, что и эффект)</td><td>нужен стабильный id события</td></tr>
-      </table></div>
-<pre class="wide"><span class="a">@KafkaListener</span>(topics = <span class="s">"payments"</span>)
-<span class="a">@Transactional</span>                                       <span class="c">// транзакция БД</span>
-<span class="k">public</span> <span class="k">void</span> on(<span class="t">PaymentEvent</span> e) {
-    <span class="k">int</span> inserted = jdbc.update(<span class="s">"""
-        insert into processed_message(message_id) values (?) on conflict do nothing"""</span>, e.eventId());
-    <span class="k">if</span> (inserted == <span class="n">0</span>) <span class="k">return</span>;                       <span class="c">// уже обрабатывали — выходим</span>
-    ledger.post(e);                                  <span class="c">// эффект в той же транзакции</span>
-}   <span class="c">// коммит БД, затем offset; упали между ними — повтор отсечётся processed_message</span></pre>
-<pre class="narrow"><span class="a">@KafkaListener</span>(topics = <span class="s">"payments"</span>)
-<span class="a">@Transactional</span>   <span class="c">// транзакция БД</span>
-<span class="k">public</span> <span class="k">void</span> on(<span class="t">PaymentEvent</span> e) {
-    <span class="k">int</span> inserted = jdbc.update(<span class="s">"""
-            insert into processed_message
-                   (message_id)
-            values (?)
-            on conflict do nothing"""</span>,
-            e.eventId());
-    <span class="c">// уже обрабатывали — выходим</span>
-    <span class="k">if</span> (inserted == <span class="n">0</span>) <span class="k">return</span>;
-    <span class="c">// эффект в той же транзакции</span>
-    ledger.post(e);
-}
-<span class="c">// коммит БД, затем offset; упали между ними —</span>
-<span class="c">// повтор отсечётся processed_message</span></pre>
-      <p>Почему id события, а не (partition, offset): одно и то же бизнес-событие может быть опубликовано дважды (ретрай продюсера без идемпотентности, повтор из outbox, переотправка из DLT) с разными offset’ами. Ключ дедупликации должен рождаться у источника события.</p>
-      <p>Идемпотентный продюсер (<code>enable.idempotence=<span class="k">true</span></code>, по умолчанию с 3.0): брокер помнит producer id и номера последовательностей и отбрасывает дубли от ретраев одной сессии продюсера. Защищает от дублей на участке «продюсер → брокер», но не от повторной отправки после рестарта приложения.</p>
-      <p>Таблицу дедупликации надо чистить по времени (держать дольше, чем максимальная задержка повтора), иначе она растёт бесконечно; или вместо отдельной таблицы использовать естественную идемпотентность (уникальный индекс на payment_id в целевой таблице, UPSERT).</p>
+</figure><ol><li>Прочитать входные записи.</li><li>Начать Kafka-транзакцию и отправить результаты в выходные топики.</li><li>Включить offsets обработанного входа через sendOffsetsToTransaction.</li><li>Зафиксировать транзакцию: результаты и offsets становятся согласованными. При abort вход будет прочитан повторно, но отменённый результат read_committed не выдаст.</li></ol><p><b>Для записи в БД:</b> eventId и бизнес-изменение сохраняют в одной транзакции. Уникальность eventId не даёт повторно применить эффект; offset коммитят после COMMIT БД.</p><pre><span class="t">BEGIN</span>;
+<span class="t">WITH</span> first_delivery <span class="t">AS</span> (
+    <span class="t">INSERT</span> <span class="t">INTO</span> processed_event(id)
+    <span class="t">VALUES</span> ('event-<span class="n">42</span>')
+    <span class="t">ON</span> <span class="t">CONFLICT</span> <span class="t">DO</span> <span class="t">NOTHING</span>
+    <span class="t">RETURNING</span> id
+)
+<span class="t">UPDATE</span> account
+<span class="t">SET</span> balance = balance + <span class="n">100</span>
+<span class="t">WHERE</span> id = <span class="n">7</span>
+  <span class="t">AND</span> <span class="t">EXISTS</span> (
+      <span class="t">SELECT</span> <span class="n">1</span> <span class="t">FROM</span> first_delivery
+  );
+<span class="t">COMMIT</span>;
+-- Затем commit offset в <span class="t">Kafka</span>.</pre><p>В примере PostgreSQL processed_event.id — уникальный ключ. UPDATE выполняется только при первой вставке eventId; повтор не меняет баланс. Если UPDATE должен обязательно затронуть счёт, отсутствие счёта проверяют и откатывают транзакцию. Для HTTP используют idempotency key, если получатель поддерживает его.</p><p class="follow"><b>Идемпотентный продюсер уже даёт exactly-once обработку?</b> Нет. Он устраняет дубли своих внутренних повторных отправок, но не связывает обработку входа, её результат и commit offsets.</p>
     </div></div></article>
-<article id="q228" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">228. Ребалансировка консюмеров и max.poll.interval.ms: почему больно и как уменьшить</h2><div class="answer" hidden><div class="short"><p>Ребалансировка <b>перераспределяет партиции</b> между консюмерами группы. Она болезненна из-за <b>пауз обработки, роста лага и повторного чтения</b> сообщений, по которым ещё не закоммичен offset.</p>
-<p>Если пауза между вызовами <code>poll()</code> превышает <code>max.poll.interval.ms</code>, например из-за долгой обработки пачки, обычный динамический участник теряет членство в группе, <b>даже если heartbeat продолжает отправляться</b>.</p>
-<p>Поэтому сначала <b>ограничиваю время обработки пачки</b> таймаутами и ограниченными ретраями, уменьшаю <code>max.poll.records</code>, затем настраиваю <code>max.poll.interval.ms</code> <b>с запасом</b>.</p></div>
+<article id="q228" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">228. Ребалансировка консюмеров и max.poll.interval.ms: почему больно и как уменьшить</h2><div class="answer" hidden><div class="short"><p><b>Ребалансировка перераспределяет партиции между консюмерами.</b> На переносимых партициях возникают паузы; новый владелец может повторно прочитать записи, обработанные без коммита.</p><p><b>max.poll.interval.ms ограничивает перерыв между poll.</b> Долгая обработка пачки может лишить динамического участника назначения, даже если heartbeat продолжает работать.</p><p>Сначала ограничиваю время HTTP/БД и ретраев, уменьшаю max.poll.records; затем выбираю poll interval с запасом по медленным пачкам.</p></div>
     <div class="more">
-<p><b>Что происходит внутри.</b> В обычном синхронном consumer цикл такой:</p>
-<pre>poll → обработать пачку → commit → poll</pre>
-<p>Два таймаута отвечают за разные вещи:</p>
-<div class="table-wrap"><table>
-  <tr><th>Настройка</th><th>Что контролирует</th></tr>
-  <tr><td><code>session.timeout.ms</code></td><td>Как долго можно не получать heartbeat от consumer. В classic-протоколе задаётся клиентом, в новом consumer-протоколе соответствующий таймаут задаёт брокер через <code>group.consumer.session.timeout.ms</code>.</td></tr>
-  <tr><td><code>max.poll.interval.ms</code></td><td>Какой максимальный перерыв допустим между вызовами <code>poll()</code>. Heartbeat не отменяет это ограничение.</td></tr>
-</table></div>
-<p>Допустим, <code>poll()</code> вернул 500 сообщений, обработка каждого занимает секунду. Пачка займёт около 500 секунд — больше стандартного <code>max.poll.interval.ms</code> в 5 минут.</p>
-<p>Для обычного динамического участника превышение интервала приводит к выходу из группы и перераспределению партиций. Приложение при этом может продолжать старую обработку: <b>отзыв партиции не отменяет уже выполняющийся HTTP-запрос или транзакцию в БД</b>. Последующий commit может завершиться <code><span class="t">CommitFailedException</span></code>, а новый владелец прочитает сообщения с последнего закоммиченного offset.</p>
-<p>Получается неприятная петля:</p>
-<pre>медленная зависимость
-→ долгая пачка → rebalance
-→ повторная обработка
-→ дополнительная нагрузка
-→ ещё более долгая пачка</pre>
-
-<p><b>Как уменьшить боль — в порядке приоритета.</b></p>
-<ol>
-  <li><b>Ограничить время обработки.</b> Таймауты на БД и HTTP, ограниченные ретраи. Бесконечный retry внутри обработки легко удерживает consumer до потери партиций.</li>
-  <li><b>Уменьшить <code>max.poll.records</code>.</b> Это ограничивает количество записей, возвращаемых одним <code>poll()</code>, и помогает уложить пачку в бюджет времени.</li>
-  <li><b>Подобрать <code>max.poll.interval.ms</code> с запасом.</b> Учитывать медленные пачки, retries, commit и GC. Просто поставить час — значит разрешить зависшей обработке час удерживать партиции.</li>
-  <li><b>Идемпотентная обработка.</b> Повторная доставка возможна независимо от этих настроек: бизнес-эффекты должны выдерживать повтор.</li>
-</ol>
-
-<p><b>Пример настроек.</b> Для пачки из 100 записей со временем обработки около 200 мс на запись:</p>
-<pre>enable.auto.commit=<span class="k">false</span>
-max.poll.records=<span class="n">100</span>
-max.poll.interval.ms=<span class="n">120000</span></pre>
-<p>Получается примерно 20 секунд на обычную пачку при бюджете в 120 секунд. Это иллюстрация: значения выбираются по замерам медленных пачек, с учётом таймаутов и ретраев. При <code>enable.auto.commit=<span class="k">false</span></code> приложение должно явно коммитить offsets после успешной обработки.</p>
-
-<div class="follow">
-  <p><b>Поможет добавить консюмеров?</b> Да, пока есть свободные партиции и ресурс у зависимостей. В одной группе одну партицию одновременно назначают одному consumer.</p>
-  <p><b>Поможет <code>pause()</code>?</b> Позволит временно остановить получение записей из выбранных партиций, сохранив их назначение, но <code>poll()</code> всё равно нужно регулярно вызывать.</p>
-  <p><b>Что смотреть в проде?</b> Частоту и длительность ребалансов, время между <code>poll()</code>, время обработки пачек, lag, ошибки commit, задержки зависимостей и GC.</p>
-</div>
+<pre>poll → обработка → commit → poll</pre><div class="table-wrap"><table><tr><th>Механизм</th><th>Что проверяет / меняет</th></tr><tr><td>Heartbeat и session timeout</td><td>Жив ли участник. В classic таймаут задаёт клиент, в consumer-протоколе — брокер</td></tr><tr><td>max.poll.interval.ms</td><td>Успевает ли приложение возвращаться к poll</td></tr><tr><td>Cooperative assignment</td><td>Переносит нужные назначения поэтапно вместо общего отзыва</td></tr><tr><td>group.instance.id</td><td>Стабильная идентичность участника: уменьшает перераспределения при коротких рестартах</td></tr></table></div><p><b>Пример:</b> 500 сообщений × 1 секунда = 500 секунд между poll — больше бюджета в 5 минут. 100 сообщений × 200 мс ≈ 20 секунд; для такого измеренного сценария 120 секунд оставят запас на медленные операции и commit.</p><pre>max.poll.records=<span class="n">100</span>
+max.poll.interval.ms=<span class="n">120000</span></pre><p>Отзыв партиции не отменяет уже выполняющуюся транзакцию БД или HTTP-запрос. Поэтому старый и новый обработчики могут пересечься — нужна идемпотентность. У static member при превышении poll interval перераспределение обычно откладывается до session timeout; это не разрешение обрабатывать бесконечно.</p><p class="follow"><b>Поможет pause()?</b> Остановит выдачу новых записей выбранных партиций, сохраняя назначение. Но poll нужно регулярно вызывать: одна pause не отменяет проверку max.poll.interval.ms.</p>
     </div></div></article>
-<article id="q229" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">229. Ошибки в консюмере: retry, Dead Letter Topic, poison pill</h2><div class="answer" hidden><div class="short"><p><b>Poison pill</b> — сообщение, которое никогда не обработается; бесконечные ретраи <b>блокируют всю партицию</b>.</p>
-<ul><li>В Spring Kafka — <b>DefaultErrorHandler</b>: ретраи с backoff, затем <b>Dead Letter Topic</b>.</li><li>Ошибки десериализации ловит <b>ErrorHandlingDeserializer</b>.</li><li><b>Классифицировать ошибки</b>: таймаут ретраим, невалидные данные — сразу в DLT.</li></ul>
-<p>DLT мониторят и умеют <b>переотправлять</b>.</p></div>
+<article id="q229" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">229. Ошибки в консюмере: retry, Dead Letter Topic, poison pill</h2><div class="answer" hidden><div class="short"><p><b>Ошибки делю на временные и постоянные.</b> Таймаут зависимости можно повторить с ограниченным backoff; неверный формат обычно отправляют на разбор без бессмысленных повторов.</p><p><b>DefaultErrorHandler</b> повторяет обработку с паузами. Когда попытки исчерпаны, <b>DeadLetterPublishingRecoverer</b> отправляет запись в DLT. Ошибку десериализации, возникшую до вызова listener, перехватывает <b>ErrorHandlingDeserializer</b>.</p><p>Бесконечные повторы poison pill останавливают продвижение партиции. DLT требует алерта, разбора и управляемого повторного запуска.</p></div>
     <div class="more">
-<ul><li>Таймаут внешнего сервиса — ретраить, ошибку валидации — сразу в DLT. Мониторить lag и размер DLT, предусмотреть переотправку из DLT.</li></ul>
-<pre class="wide"><span class="a">@Bean</span>
+<div class="table-wrap"><table><tr><th>Способ</th><th>Что происходит с порядком</th></tr><tr><td>Блокирующий retry</td><td>Следующие записи ждут завершения повторов; партиция задерживается</td></tr><tr><td>Retry-топики</td><td>Основной поток идёт дальше, отложенная запись может быть обогнана</td></tr><tr><td>DLT</td><td>Запись изолируется; следующие проходят без её успешного бизнес-эффекта</td></tr></table></div><p><b>Пример Spring Kafka 3.x, record-listener без транзакций:</b> первая попытка и два повтора с паузой в секунду, затем DLT.</p><pre class="wide"><span class="a">@Bean</span>
 <span class="t">DefaultErrorHandler</span> errorHandler(<span class="t">KafkaTemplate</span>&lt;<span class="t">Object</span>, <span class="t">Object</span>&gt; template) {
-    <span class="k">var</span> recoverer = <span class="k">new</span> <span class="t">DeadLetterPublishingRecoverer</span>(template,
-            (rec, ex) -&gt; <span class="k">new</span> <span class="t">TopicPartition</span>(rec.topic() + <span class="s">".DLT"</span>, rec.partition()));
-    <span class="k">var</span> backoff = <span class="k">new</span> <span class="t">ExponentialBackOffWithMaxRetries</span>(<span class="n">5</span>);
-    backoff.setInitialInterval(<span class="n">500</span>);
-    backoff.setMultiplier(<span class="n">2.0</span>);
-    <span class="k">var</span> handler = <span class="k">new</span> <span class="t">DefaultErrorHandler</span>(recoverer, backoff);
-    handler.addNotRetryableExceptions(<span class="t">ValidationException</span>.<span class="k">class</span>, <span class="t">JsonProcessingException</span>.<span class="k">class</span>);  <span class="c">// сразу в DLT</span>
+    <span class="k">var</span> recoverer = <span class="k">new</span> <span class="t">DeadLetterPublishingRecoverer</span>(template);
+    recoverer.setFailIfSendResultIsError(<span class="k">true</span>);
+    <span class="k">var</span> handler = <span class="k">new</span> <span class="t">DefaultErrorHandler</span>(recoverer, <span class="k">new</span> <span class="t">FixedBackOff</span>(<span class="n">1000L</span>, <span class="n">2L</span>));
+    handler.addNotRetryableExceptions(<span class="t">IllegalArgumentException</span>.<span class="k">class</span>);
     <span class="k">return</span> handler;
-}
-
-<span class="c">// ошибки десериализации не доходят до листенера — их перехватывает обёртка</span>
-spring.kafka.consumer.value-deserializer: org.springframework.kafka.support.serializer.<span class="t">ErrorHandlingDeserializer</span>
-spring.kafka.consumer.properties.spring.deserializer.value.delegate.<span class="k">class</span>: org.springframework.kafka.support.serializer.<span class="t">JsonDeserializer</span></pre>
+}</pre>
 <pre class="narrow"><span class="a">@Bean</span>
 <span class="t">DefaultErrorHandler</span> errorHandler(
-        <span class="t">KafkaTemplate</span>&lt;<span class="t">Object</span>, <span class="t">Object</span>&gt; kt) {
+    <span class="t">KafkaTemplate</span>&lt;<span class="t">Object</span>, <span class="t">Object</span>&gt; kt) {
     <span class="k">var</span> recoverer =
-        <span class="k">new</span> <span class="t">DeadLetterPublishingRecoverer</span>(
-            kt,
-            (rec, ex) -&gt; <span class="k">new</span> <span class="t">TopicPartition</span>(
-                    rec.topic() + <span class="s">".DLT"</span>,
-                    rec.partition()));
-    <span class="c">// 500 мс, ×2, до 5 повторов</span>
-    <span class="k">var</span> backoff = <span class="k">new</span> <span class="t">ExponentialBackOff</span>(
-            <span class="n">500</span>, <span class="n">2.0</span>);
-    backoff.setMaxAttempts(<span class="n">5</span>);
-
-    <span class="k">var</span> handler = <span class="k">new</span> <span class="t">DefaultErrorHandler</span>(
-            recoverer, backoff);
-    <span class="c">// сразу в DLT</span>
+      <span class="k">new</span> <span class="t">DeadLetterPublishingRecoverer</span>(
+        kt);
+    recoverer
+      .setFailIfSendResultIsError(<span class="k">true</span>);
+    <span class="k">var</span> handler =
+      <span class="k">new</span> <span class="t">DefaultErrorHandler</span>(recoverer,
+        <span class="k">new</span> <span class="t">FixedBackOff</span>(<span class="n">1000L</span>, <span class="n">2L</span>));
     handler.addNotRetryableExceptions(
-            <span class="t">ValidationException</span>.<span class="k">class</span>,
-            <span class="t">JsonProcessingException</span>.<span class="k">class</span>);
+      <span class="t">IllegalArgumentException</span>.<span class="k">class</span>);
     <span class="k">return</span> handler;
-}
-
-<span class="c">// ошибки десериализации не доходят до</span>
-<span class="c">// листенера — их перехватывает обёртка</span>
-spring.kafka.consumer:
-  value-deserializer:
-    <span class="t">ErrorHandlingDeserializer</span>
-  properties:
-    spring.deserializer.value.delegate.<span class="k">class</span>:
-      <span class="t">JsonDeserializer</span>
-# полные имена: org.springframework.kafka
-#   .support.serializer.*</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Стратегия</th><th>Порядок</th><th>Блокирует партицию</th><th>Когда</th></tr>
-        <tr><td>Блокирующие ретраи (DefaultErrorHandler)</td><td>сохраняется</td><td>да, на время ретраев</td><td>короткие сбои, важен порядок</td></tr>
-        <tr><td>Retry-топики (@RetryableTopic: topic-retry-1s, -10s, -1m)</td><td>нарушается</td><td>нет</td><td>долгие сбои зависимостей, порядок не важен</td></tr>
-        <tr><td>DLT</td><td>—</td><td>нет</td><td>финальная точка после ретраев и для неретраибельных ошибок</td></tr>
-        <tr><td>Пауза контейнера (pause/resume)</td><td>сохраняется</td><td>да, намеренно</td><td>зависимость лежит — не жечь ретраи, ждать восстановления (circuit breaker)</td></tr>
-      </table></div>
-      <p>Классификация ошибок — главное на интервью: транзиентные (таймаут, 503, deadlock в БД) — ретраить с backoff; постоянные (невалидный формат, нарушение бизнес-правила, не найден справочник) — ретраи бессмысленны, сразу в DLT. Каждое сообщение в DLT несёт заголовки с исключением, исходным топиком, партицией и offset — для разбора.</p>
-      <p>DLT без процесса разбора — та же потеря, только отложенная. Нужны: алерт на рост DLT, инструмент переотправки (обратно в основной топик после исправления), понимание, что переотправленное сообщение может прийти позже более новых по тому же ключу.</p>
-      <p>Блокирующие ретраи дольше <code>max.poll.interval.ms</code> выкинут консюмер из группы — Spring Kafka учитывает это, разбивая backoff между poll’ами (seek на упавшую запись), но суммарное время ретраев всё равно ограничивайте.</p>
-<p class="follow"><b>Что будет, если просто логировать ошибку и коммитить offset?</b> Сообщение потеряно молча; для денег и заказов недопустимо.</p>
+}</pre><p>В Boot стандартная автоконфигурация подключает bean обработчика к фабрике listener. По умолчанию recoverer отправляет в <code>&lt;исходный-топик&gt;.<span class="t">DLT</span></code> с той же партицией: DLT заранее создают с достаточным числом партиций. Ошибка его публикации должна помешать считать recovery успешным.</p><p>Для ошибок десериализации нужны ErrorHandlingDeserializer и сериализатор DLT, способный отправить исходные byte[]. При Kafka-транзакциях используют rollback-обработку, например DefaultAfterRollbackProcessor; этот пример нельзя переносить туда без изменения схемы.</p><p class="follow"><b>Отсутствие справочника всегда постоянная ошибка?</b> Нет. Справочник может обновиться позже. Классификация зависит от причины и бизнес-правила, а не только имени исключения.</p>
     </div></div></article>
-<article id="q230" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">230. Consumer lag растёт: что делать <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p>Сначала — lag растёт <b>на всех партициях или на некоторых</b>:</p>
-<ul><li><b>на всех</b> — не хватает пропускной способности: оптимизировать обработку, батчи, консюмеры (не больше числа партиций);</li><li><b>на одной</b> — горячий ключ, зависший консюмер или poison pill;</li><li><b>пилообразный</b> — цикл ребалансировок.</li></ul>
-<p>Если тормозит база, больше консюмеров <b>усилит давление</b>. Алертят на <b>lag во времени</b>, а не в сообщениях.</p></div>
+<article id="q230" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">230. Consumer lag растёт: что делать <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Сначала выясняю, где растёт lag и успевает ли обработка за поступлением.</b> На всех партициях — проверяю общую пропускную способность и зависимости; на одной — горячий ключ, зависание или повторяющуюся ошибку.</p><p>Смотрю скорость поступления и завершения обработки, время пачки, rebalance, commit и задержки БД/API. <b>Если узкое место — БД, увеличение числа консюмеров может ухудшить ситуацию.</b></p></div>
     <div class="more">
-<ul><li>Масштабирование: консюмеры до числа партиций, пакетная запись в БД, параллельная обработка с порядком по ключу. Автоскейлинг по lag — KEDA.</li></ul>
-<pre class="wide"># lag по партициям группы
-kafka-consumer-groups.sh --bootstrap-server kafka:<span class="n">9092</span> --describe --group payment-processor
-# <span class="t">GROUP</span>              <span class="t">TOPIC</span>     <span class="t">PARTITION</span>  <span class="t">CURRENT</span>-<span class="t">OFFSET</span>  <span class="t">LOG</span>-<span class="t">END</span>-<span class="t">OFFSET</span>  <span class="t">LAG</span>    <span class="t">CONSUMER</span>-<span class="t">ID</span>
-# payment-processor  payments  <span class="n">0</span>          <span class="n">1204331</span>         <span class="n">1204390</span>         <span class="n">59</span>     c1-...
-# payment-processor  payments  <span class="n">1</span>          <span class="n">998212</span>          <span class="n">1453007</span>         <span class="n">454795</span> c2-...   ← одна партиция</pre>
-<pre class="narrow"># lag по партициям группы
-kafka-consumer-groups.sh \
-  --bootstrap-server kafka:<span class="n">9092</span> \
-  --describe --group payment-processor
-# <span class="t">PARTITION</span>  <span class="t">CURRENT</span>    <span class="t">LOG</span>-<span class="t">END</span>    <span class="t">LAG</span>
-# <span class="n">0</span>          <span class="n">1204331</span>    <span class="n">1204390</span>    <span class="n">59</span>
-# <span class="n">1</span>          <span class="n">998212</span>     <span class="n">1453007</span>    <span class="n">454795</span>
-#                        ↑ одна партиция</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Картина</th><th>Вероятная причина</th><th>Что делать</th></tr>
-        <tr><td>Lag растёт на всех партициях равномерно</td><td>входящий поток выше пропускной способности обработки</td><td>оптимизировать обработку, батчи, масштабировать консюмеры (до числа партиций), добавить партиции</td></tr>
-        <tr><td>Растёт на одной партиции</td><td>горячий ключ; poison pill с бесконечными ретраями; зависший консюмер этой партиции</td><td>смотреть логи и offset — двигается ли вообще; распределение ключей</td></tr>
-        <tr><td>Пилообразный, частые всплески</td><td>цикл ребалансировок: обработка пачки дольше max.poll.interval.ms</td><td>уменьшить max.poll.records, cooperative-sticky, static membership</td></tr>
-        <tr><td>Вырос после деплоя</td><td>регрессия в коде, новые запросы, другой размер пула</td><td>сравнить время обработки сообщения до и после</td></tr>
-        <tr><td>Вырос вместе с латентностью БД/внешнего сервиса</td><td>узкое место ниже по цепочке</td><td>масштабирование консюмеров только усилит давление — нужно решать в зависимости</td></tr>
-      </table></div>
-      <p>Приёмы ускорения обработки: пакетный листенер (<code><span class="t">List</span>&lt;<span class="t">ConsumerRecord</span>&gt;</code>) с batch insert в БД вместо записи по одной; параллельная обработка внутри пачки с сохранением порядка по ключу; асинхронные внешние вызовы; кеш справочников; отделение медленной части в отдельный топик.</p>
-      <p>Lag в сообщениях обманчив: 10 000 сообщений при скорости 10 000/с — секунда, а при 10/с — 17 минут. Полезнее метрика «время отставания» (lag в секундах: now − timestamp последнего обработанного) — её дают Burrow, Kafka Exporter, Micrometer-метрики Spring Kafka. Алерт настраивают на время, а не на количество.</p>
-<p class="follow"><b>Добавление консюмеров не помогло?</b> Консюмеров уже не меньше, чем партиций, или узкое место ниже — в БД.</p>
+<div class="table-wrap"><table><tr><th>Наблюдение</th><th>Что проверить</th></tr><tr><td>Все партиции отстают равномерно</td><td>Поток вырос? Обработка стала медленнее? Хватает CPU и ресурсов БД?</td></tr><tr><td>Одна партиция отстаёт</td><td>Распределение ключей, poison pill, зависший внешний вызов</td></tr><tr><td>Lag растёт после каждого rebalance</td><td>max.poll.interval, рестарты, GC, сетевые обрывы</td></tr><tr><td>Обработка быстрая, committed lag большой</td><td>Частота commit и ошибки сохранения offsets</td></tr><tr><td>read_committed не продвигается</td><td>Открытые транзакции и last stable offset</td></tr></table></div><ol><li>Сопоставить время начала проблемы с релизом и изменением потока.</li><li>Найти медленную стадию по метрикам и трассировке.</li><li>Устранить причину: запрос, batch-запись, таймаут, retry или перекос ключей.</li><li>Добавлять обработчики только при свободных партициях и запасе ресурсов зависимостей.</li></ol><p><b>Lag в сообщениях не равен задержке пользователя.</b> Дополнительно измеряют возраст события при завершении обработки. Offset-разность может включать пропуски после compaction и служебные записи транзакций; это не точное число необработанных бизнес-событий.</p><p class="follow"><b>Можно просто сбросить offsets вперёд?</b> Это пропуск данных, а не ускорение обработки. Делают только как осознанную бизнес-операцию с пониманием потерянного диапазона.</p>
     </div></div></article>
-<article id="q231" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">231. Заголовки сообщений и трассировка</h2><div class="answer" hidden><div class="short"><p>Заголовки — <b>метаданные</b> рядом с ключом и телом: trace id (<b>W3C traceparent</b>), тип и версия события, id для идемпотентности.</p>
-<ul><li>Spring Kafka с включённым <b>observation</b> сам переносит контекст трассировки — в трейсе видно, сколько сообщение пролежало в топике.</li><li><b>Тип события</b> в заголовке позволяет маршрутизировать и десериализовать, не разбирая тело.</li><li>Персональные данные в заголовки <b>не кладут</b>.</li></ul></div>
+<article id="q231" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">231. Заголовки сообщений и трассировка</h2><div class="answer" hidden><div class="short"><p><b>Headers — метаданные сообщения отдельно от ключа и payload.</b> Туда кладут traceparent, eventId, тип и версию события; значения заголовков — byte[].</p><p><b>Трассировку передают через отправку и обработку.</b> В Spring Kafka для этого включают observation и настраивают tracing bridge/экспорт. Само наличие traceId не измеряет время ожидания в Kafka и не обеспечивает дедупликацию.</p></div>
     <div class="more">
-<ul>
-      <li>Тип события в заголовке позволяет роутить и десериализовать, не разбирая тело.</li>
-    </ul>
-<pre class="wide"><span class="c">// продюсер</span>
-<span class="t">ProducerRecord</span>&lt;<span class="t">String</span>, <span class="t">PaymentEvent</span>&gt; rec = <span class="k">new</span> <span class="t">ProducerRecord</span>&lt;&gt;(<span class="s">"payments"</span>, key, event);
-rec.headers().add(<span class="s">"eventType"</span>, <span class="s">"PaymentCompleted"</span>.getBytes(<span class="t">UTF_8</span>));
-rec.headers().add(<span class="s">"eventId"</span>, event.id().toString().getBytes(<span class="t">UTF_8</span>));
-kafkaTemplate.send(rec);
-
-<span class="c">// консюмер в Spring Kafka</span>
-<span class="a">@KafkaListener</span>(topics = <span class="s">"payments"</span>)
-<span class="k">void</span> on(<span class="a">@Payload</span> <span class="t">PaymentEvent</span> e,
-        <span class="a">@Header</span>(<span class="s">"eventType"</span>) <span class="t">String</span> type,
-        <span class="a">@Header</span>(<span class="t">KafkaHeaders</span>.<span class="t">RECEIVED_PARTITION</span>) <span class="k">int</span> partition) { ... }
-
-<span class="c">// трассировка: включить observation — traceparent пишется и читается автоматически</span>
-spring.kafka.template.observation-enabled: <span class="k">true</span>
-spring.kafka.listener.observation-enabled: <span class="k">true</span></pre>
-<pre class="narrow"><span class="c">// продюсер</span>
-<span class="k">var</span> rec = <span class="k">new</span> <span class="t">ProducerRecord</span>&lt;&gt;(
-        <span class="s">"payments"</span>, key, event);
-rec.headers().add(<span class="s">"eventType"</span>,
-        <span class="s">"PaymentCompleted"</span>.getBytes(<span class="t">UTF_8</span>));
-<span class="t">String</span> eventId = event.id().toString();
-rec.headers().add(<span class="s">"eventId"</span>,
-        eventId.getBytes(<span class="t">UTF_8</span>));
-kafkaTemplate.send(rec);
-
-<span class="c">// консюмер в Spring Kafka</span>
-<span class="a">@KafkaListener</span>(topics = <span class="s">"payments"</span>)
-<span class="k">void</span> on(<span class="a">@Payload</span> <span class="t">PaymentEvent</span> e,
-        <span class="a">@Header</span>(<span class="s">"eventType"</span>) <span class="t">String</span> type,
-        <span class="a">@Header</span>(<span class="t">RECEIVED_PARTITION</span>)
-        <span class="k">int</span> partition) { ... }
-
-<span class="c">// трассировка: включить observation —</span>
-<span class="c">// traceparent пишется и читается сам</span>
-spring.kafka:
-  template.observation-enabled: <span class="k">true</span>
-  listener.observation-enabled: <span class="k">true</span></pre>
-      <p>Что обычно кладут в заголовки: <code>traceparent</code>/<code>tracestate</code> (W3C), тип и версия события (для маршрутизации и выбора десериализатора без разбора тела), eventId, источник, correlation/causation id (какое событие вызвало это — для цепочек саг), признак тестового трафика. Spring Kafka сам добавляет <code>__TypeId__</code> для JsonSerializer (из-за него консюмер может пытаться создать класс продюсера — <code>spring.json.use.type.headers=<span class="k">false</span></code> или маппинг типов).</p>
-      <p>Чего не кладут: большие данные и персональную информацию (заголовки тоже хранятся, реплицируются и попадают в DLT и логи). DLT-обработчик Spring добавляет заголовки исключения: <code>kafka_dlt-exception-message</code>, исходные топик, партиция, offset.</p>
-      <p>Трейс через асинхронную границу: спан продюсера и спан консюмера связаны через traceparent — в Jaeger/Tempo видно, сколько сообщение пролежало в топике между ними, что само по себе отличная метрика задержки.</p>
+<pre class="wide"><span class="k">var</span> <span class="k">record</span> = <span class="k">new</span> <span class="t">ProducerRecord</span>&lt;&gt;(<span class="s">"payments"</span>, <span class="s">"account-42"</span>, <span class="s">"paid"</span>);
+<span class="k">record</span>.headers().add(<span class="s">"eventId"</span>, <span class="s">"event-42"</span>.getBytes(<span class="t">StandardCharsets</span>.<span class="t">UTF_8</span>));
+producer.send(<span class="k">record</span>).get();</pre>
+<pre class="narrow"><span class="k">var</span> <span class="k">record</span> = <span class="k">new</span> <span class="t">ProducerRecord</span>&lt;&gt;(
+    <span class="s">"payments"</span>, <span class="s">"account-42"</span>, <span class="s">"paid"</span>);
+<span class="k">byte</span>[] eventId = <span class="s">"event-42"</span>.getBytes(
+    <span class="t">StandardCharsets</span>.<span class="t">UTF_8</span>);
+<span class="k">record</span>.headers().add(<span class="s">"eventId"</span>, eventId);
+producer.send(<span class="k">record</span>).get();</pre><p>В примере key задаёт распределение по партициям, eventId — идентичность события. Один accountId не заменяет eventId: у счёта много разных событий. Trace-контекст обычно переносит инструментирование, а не ручная генерация заголовков.</p><ul><li><b>Трейс:</b> producer/consumer spans связывают причину и обработку; длительность ожидания измеряют по согласованным timestamp и инструментированию.</li><li><b>Дедупликация:</b> eventId нужно проверить и сохранить атомарно с бизнес-эффектом.</li><li><b>Безопасность:</b> заголовки доступны получателю так же, как тело; секреты туда не помещают. Типы из внешнего заголовка нельзя бесконтрольно превращать в произвольные Java-классы.</li></ul><p class="follow"><b>Зачем версия события, если есть Schema Registry?</b> Версия бизнес-контракта и идентификатор схемы сериализации решают разные задачи. Имена и набор метаданных согласуют с потребителями, не дублируя всё автоматически.</p>
     </div></div></article>
-<article id="q232" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">232. Размер сообщения и большие payload</h2><div class="answer" hidden><div class="short"><p>Лимит по умолчанию — около <b>1 МБ</b>; поднимать его нужно в трёх местах: брокер, продюсер, консюмер. Но большие сообщения <b>замедляют репликацию</b> и задерживают партицию.</p>
-<p>Стандартное решение — <b>claim check</b>: файл в объектное хранилище (S3), в сообщение — только <b>ссылка и метаданные</b>. Иногда хватает сжатия и компактного формата (Avro).</p></div>
+<article id="q232" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">232. Размер сообщения и большие payload</h2><div class="answer" hidden><div class="short"><p><b>Большой payload увеличивает расход памяти, сетевой трафик и время репликации.</b> Лимиты Kafka относятся к запросам и пачкам, поэтому их нельзя считать одним ограничением «на сообщение».</p><p><b>Для файлов обычно использую claim check:</b> файл сохраняется в объектном хранилище, в Kafka отправляются его ключ, размер и checksum. Получатель скачивает объект по этим метаданным.</p></div>
     <div class="more">
-<div class="table-wrap"><table>
-        <tr><th>Где</th><th>Параметр</th><th>По умолчанию</th></tr>
-        <tr><td>Брокер / топик</td><td>message.max.bytes / max.message.bytes</td><td>~1 МБ</td></tr>
-        <tr><td>Реплики</td><td>replica.fetch.max.bytes</td><td>1 МБ (не ограничивает жёстко с новыми версиями, но стоит выровнять)</td></tr>
-        <tr><td>Продюсер</td><td>max.request.size</td><td>1 МБ</td></tr>
-        <tr><td>Консюмер</td><td>max.partition.fetch.bytes, fetch.max.bytes</td><td>1 МБ / 50 МБ</td></tr>
-      </table></div>
-<pre class="wide"><span class="c">// claim check: тело — в объектное хранилище, в сообщение — ссылка и метаданные</span>
-<span class="t">String</span> key = <span class="s">"statements/"</span> + statementId + <span class="s">".pdf"</span>;
-s3.putObject(bucket, key, pdfBytes);
-kafkaTemplate.send(<span class="s">"statements"</span>, clientId, <span class="k">new</span> <span class="t">StatementReady</span>(statementId, bucket, key, sha256(pdfBytes)));
-<span class="c">// консюмер скачивает по ссылке; жизненный цикл объектов — по политике бакета, не по retention топика</span></pre>
-<pre class="narrow"><span class="c">// claim check: тело — в объектное хранилище,</span>
-<span class="c">// в сообщение — ссылка и метаданные</span>
-<span class="t">String</span> key = <span class="s">"statements/"</span> + statementId
-        + <span class="s">".pdf"</span>;
-s3.putObject(bucket, key, pdfBytes);
-<span class="k">var</span> event = <span class="k">new</span> <span class="t">StatementReady</span>(statementId,
-        bucket, key, sha256(pdfBytes));
-kafkaTemplate.send(<span class="s">"statements"</span>, clientId,
-        event);
-<span class="c">// консюмер скачивает по ссылке; жизненный</span>
-<span class="c">// цикл объектов — по политике бакета,</span>
-<span class="c">// не по retention топика</span></pre>
-      <p>Почему большие сообщения вредны, даже если поднять лимиты: они занимают память продюсера, брокера и консюмера целиком, замедляют репликацию и ребалансировки, хуже батчатся; одно огромное сообщение задерживает всю партицию. Kafka оптимизирована под поток мелких сообщений (килобайты).</p>
-      <p>Промежуточные варианты: сжатие (zstd хорошо жмёт JSON — в разы), более компактный формат (Avro/Protobuf вместо JSON), разбиение на чанки с ключом и номером части (сложно — сборка, порядок, потерянные части; обычно хуже claim check).</p>
+<div class="table-wrap"><table><tr><th>Где</th><th>Что проверяют</th></tr><tr><td>Продюсер</td><td>max.request.size — размер запроса и фактический предел несжатой пачки</td></tr><tr><td>Топик / брокер</td><td>max.message.bytes / message.max.bytes — допустимая пачка, после сжатия, если оно включено</td></tr><tr><td>Репликация</td><td>replica.fetch.max.bytes и общий бюджет памяти/сети</td></tr><tr><td>Консюмер</td><td>max.partition.fetch.bytes, fetch.max.bytes и память на распаковку</td></tr></table></div><p>Fetch-лимиты не во всех случаях жёсткие: первая большая пачка может быть возвращена ради продвижения чтения. Простое повышение всех значений не устраняет стоимость больших данных.</p><pre>{
+  <span class="p">"eventId"</span>: <span class="s">"statement-42"</span>,
+  <span class="p">"objectKey"</span>: <span class="s">"statements/42.pdf"</span>,
+  <span class="p">"sizeBytes"</span>: <span class="n">25000000</span>,
+  <span class="p">"sha256"</span>: <span class="s">"..."</span>
+}</pre><ol><li>Загрузить объект и убедиться, что он доступен.</li><li>Надёжно опубликовать событие со ссылкой, при необходимости через outbox.</li><li>У получателя скачать объект, проверить checksum и обработать идемпотентно.</li></ol><p>У объекта должен быть срок жизни не короче возможного replay событий. Если загрузка прошла, а публикация нет, останется лишний объект — нужна очистка. Доступ выдают через права сервиса; короткоживущая signed URL плохо подходит для долгой истории.</p><p class="follow"><b>Можно разрезать файл на Kafka-сообщения?</b> Можно, но придётся собирать части, отслеживать полноту, повторы и сроки хранения. Для обычной передачи файлов ссылка обычно проще.</p>
     </div></div></article>
-<article id="q233" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">233. Log compaction: когда использовать</h2><div class="answer" hidden><div class="short"><p>Компактный топик хранит как минимум <b>последнее значение по каждому ключу</b>, старые версии со временем удаляются — по сути <b>таблица в виде лога</b>: справочники, настройки, текущее состояние сущностей.</p>
-<p>Новый консюмер читает с начала и <b>восстанавливает состояние</b>. Удаление ключа — сообщение с null, <b>tombstone</b>. Так Kafka хранит офсеты групп и changelog-и Kafka Streams.</p></div>
+<article id="q233" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">233. Log compaction: когда использовать</h2><div class="answer" hidden><div class="short"><p><b>Compaction удаляет старые значения одного ключа, сохраняя актуальное состояние.</b> Это полезно для справочников, конфигурации и changelog состояния: новый получатель может восстановить таблицу по логу.</p><p><b>Очистка идёт в фоне, не сразу после записи.</b> Промежуточные версии ещё могут читаться. Для удаления ключа отправляют tombstone — запись с ключом и null-значением; сама tombstone тоже хранится ограниченное время.</p></div>
     <div class="more">
-<ul><li>Удаление ключа — tombstone (null-значение). Компакция идёт в фоне только по закрытым сегментам — какое-то время старые версии ещё видны.</li></ul>
-<pre class="wide"># компактный топик для текущих лимитов клиентов
-kafka-topics.sh --create --topic client-limits --partitions <span class="n">12</span> --replication-factor <span class="n">3</span> \
-  --config cleanup.policy=compact \
-  --config min.cleanable.dirty.ratio=<span class="n">0.1</span> \
-  --config delete.retention.ms=<span class="n">86400000</span>        # сколько хранить tombstone после компакции
-
-# лог до компакции          после
-# k1:v1  k2:v1  k1:v2       k2:v1  k1:v3  k3:<span class="k">null</span>(tombstone, временно)
-# k3:v1  k1:v3  k3:<span class="k">null</span></pre>
-<pre class="narrow"># компактный топик для текущих лимитов
-kafka-topics.sh --create \
-  --topic client-limits \
-  --partitions <span class="n">12</span> --replication-factor <span class="n">3</span> \
-  --config cleanup.policy=compact \
-  --config min.cleanable.dirty.ratio=<span class="n">0.1</span> \
-  --config delete.retention.ms=<span class="n">86400000</span>
-# delete.retention.ms — сколько хранить
-# tombstone после компакции
-
-# лог до компакции:
-#   k1:v1  k2:v1  k1:v2  k3:v1  k1:v3  k3:<span class="k">null</span>
-# после:
-#   k2:v1  k1:v3  k3:<span class="k">null</span>
-#   (tombstone хранится временно)</pre>
-      <p>Как работает: лог делится на «чистую» (уже компактную) и «грязную» часть; фоновый поток log cleaner строит в памяти карту «ключ → последний offset» для грязной части и переписывает сегменты, оставляя для каждого ключа только последнюю запись. Активный (последний) сегмент не компактируется никогда — поэтому сообщения со старыми значениями какое-то время видны.</p>
-      <p>Применение:</p>
-      <ul>
-        <li>состояние Kafka Streams (changelog-топики state store’ов — компактные);</li>
-        <li><code>__consumer_offsets</code> — сама Kafka хранит офсеты групп в компактном топике;</li>
-        <li>справочники и конфигурация, которые сервисы держат в памяти: при старте читают топик с начала (GlobalKTable, или просто консюмер «с earliest»);</li>
-        <li>CDC-топики «последнее состояние строки».</li>
-      </ul>
-      <p>Ограничения: нужен ключ у каждого сообщения; offset’ы сохраняются (дыры в нумерации — норма); компакция не гарантирует, что промежуточных значений не будет видно — консюмер, читающий в реальном времени, увидит все; можно комбинировать <code>cleanup.policy=compact,delete</code>, тогда старые ключи удаляются ещё и по retention.</p>
+<div class="table-wrap"><table><tr><th>Запись по порядку</th><th>Состояние после применения</th></tr><tr><td>A → 10</td><td>A=10</td></tr><tr><td>B → 20</td><td>A=10, B=20</td></tr><tr><td>A → 15</td><td>A=15, B=20</td></tr><tr><td>B → null</td><td>A=15, B удалён</td></tr></table></div><p>Cleaner переписывает подходящие закрытые сегменты, убирая устаревшие версии. Offset оставшихся записей не меняется, поэтому пропуски нормальны. Активный сегмент не очищается, пока не закроется.</p><pre>cleanup.policy=compact
+delete.retention.ms=<span class="n">86400000</span></pre><p>Это настройки топика. При <code>compact,delete</code> добавляется удаление сегментов по retention: даже последнее состояние старого ключа может исчезнуть. Если нужен постоянно восстанавливаемый справочник, это существенное изменение гарантии.</p><p class="follow"><b>Консюмер был выключен дольше хранения tombstone — что с его кешем?</b> Он может не узнать об удалении и сохранить старое значение. Для восстановления потребуется корректный полный rebuild, а не продолжение со старого offset поверх старого состояния.</p>
     </div></div></article>
-<article id="q234" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">234. Эволюция схем событий <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p>Событие — <b>публичный API</b>: продюсер и консюмеры деплоятся независимо, а в топике лежат и старые сообщения.</p>
-<ul><li><b>Schema Registry</b> проверяет совместимость: <b>BACKWARD</b> — новая схема читает старые данные (обновлять сначала консюмеров), <b>FORWARD</b> — наоборот.</li><li>Безопасно — <b>добавлять необязательные поля</b> с дефолтом; удалять — в несколько шагов, номер в Protobuf резервировать.</li><li>Ломающее изменение — <b>новый тип события</b> или новый топик.</li></ul></div>
+<article id="q234" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">234. Эволюция схем событий <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Событие — контракт между независимо обновляемыми сервисами.</b> Совместимость нужна и для новых сообщений, и для старой истории, которую консюмер может перечитать.</p><ul><li><b>BACKWARD:</b> новая схема читает данные старой — обычно сначала обновляют консюмеров.</li><li><b>FORWARD:</b> старая схема читает данные новой — обычно сначала обновляют продюсеров.</li><li><b>FULL:</b> совместимость в обе стороны. Registry проверяет структуру, а не смысл бизнес-изменений.</li></ul></div>
     <div class="more">
-<ul><li>В Protobuf номера полей не переиспользуют — удалённые помечают reserved. Конверт события: id, type, version, occurredAt, aggregateId.</li></ul>
-<div class="table-wrap"><table>
-        <tr><th>Изменение</th><th>Avro / Protobuf</th><th>JSON без схемы</th></tr>
-        <tr><td>Добавить необязательное поле</td><td>безопасно (в Avro — с default)</td><td>безопасно, если консюмеры игнорируют неизвестные поля (<code><span class="t">FAIL_ON_UNKNOWN_PROPERTIES</span>=<span class="k">false</span></code>)</td></tr>
-        <tr><td>Удалить поле</td><td>безопасно, если оно было необязательным (в Avro — с default)</td><td>опасно — консюмер ждёт поле</td></tr>
-        <tr><td>Переименовать поле</td><td>Protobuf — да (на проводе только номер), Avro — через aliases</td><td>ломает</td></tr>
-        <tr><td>Изменить тип</td><td>ограниченно (int32 → int64 в Protobuf)</td><td>ломает</td></tr>
-        <tr><td>Новое значение enum</td><td>опасно для старых консюмеров</td><td>опасно</td></tr>
-      </table></div>
-      <p>Режимы совместимости Schema Registry: <b>BACKWARD</b> (по умолчанию) — новая схема читает данные, записанные предыдущей; обновлять сначала консюмеров. <b>FORWARD</b> — предыдущая схема читает данные новой; обновлять сначала продюсеров. <b>FULL</b> — оба направления. <b>*_TRANSITIVE</b> — относительно всех прошлых версий, а не только последней (важно, если в топике лежат старые сообщения за долгий retention).</p>
-<pre class="wide">{
-  <span class="p">"eventId"</span>: <span class="s">"6a1f…"</span>,            <span class="c">// для идемпотентности</span>
-  <span class="p">"eventType"</span>: <span class="s">"PaymentCompleted"</span>,
-  <span class="p">"schemaVersion"</span>: <span class="n">2</span>,
-  <span class="p">"occurredAt"</span>: <span class="s">"2026-10-22T10:15:03Z"</span>,
-  <span class="p">"aggregateId"</span>: <span class="s">"acc-42"</span>,
-  <span class="p">"payload"</span>: { ... }
-}</pre>
-<pre class="narrow">{
-  <span class="p">"eventId"</span>: <span class="s">"6a1f…"</span>,  <span class="c">// для идемпотентности</span>
-  <span class="p">"eventType"</span>: <span class="s">"PaymentCompleted"</span>,
-  <span class="p">"schemaVersion"</span>: <span class="n">2</span>,
-  <span class="p">"occurredAt"</span>: <span class="s">"2026-10-22T10:15:03Z"</span>,
-  <span class="p">"aggregateId"</span>: <span class="s">"acc-42"</span>,
-  <span class="p">"payload"</span>: { ... }
-}</pre>
-      <p>Ломающее изменение, если без него никак: новый тип события или новый топик (<code>payments.v2</code>), продюсер какое-то время пишет в оба, консюмеры переезжают, старый топик выводится. Никогда — «переделать формат в том же топике и задеплоить всех одновременно»: в топике ещё лежат старые сообщения, а консюмеры деплоятся не атомарно.</p>
-      <p>Contract-тесты (Spring Cloud Contract, Pact для сообщений) и проверка совместимости схем в CI ловят ломающие изменения до деплоя.</p>
-<p class="follow"><b>Как удалить поле из события?</b> Сделать необязательным, дождаться, пока консюмеры перестанут его читать, удалить; номер в Protobuf зарезервировать.</p>
+<div class="table-wrap"><table><tr><th>Изменение</th><th>Что проверить</th></tr><tr><td>Добавить поле</td><td>Может ли читатель восстановить его при чтении старой записи? Для Avro обычно нужен default</td></tr><tr><td>Удалить поле</td><td>Работают ли ещё читатели, которым оно нужно? Сначала убрать зависимость</td></tr><tr><td>Изменить смысл amount</td><td>Даже прежний тип decimal не спасает от смены рублей на копейки</td></tr><tr><td>Удалить поле Protobuf</td><td>Зарезервировать номер; не использовать его для другого поля</td></tr></table></div><p><b>Пример Avro:</b> новая версия добавляет необязательный комментарий с default=null. Новый reader сможет читать запись, в которой этого поля ещё нет.</p><pre>{
+  <span class="p">"name"</span>: <span class="s">"comment"</span>,
+  <span class="p">"type"</span>: [<span class="s">"null"</span>, <span class="s">"string"</span>],
+  <span class="p">"default"</span>: <span class="k">null</span>
+}</pre><p>Правила отличаются у Avro, Protobuf и JSON Schema. BACKWARD без TRANSITIVE обычно проверяет совместимость с предыдущей версией, а не со всей историей. Для replay нескольких лет важна совместимость со всеми реально сохранёнными версиями.</p><p class="follow"><b>Что делать с несовместимым изменением?</b> Ввести новый тип или топик, дать читателям перейти и только затем убрать старый контракт. Номер версии сам по себе не делает старого читателя совместимым.</p>
     </div></div></article>
-<article id="q235" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">235. Transactional Outbox</h2><div class="answer" hidden><div class="short"><p>Проблема <b>dual write</b>: нельзя атомарно записать в базу и отправить в Kafka — коммит прошёл, а отправка упала, или наоборот.</p>
-<p><b>Outbox</b>: в той же транзакции, что и бизнес-изменение, событие пишется в таблицу outbox, а отдельный процесс публикует его в Kafka — <b>опросом</b> или через <b>CDC</b> (Debezium). Гарантия — <b>at-least-once</b>, консюмеры идемпотентны.</p></div>
+<article id="q235" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">235. Transactional Outbox</h2><div class="answer" hidden><div class="short"><p><b>Outbox решает разрыв между COMMIT в БД и отправкой в Kafka.</b> Бизнес-изменение и событие сохраняются одной транзакцией в своей БД; отдельный публикатор доставляет событие в Kafka.</p><p><b>Доставка обычно at-least-once:</b> публикатор может упасть после успешной отправки, но до отметки «опубликовано», и отправить событие повторно. Поэтому eventId стабилен, а консюмер обрабатывает повторы идемпотентно.</p></div>
     <div class="more">
 <figure class="concept" aria-labelledby="outbox-delivery-caption">
 <svg viewBox="0 0 320 392" role="img" aria-labelledby="outbox-delivery-title outbox-delivery-desc" xmlns="http://www.w3.org/2000/svg">
@@ -14331,261 +13767,54 @@ kafka-topics.sh --create \
 <text x="160.0" y="361.0" text-anchor="middle">Дедупликация по eventId</text>
 </svg>
 <figcaption id="outbox-delivery-caption">Бизнес-данные и outbox фиксируются одной транзакцией. Доставка может повториться, поэтому обработчик должен быть идемпотентным.</figcaption>
-</figure>
-<ul><li>Публикация: polling (несколько инстансов — через FOR UPDATE SKIP LOCKED) или CDC по WAL (Debezium). Таблицу outbox нужно чистить; порядок — по id агрегата.</li></ul>
-<pre class="wide"><span class="k">create</span> <span class="k">table</span> outbox (
-    id             bigserial <span class="k">primary</span> <span class="k">key</span>,
-    aggregate_type text        <span class="k">not</span> <span class="k">null</span>,
-    aggregate_id   text        <span class="k">not</span> <span class="k">null</span>,     <span class="c">-- станет ключом сообщения → порядок по агрегату</span>
-    event_type     text        <span class="k">not</span> <span class="k">null</span>,
-    payload        jsonb       <span class="k">not</span> <span class="k">null</span>,
-    created_at     <span class="k">timestamptz</span> <span class="k">not</span> <span class="k">null</span> <span class="k">default</span> now(),
-    published_at   <span class="k">timestamptz</span>
-);
-<span class="k">create</span> <span class="k">index</span> ix_outbox_unpublished <span class="k">on</span> outbox (id) <span class="k">where</span> published_at <span class="k">is</span> <span class="k">null</span>;
-
-@Transactional
-public void complete(Payment p) {
-    p.complete();                                                   // бизнес-изменение
-    outbox.save(OutboxEvent.<span class="k">of</span>("Payment", p.id(), "PaymentCompleted", toJson(p)));   // та же транзакция
-}
-
-// публикатор: каждые N мс, на любом количестве инстансов
-@Transactional
-public void publishBatch() {
-    List&lt;OutboxEvent&gt; batch = jdbc.query("""
-        <span class="k">select</span> * <span class="k">from</span> outbox <span class="k">where</span> published_at <span class="k">is</span> <span class="k">null</span>
-         <span class="k">order</span> <span class="k">by</span> id <span class="k">limit</span> <span class="n">100</span> <span class="k">for</span> <span class="k">update</span> <span class="k">skip</span> <span class="k">locked</span>""", mapper);
-    <span class="k">for</span> (var e : batch) kafka.send(topic(e), e.aggregateId(), e.payload()).get();   // ждём подтверждения
-    jdbc.<span class="k">update</span>("<span class="k">update</span> outbox <span class="k">set</span> published_at = now() <span class="k">where</span> id = any(?)", ids(batch));
-}</pre>
-<pre class="narrow"><span class="k">create</span> <span class="k">table</span> outbox (
-    id             bigserial <span class="k">primary</span> <span class="k">key</span>,
-    aggregate_type text <span class="k">not</span> <span class="k">null</span>,
-    <span class="c">-- станет ключом сообщения →</span>
-    <span class="c">-- порядок по агрегату</span>
-    aggregate_id   text <span class="k">not</span> <span class="k">null</span>,
-    event_type     text <span class="k">not</span> <span class="k">null</span>,
-    payload        jsonb <span class="k">not</span> <span class="k">null</span>,
-    created_at     <span class="k">timestamptz</span> <span class="k">not</span> <span class="k">null</span>
-                   <span class="k">default</span> now(),
-    published_at   <span class="k">timestamptz</span>
-);
-<span class="k">create</span> <span class="k">index</span> ix_outbox_unpublished
-    <span class="k">on</span> outbox (id)
- <span class="k">where</span> published_at <span class="k">is</span> <span class="k">null</span>;
-
-@Transactional
-public void complete(Payment p) {
-    // бизнес-изменение
-    p.complete();
-    // та же транзакция
-    outbox.save(OutboxEvent.<span class="k">of</span>("Payment",
-            p.id(), "PaymentCompleted",
-            toJson(p)));
-}
-
-// публикатор: каждые N мс,
-// на любом количестве инстансов
-@Transactional
-public void publishBatch() {
-    List&lt;OutboxEvent&gt; batch = jdbc.query("""
-        <span class="k">select</span> * <span class="k">from</span> outbox
-         <span class="k">where</span> published_at <span class="k">is</span> <span class="k">null</span>
-         <span class="k">order</span> <span class="k">by</span> id <span class="k">limit</span> <span class="n">100</span>
-           <span class="k">for</span> <span class="k">update</span> <span class="k">skip</span> <span class="k">locked</span>""", mapper);
-    <span class="k">for</span> (var e : batch) {
-        // ждём подтверждения
-        kafka.send(topic(e), e.aggregateId(),
-                e.payload()).get();
-    }
-    jdbc.<span class="k">update</span>("""
-        <span class="k">update</span> outbox <span class="k">set</span> published_at = now()
-         <span class="k">where</span> id = any(?)""", ids(batch));
-}</pre>
-      <div class="table-wrap"><table>
-        <tr><th></th><th>Polling</th><th>CDC (Debezium Outbox Event Router)</th></tr>
-        <tr><td>Задержка</td><td>интервал опроса</td><td>сотни мс</td></tr>
-        <tr><td>Нагрузка на БД</td><td>запросы и UPDATE published_at</td><td>чтение WAL через слот репликации</td></tr>
-        <tr><td>Инфраструктура</td><td>ничего нового</td><td>Kafka Connect, слот репликации, мониторинг его лага</td></tr>
-        <tr><td>Риск</td><td>гонки при параллельных публикаторах (SKIP LOCKED нарушает порядок между ними)</td><td>брошенный слот держит WAL — диск мастера заполняется</td></tr>
-      </table></div>
-      <p>Тонкости: с <code><span class="t">SKIP</span> <span class="t">LOCKED</span></code> и несколькими публикаторами события одного агрегата могут уйти не по порядку (один инстанс взял id 1–100, другой 101–200 и отправил раньше) — если порядок важен, распределять по хешу агрегата или публиковать одним лидером. Отправка и пометка не атомарны: упали после send до update — событие уйдёт повторно, поэтому консюмеры идемпотентны. Таблицу чистят (удаление опубликованных старше N дней или партиционирование по дате).</p>
-      <p>Обратный паттерн — <b>Inbox</b>: входящее сообщение сначала сохраняется в таблицу (с уникальным id — дедупликация), offset коммитится, а обработка идёт из таблицы своим темпом с ретраями.</p>
-<p class="follow"><b>Почему не отправлять в @TransactionalEventListener(AFTER_COMMIT)?</b> Падение между коммитом и отправкой — событие потеряно навсегда.</p>
+</figure><pre><span class="t">BEGIN</span>;
+<span class="t">UPDATE</span> payment <span class="t">SET</span> status = '<span class="t">DONE</span>'
+<span class="t">WHERE</span> id = <span class="n">42</span>;
+<span class="t">INSERT</span> <span class="t">INTO</span> outbox
+    (id, aggregate_id, type)
+<span class="t">VALUES</span> ('event-<span class="n">42</span>', '<span class="n">42</span>', '<span class="t">PaymentDone</span>');
+<span class="t">COMMIT</span>;</pre><p>Это минимальная последовательность SQL для существующей бизнес-операции; в реальной outbox также хранят payload и служебные поля доставки. Событие появляется только вместе с бизнес-изменением.</p><ol><li>Публикатор читает ещё не отправленные события.</li><li>Отправляет с key=aggregateId и ждёт подтверждения Kafka.</li><li>Помечает опубликованными. При сбое повторяет с прежним eventId.</li></ol><div class="table-wrap"><table><tr><th>Доставка</th><th>Особенности</th></tr><tr><td>Polling</td><td>Простой публикатор, но нужны запросы, координация работников и очистка таблицы</td></tr><tr><td>CDC / Debezium</td><td>Чтение изменений из WAL; нужны Connect, слот репликации и контроль его отставания</td></tr></table></div><p><b>SKIP LOCKED не гарантирует порядок по агрегату:</b> второй публикатор может отправить более позднее событие первым. Нужна отдельная координация порядка — например, один отправитель или закрепление агрегата за работником. Ключ Kafka сохраняет порядок уже поступивших отправок, но не исправляет их перестановку до брокера.</p><p class="follow"><b>Почему недостаточно AFTER_COMMIT listener?</b> Процесс может упасть после COMMIT, но до вызова отправки. В outbox намерение отправить уже находится в БД и переживает такой сбой.</p>
     </div></div></article>
-<article id="q236" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">236. Kafka Connect и CDC</h2><div class="answer" hidden><div class="short"><ul><li><b>Kafka Connect</b> — фреймворк готовых коннекторов: <b>source</b> в Kafka из баз и файлов, <b>sink</b> из Kafka в базы, S3, Elasticsearch — без своего кода, с офсетами и масштабированием.</li><li><b>Debezium</b> — source-коннектор <b>CDC</b>: читает WAL PostgreSQL и публикует изменения строк как события. С outbox сервис пишет события в таблицу, Debezium доставляет их в Kafka.</li></ul>
-<p>Риск — <b>слот репликации</b>, который держит WAL при остановке коннектора.</p></div>
+<article id="q236" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">236. Kafka Connect и CDC</h2><div class="answer" hidden><div class="short"><p><b>Kafka Connect запускает коннекторы для переноса данных.</b> Source читает внешнюю систему и пишет в Kafka; sink читает Kafka и пишет во внешнюю систему.</p><p><b>Debezium — CDC-коннектор:</b> для PostgreSQL читает изменения через logical replication и публикует события строк. С Outbox Event Router записи outbox превращаются в согласованные события приложения.</p><p>Главный эксплуатационный риск — <b>отставший слот репликации удерживает WAL</b> и может заполнить диск БД.</p></div>
     <div class="more">
-<ul>
-      <li>Outbox + Debezium: сервис пишет в таблицу outbox, коннектор доставляет в Kafka — без своего поллера.</li>
-    </ul>
-<pre class="wide">{
-  <span class="p">"name"</span>: <span class="s">"payments-outbox"</span>,
-  <span class="p">"config"</span>: {
-    <span class="p">"connector.class"</span>: <span class="s">"io.debezium.connector.postgresql.PostgresConnector"</span>,
-    <span class="p">"database.hostname"</span>: <span class="s">"pg"</span>, <span class="p">"database.dbname"</span>: <span class="s">"payments"</span>,
-    <span class="p">"database.user"</span>: <span class="s">"${secrets:debezium/user}"</span>, <span class="p">"database.password"</span>: <span class="s">"${secrets:debezium/password}"</span>,
-    <span class="p">"plugin.name"</span>: <span class="s">"pgoutput"</span>,
-    <span class="p">"slot.name"</span>: <span class="s">"payments_outbox"</span>,
-    <span class="p">"table.include.list"</span>: <span class="s">"public.outbox"</span>,
-    <span class="p">"transforms"</span>: <span class="s">"outbox"</span>,
-    <span class="p">"transforms.outbox.type"</span>: <span class="s">"io.debezium.transforms.outbox.EventRouter"</span>,
-    <span class="p">"transforms.outbox.route.by.field"</span>: <span class="s">"aggregate_type"</span>,
-    <span class="p">"transforms.outbox.table.field.event.key"</span>: <span class="s">"aggregate_id"</span>
-  }
-}</pre>
-<pre class="narrow">{
-  <span class="p">"name"</span>: <span class="s">"payments-outbox"</span>,
-  <span class="p">"config"</span>: {
-    <span class="p">"connector.class"</span>: "io.debezium.connector
-        .postgresql.PostgresConnector",
-    <span class="p">"database.hostname"</span>: <span class="s">"pg"</span>,
-    <span class="p">"database.dbname"</span>: <span class="s">"payments"</span>,
-    <span class="p">"database.user"</span>:
-        <span class="s">"${secrets:debezium/user}"</span>,
-    <span class="p">"database.password"</span>:
-        <span class="s">"${secrets:debezium/password}"</span>,
-    <span class="p">"plugin.name"</span>: <span class="s">"pgoutput"</span>,
-    <span class="p">"slot.name"</span>: <span class="s">"payments_outbox"</span>,
-    <span class="p">"table.include.list"</span>: <span class="s">"public.outbox"</span>,
-    <span class="p">"transforms"</span>: <span class="s">"outbox"</span>,
-    <span class="p">"transforms.outbox.type"</span>: "io.debezium
-        .transforms.outbox.EventRouter",
-    <span class="p">"transforms.outbox.route.by.field"</span>:
-        <span class="s">"aggregate_type"</span>,
-    <span class="p">"transforms.outbox.table.field.event.key"</span>:
-        <span class="s">"aggregate_id"</span>
-  }
-}</pre>
-      <p>Как работает CDC в PostgreSQL: <code>wal_level = logical</code>, Debezium создаёт слот логической репликации и публикацию, получает поток изменений строк (INSERT/UPDATE/DELETE с данными до и после) в порядке коммита. Позиция чтения (LSN) хранится как offset коннектора. При первом запуске — снапшот существующих данных.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Плюсы CDC</th><th>Риски</th></tr>
-        <tr><td>не нужен код публикации; события строго в порядке коммитов</td><td>слот репликации держит WAL, пока коннектор не прочитал — коннектор упал на сутки, диск мастера заполнился</td></tr>
-        <tr><td>ловит изменения, сделанные любым путём (миграции, ручные правки)</td><td>события изменений таблиц — это внутренняя модель; публиковать их напрямую = сделать схему БД публичным контрактом (поэтому outbox)</td></tr>
-        <tr><td>низкая задержка</td><td>failover PostgreSQL: слоты до PG 17 не переносятся на реплику автоматически</td></tr>
-      </table></div>
-      <p>Kafka Connect — отдельный кластер воркеров (JVM), коннекторы и их задачи распределяются между воркерами, конфигурация и offset’ы хранятся в служебных топиках Kafka. Single Message Transforms — лёгкие преобразования на лету (маршрутизация, переименование полей, маскирование). Sink-коннекторы: JDBC, Elasticsearch, S3 — выгрузка без своего кода.</p>
+<ol><li><b>Начальный snapshot:</b> при обычной начальной настройке коннектор получает существующие данные.</li><li><b>Поток изменений:</b> затем читает WAL с сохранённой позиции LSN.</li><li><b>Публикация:</b> пишет события в топики и сохраняет прогресс. После сбоя возможны повторы — гарантии зависят от коннектора и настройки.</li></ol><div class="table-wrap"><table><tr><th>Механизм</th><th>Зачем нужен</th></tr><tr><td>Distributed workers</td><td>Распределяют задачи коннекторов; для масштабирования сам коннектор должен поддерживать несколько задач</td></tr><tr><td>Служебные топики Connect</td><td>Хранят конфигурации, offsets и статусы в distributed mode</td></tr><tr><td>SMT</td><td>Лёгкие преобразования: переименовать поле, изменить маршрут</td></tr><tr><td>Outbox Event Router</td><td>Выбирает ключ, payload и топик по полям outbox</td></tr></table></div><p>У стандартного <a href="https://debezium.io/documentation/reference/stable/transformations/outbox-event-router.html">Outbox Event Router</a> используются поля id, aggregatetype, aggregateid и payload. Для своих имён столбцов задают соответствующие настройки: случайное несовпадение схемы и конфигурации сломает публикацию.</p><p>Наблюдают не только статус RUNNING, но и возраст изменений, lag коннектора, retained WAL, ошибки и рост выходных топиков. При failover PostgreSQL заранее проверяют судьбу логического слота и способ продолжить чтение.</p><p class="follow"><b>Почему не публиковать все изменения бизнес-таблиц как публичные события?</b> Тогда схема БД становится контрактом для других сервисов. Outbox позволяет публиковать бизнес-события независимо от внутренней структуры таблиц.</p>
     </div></div></article>
-<article id="q237" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">237. Kafka Streams или обычный консюмер</h2><div class="answer" hidden><div class="short"><ul><li><b>Kafka Streams</b> — библиотека «поток в поток»: состояние в локальном <b>RocksDB</b> с копией в changelog-топике, перекладка по ключу, <b>окна, джойны</b>, exactly-once внутри Kafka.</li><li><b>Обычный консюмер</b> проще: прочитать событие и сделать <b>побочный эффект</b> — записать в базу, вызвать API.</li></ul>
-<p>Streams — для агрегаций, окон и джойнов, для сложной аналитики — <b>Flink</b>.</p></div>
+<article id="q237" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">237. Kafka Streams или обычный консюмер</h2><div class="answer" hidden><div class="short"><p><b>Обычный консюмер</b> подходит, когда событие запускает операцию в БД или вызов API: вы явно управляете обработкой, повтором и commit.</p><p><b>Kafka Streams</b> — библиотека обработки потоков: группировки, агрегаты, окна и join. Она управляет партициями, локальным состоянием и его восстановлением из changelog.</p><p><b>Exactly-once в Streams</b> связывает Kafka-результаты, состояние и offsets; внешний HTTP или БД автоматически в эту гарантию не входят.</p></div>
     <div class="more">
-<ul><li>Параллелизм Streams — число партиций; после падения инстанса задача восстанавливает store из changelog — время зависит от его размера.</li></ul>
-<pre class="wide"><span class="c">// Streams: сумма платежей по счёту за 5-минутные окна, результат — в топик</span>
-<span class="t">StreamsBuilder</span> b = <span class="k">new</span> <span class="t">StreamsBuilder</span>();
-b.stream(<span class="s">"payments"</span>, <span class="t">Consumed</span>.with(<span class="t">Serdes</span>.<span class="t">String</span>(), paymentSerde))
- .groupByKey()
- .windowedBy(<span class="t">TimeWindows</span>.ofSizeWithNoGrace(<span class="t">Duration</span>.ofMinutes(<span class="n">5</span>)))
- .aggregate(() -&gt; <span class="t">BigDecimal</span>.<span class="t">ZERO</span>, (key, p, sum) -&gt; sum.add(p.amount()),
-            <span class="t">Materialized</span>.with(<span class="t">Serdes</span>.<span class="t">String</span>(), bigDecimalSerde))
- .toStream()
- .to(<span class="s">"payment-totals-5m"</span>);</pre>
-<pre class="narrow"><span class="c">// Streams: сумма платежей по счёту за</span>
-<span class="c">// 5-минутные окна, результат — в топик</span>
-<span class="t">StreamsBuilder</span> b = <span class="k">new</span> <span class="t">StreamsBuilder</span>();
-b.stream(<span class="s">"payments"</span>, <span class="t">Consumed</span>.with(
-        <span class="t">Serdes</span>.<span class="t">String</span>(), paymentSerde))
- .groupByKey()
- .windowedBy(<span class="t">TimeWindows</span>.ofSizeWithNoGrace(
-         <span class="t">Duration</span>.ofMinutes(<span class="n">5</span>)))
- .aggregate(() -&gt; <span class="t">BigDecimal</span>.<span class="t">ZERO</span>,
-         (key, p, sum) -&gt; sum.add(p.amount()),
-         <span class="t">Materialized</span>.with(<span class="t">Serdes</span>.<span class="t">String</span>(),
-                 bigDecimalSerde))
- .toStream()
- .to(<span class="s">"payment-totals-5m"</span>);</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Задача</th><th>Выбор</th></tr>
-        <tr><td>Событие → запись в БД / вызов API / письмо</td><td>обычный консюмер (Spring Kafka)</td></tr>
-        <tr><td>Фильтрация, обогащение, маршрутизация между топиками</td><td>Streams или консюмер+продюсер</td></tr>
-        <tr><td>Агрегации, окна, подсчёты по ключу с состоянием</td><td>Streams</td></tr>
-        <tr><td>Джойн двух потоков или потока со справочником (KTable)</td><td>Streams</td></tr>
-        <tr><td>Exactly-once Kafka → Kafka</td><td>Streams (одна настройка processing.guarantee)</td></tr>
-        <tr><td>Сложная многошаговая аналитика, большие окна, SQL</td><td>Flink</td></tr>
-      </table></div>
-      <p>Как Streams хранит состояние: локальный RocksDB на диске инстанса + changelog-топик (компактный), куда пишется каждое изменение. Партиция входного топика = задача (task), задача владеет своей частью состояния. При падении инстанса задача переезжает на другой, и тот восстанавливает state store, вычитывая changelog — для больших store это минуты (standby-реплики <code>num.standby.replicas</code> держат тёплую копию и ускоряют failover).</p>
-      <p>Repartition: если сгруппировать по другому ключу (<code>groupBy</code> вместо <code>groupByKey</code>), Streams автоматически создаёт промежуточный топик и перекладывает туда данные по новому ключу — чтобы все записи ключа попали в одну задачу. Это лишний проход через брокер, о нём стоит знать при оценке нагрузки.</p>
+<div class="table-wrap"><table><tr><th>Задача</th><th>Выбор</th></tr><tr><td>Получить PaymentDone и обновить свою БД</td><td>Обычный консюмер + идемпотентная транзакция</td></tr><tr><td>Посчитать сумму или число событий по ключу</td><td>Streams: агрегат со state store</td></tr><tr><td>Объединить поток заказов со справочником клиентов</td><td>Streams: join с KTable / GlobalKTable</td></tr><tr><td>Очень сложные вычисления по event time</td><td>Сравнить возможности Streams и специализированного движка, например Flink</td></tr></table></div><p><b>Пример Streams:</b> число платежей по ключу счёта, результат — в другой топик. Во входе key уже должен быть accountId.</p><pre class="wide"><span class="t">StreamsBuilder</span> builder = <span class="k">new</span> <span class="t">StreamsBuilder</span>();
+builder.stream(<span class="s">"payments"</span>, <span class="t">Consumed</span>.with(<span class="t">Serdes</span>.<span class="t">String</span>(), <span class="t">Serdes</span>.<span class="t">String</span>()))
+    .groupByKey()
+    .count()
+    .toStream()
+    .to(<span class="s">"payment-counts"</span>, <span class="t">Produced</span>.with(<span class="t">Serdes</span>.<span class="t">String</span>(), <span class="t">Serdes</span>.<span class="t">Long</span>()));</pre>
+<pre class="narrow"><span class="t">StreamsBuilder</span> builder =
+    <span class="k">new</span> <span class="t">StreamsBuilder</span>();
+builder.stream(<span class="s">"payments"</span>, <span class="t">Consumed</span>.with(
+      <span class="t">Serdes</span>.<span class="t">String</span>(), <span class="t">Serdes</span>.<span class="t">String</span>()))
+    .groupByKey()
+    .count()
+    .toStream()
+    .to(<span class="s">"payment-counts"</span>, <span class="t">Produced</span>.with(
+        <span class="t">Serdes</span>.<span class="t">String</span>(), <span class="t">Serdes</span>.<span class="t">Long</span>()));</pre><p>Для stateful-операций обычно используется локальный RocksDB с changelog в Kafka. После переноса задачи store восстанавливается; standby-реплики уменьшают время восстановления. Группировка по новому ключу может создать repartition-топик — это дополнительная передача через брокер.</p><pre>processing.guarantee=exactly_once_v2</pre><p>Это настройка приложения Streams. Число задач определяется партициями топологии; лишние stream threads не создадут дополнительную работу сверх доступных задач.</p><p class="follow"><b>Почему не сделать count обычным консюмером?</b> Можно, но придётся самостоятельно обеспечить состояние, восстановление, согласование offsets и результатов. Streams уже реализует эту инфраструктуру.</p>
     </div></div></article>
-<article id="q238" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">238. RabbitMQ: exchange, подтверждения и DLX</h2><div class="answer" hidden><div class="short"><p>Продюсер пишет не в очередь, а в <b>exchange</b>, и тот раскладывает сообщения по очередям: <b>direct</b> — по точному ключу, <b>topic</b> — по маске, <b>fanout</b> — во все. Сообщение удаляется после подтверждения, перечитать нельзя.</p>
-<ul><li>Надёжность — durable-очереди, persistent-сообщения, <b>publisher confirms</b> и ручной ack.</li><li>Неудачные сообщения — в <b>dead letter exchange</b>.</li><li><b>prefetch</b> ограничивает, сколько сообщений консюмер держит у себя.</li></ul></div>
+<article id="q238" class="responsive-code" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">238. RabbitMQ: exchange, подтверждения и DLX</h2><div class="answer" hidden><div class="short"><p><b>Exchange принимает сообщение и маршрутизирует его в очереди.</b> Direct сравнивает routing key точно, topic — по шаблону, fanout отправляет во все привязанные очереди.</p><p><b>Publisher confirm</b> подтверждает приём брокером, <b>consumer ack</b> — завершение обработки получателем. Это разные подтверждения. Для надёжности нужны подходящая durable/quorum-очередь, persistent-сообщения и обработка ошибок отправки.</p><p><b>DLX</b> принимает сообщения после dead-lettering, например nack без requeue. Prefetch ограничивает число неподтверждённых доставок у консюмера.</p></div>
     <div class="more">
-<ul>
-      <li>Без потерь: durable-очередь + persistent-сообщение + publisher confirms у продюсера + ручной ack после обработки.</li>
-      <li>prefetch — сколько неподтверждённых сообщений держит консюмер: мало — простаивает, много — медленный консюмер копит сообщения у себя (в Spring AMQP по умолчанию 250).</li>
-      <li>Ошибка: nack без requeue → dead letter exchange; ретраи с задержкой — TTL-очередь, которая возвращает сообщение в рабочую. requeue=true на ядовитом сообщении — бесконечный цикл.</li>
-      <li>HA — quorum queues (Raft); порядок гарантирован только в одной очереди с одним консюмером.</li>
-    </ul>
-<pre class="wide"><span class="a">@Bean</span> <span class="t">TopicExchange</span> payments() { <span class="k">return</span> <span class="k">new</span> <span class="t">TopicExchange</span>(<span class="s">"payments"</span>); }
-<span class="a">@Bean</span> <span class="t">Queue</span> failedQueue() {
-    <span class="k">return</span> <span class="t">QueueBuilder</span>.durable(<span class="s">"payments.failed"</span>)
-            .quorum()                                              <span class="c">// реплицируемая очередь (Raft)</span>
-            .deadLetterExchange(<span class="s">"payments.dlx"</span>)                    <span class="c">// nack без requeue → сюда</span>
-            .build();
-}
-<span class="a">@Bean</span> <span class="t">Binding</span> failedBinding() {
-    <span class="k">return</span> <span class="t">BindingBuilder</span>.bind(failedQueue()).to(payments()).with(<span class="s">"payment.*.failed"</span>);
-}
-
-spring:
-  rabbitmq:
-    publisher-confirm-type: correlated          # брокер подтверждает приём сообщения
-    publisher-returns: <span class="k">true</span>                     # и сообщает, если сообщение некуда маршрутизировать
-    listener.simple:
-      acknowledge-mode: auto                    # ack после успешного листенера, nack при исключении
-      prefetch: <span class="n">20</span>
-      <span class="k">default</span>-requeue-rejected: <span class="k">false</span>           # исключение → в <span class="t">DLX</span>, а не бесконечно обратно в очередь
-      retry: { enabled: <span class="k">true</span>, max-attempts: <span class="n">3</span>, initial-interval: 1s, multiplier: <span class="n">2</span> }</pre>
-<pre class="narrow"><span class="a">@Bean</span> <span class="t">TopicExchange</span> payments() {
-    <span class="k">return</span> <span class="k">new</span> <span class="t">TopicExchange</span>(<span class="s">"payments"</span>);
-}
-
-<span class="a">@Bean</span> <span class="t">Queue</span> failedQueue() {
-    <span class="k">return</span> <span class="t">QueueBuilder</span>
-            .durable(<span class="s">"payments.failed"</span>)
-            <span class="c">// реплицируемая очередь (Raft)</span>
-            .quorum()
-            <span class="c">// nack без requeue → сюда</span>
-            .deadLetterExchange(
-                    <span class="s">"payments.dlx"</span>)
-            .build();
-}
-
-<span class="a">@Bean</span> <span class="t">Binding</span> failedBinding() {
-    <span class="k">return</span> <span class="t">BindingBuilder</span>.bind(failedQueue())
-            .to(payments())
-            .with(<span class="s">"payment.*.failed"</span>);
-}
-
-spring:
-  rabbitmq:
-    # брокер подтверждает приём сообщения
-    publisher-confirm-type: correlated
-    # и сообщает, если сообщение некуда
-    # маршрутизировать
-    publisher-returns: <span class="k">true</span>
-    listener.simple:
-      # ack после успешного листенера,
-      # nack при исключении
-      acknowledge-mode: auto
-      prefetch: <span class="n">20</span>
-      # исключение → в <span class="t">DLX</span>, а не бесконечно
-      # обратно в очередь
-      <span class="k">default</span>-requeue-rejected: <span class="k">false</span>
-      retry:
-        enabled: <span class="k">true</span>
-        max-attempts: <span class="n">3</span>
-        initial-interval: 1s
-        multiplier: <span class="n">2</span></pre>
-      <div class="table-wrap"><table>
-        <tr><th>Тип exchange</th><th>Маршрутизация</th><th>Пример</th></tr>
-        <tr><td>direct</td><td>routing key == binding key</td><td>очередь задач по типу: <code>report.generate</code></td></tr>
-        <tr><td>topic</td><td>маска: <code>*</code> — одно слово, <code>#</code> — ноль и больше</td><td><code>payment.card.failed</code> → подписчики <code>payment.*.failed</code> и <code>payment.#</code></td></tr>
-        <tr><td>fanout</td><td>во все привязанные очереди</td><td>рассылка события всем сервисам</td></tr>
-        <tr><td>headers</td><td>по заголовкам сообщения</td><td>редко</td></tr>
-      </table></div>
-      <p>Задержанные ретраи без плагина: очередь <code>payments.retry</code> с <code>x-message-ttl=<span class="n">30000</span></code> и dead letter exchange, указывающим обратно на рабочий exchange: упавшее сообщение публикуется в retry-очередь, лежит 30 с, «умирает» по TTL и возвращается в работу. Число попыток — в заголовке <code>x-death</code>.</p>
-      <p>Чем отличаются гарантии от Kafka: в RabbitMQ брокер сам отслеживает каждое неподтверждённое сообщение и при падении консюмера возвращает его в очередь — дубли возможны (at-least-once), консюмер должен быть идемпотентен так же. Порядок при нескольких консюмерах и requeue не гарантирован. Single Active Consumer — один активный консюмер на очередь, остальные в резерве, если порядок нужен.</p>
-<p class="follow"><b>Когда Rabbit, а не Kafka?</b> Маршрутизация, очереди задач с подтверждением каждого сообщения, приоритеты, задержки. Kafka — журнал событий: перечитывание, большой поток, порядок по ключу.</p>
+<div class="table-wrap"><table><tr><th>Exchange</th><th>Пример</th></tr><tr><td>direct</td><td>report.generate → очередь с точно таким binding key</td></tr><tr><td>topic</td><td>payment.*.failed → payment.card.failed</td></tr><tr><td>fanout</td><td>Событие во все связанные очереди</td></tr></table></div><p><b>Подтверждение после успешной обработки, режим MANUAL:</b> при падении соединения до ack брокер сможет доставить сообщение повторно.</p><pre class="wide"><span class="a">@RabbitListener</span>(queues = <span class="s">"payments"</span>, ackMode = <span class="s">"MANUAL"</span>)
+<span class="k">public</span> <span class="k">void</span> on(<span class="t">Message</span> message, <span class="t">Channel</span> channel) <span class="k">throws</span> <span class="t">IOException</span> {
+    process(message.getBody());
+    <span class="k">long</span> tag = message.getMessageProperties().getDeliveryTag();
+    channel.basicAck(tag, <span class="k">false</span>);
+}</pre>
+<pre class="narrow"><span class="a">@RabbitListener</span>(queues = <span class="s">"payments"</span>,
+    ackMode = <span class="s">"MANUAL"</span>)
+<span class="k">public</span> <span class="k">void</span> on(<span class="t">Message</span> message,
+    <span class="t">Channel</span> channel) <span class="k">throws</span> <span class="t">IOException</span> {
+    process(message.getBody());
+    <span class="k">long</span> tag = message
+        .getMessageProperties()
+        .getDeliveryTag();
+    channel.basicAck(tag, <span class="k">false</span>);
+}</pre><p>Это успешная ветка. Ошибки listener отдельно обрабатывают по политике контейнера: ограниченные повторы, reject/nack и DLX. Для Spring AUTO подтверждение делает контейнер после успешного возврата listener; это не то же самое, что AMQP auto-ack при доставке.</p><ul><li><b>Confirms не доказывают маршрутизацию:</b> сообщение может не попасть ни в одну очередь. Для этого применяют mandatory и publisher returns.</li><li><b>DLX нужно настроить и связать с очередью:</b> один nack без requeue не создаёт место хранения ошибки.</li><li><b>requeue=true не лечит poison pill:</b> без ограничения попыток возникает бесконечный цикл.</li><li><b>Дубли возможны:</b> бизнес-эффект мог завершиться перед обрывом соединения и потерей ack.</li></ul><p class="follow"><b>Почему низкий prefetch иногда полезен?</b> Медленные задачи меньше накапливаются у одного работника и равномернее распределяются. Слишком маленькое значение, наоборот, добавляет простои на сетевом обмене.</p>
     </div></div></article>
 <article id="q239" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">239. Монолит или микросервисы? Как резать на сервисы</h2><div class="answer" hidden><div class="short"><p>Микросервисы дают <b>независимый деплой и масштабирование</b>, изоляцию отказов и автономию команд. Цена — <b>сеть</b> со сбоями и задержками, распределённые транзакции, сложная наблюдаемость и эксплуатация.</p>
 <p>Оправданы, когда <b>несколько команд мешают друг другу</b> в одном релизе и границы домена понятны. Резать по <b>bounded context</b>, а не по техническим слоям. Часто разумно начать с <b>модульного монолита</b>.</p></div>
