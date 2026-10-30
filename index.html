@@ -13224,64 +13224,46 @@ public void on(
       <p>Идемпотентный продюсер (<code>enable.idempotence=<span class="k">true</span></code>, по умолчанию с 3.0): брокер помнит producer id и номера последовательностей и отбрасывает дубли от ретраев одной сессии продюсера. Защищает от дублей на участке «продюсер → брокер», но не от повторной отправки после рестарта приложения.</p>
       <p>Таблицу дедупликации надо чистить по времени (держать дольше, чем максимальная задержка повтора), иначе она растёт бесконечно; или вместо отдельной таблицы использовать естественную идемпотентность (уникальный индекс на payment_id в целевой таблице, UPSERT).</p>
     </div></div></article>
-<article id="q228" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">228. Ребалансировка консюмеров и max.poll.interval.ms: почему больно и как уменьшить</h2><div class="answer" hidden><div class="short"><p>При входе или выходе консюмера партиции <b>перераспределяются</b>: в классическом протоколе на это время <b>стоит вся группа</b>, а незакоммиченные сообщения обрабатываются повторно.</p>
-<ul><li><b>CooperativeStickyAssignor</b> переносит только те партиции, которые нужно.</li><li><b>Static membership</b> (<code>group.instance.id</code>) не запускает ребалансировку при быстром рестарте пода.</li><li>С Kafka 4.0 — <b>новый протокол</b> (KIP-848), где распределение считает брокер.</li></ul>
-<p>Частая причина лишних ребалансировок — <b>max.poll.interval.ms</b> (5 минут): пачка обрабатывается дольше, консюмер <b>выбывает из группы</b>, его коммит не пройдёт, пачку обработают <b>дважды</b>. Лечат меньшим <b>max.poll.records</b> и таймаутами на внешние вызовы; heartbeat идёт из отдельного потока и <b>не спасает</b>.</p></div>
+<article id="q228" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">228. Ребалансировка консюмеров и max.poll.interval.ms: почему больно и как уменьшить</h2><div class="answer" hidden><div class="short"><p>Ребалансировка <b>перераспределяет партиции</b> между консюмерами группы. Она болезненна из-за <b>пауз обработки, роста лага и повторного чтения</b> сообщений, по которым ещё не закоммичен offset.</p>
+<p>Если пауза между вызовами <code>poll()</code> превышает <code>max.poll.interval.ms</code>, например из-за долгой обработки пачки, обычный динамический участник теряет членство в группе, <b>даже если heartbeat продолжает отправляться</b>.</p>
+<p>Поэтому сначала <b>ограничиваю время обработки пачки</b> таймаутами и ограниченными ретраями, уменьшаю <code>max.poll.records</code>, затем настраиваю <code>max.poll.interval.ms</code> <b>с запасом</b>.</p></div>
     <div class="more">
-<p>Когда происходит: консюмер вошёл в группу (новый под, рестарт), вышел (остановка, падение — после <code>session.timeout.ms</code> без heartbeat), выкинут за превышение <code>max.poll.interval.ms</code>, изменилось число партиций или подписка (regex-подписка нашла новый топик).</p>
-      <div class="table-wrap"><table>
-        <tr><th>Протокол</th><th>Что происходит</th></tr>
-        <tr><td>Eager (Range, RoundRobin)</td><td>все консюмеры отдают все партиции, ждут нового распределения — stop the world для группы</td></tr>
-        <tr><td>Cooperative (CooperativeStickyAssignor)</td><td>отзываются только те партиции, что переезжают; остальные продолжают обрабатываться; 2 раунда</td></tr>
-        <tr><td>Static membership (<code>group.instance.id</code>)</td><td>консюмер с тем же id, вернувшийся до session.timeout, получает свои партиции без ребалансировки — для rolling restart</td></tr>
-        <tr><td>Новый протокол (KIP-848, Kafka 4.0, <code>group.protocol=consumer</code>)</td><td>распределение считает брокер-координатор, инкрементально, без глобальной синхронизации клиентов</td></tr>
-      </table></div>
-<pre class="wide"><span class="p">spring</span>:
-  <span class="p">kafka</span>:
-    <span class="p">consumer</span>:
-      <span class="p">properties</span>:
-        <span class="p">partition.assignment.strategy</span>: org.apache.kafka.clients.consumer.CooperativeStickyAssignor
-        <span class="p">group.instance.id</span>: ${HOSTNAME}        <span class="c"># имя пода StatefulSet — стабильное между рестартами</span>
-        <span class="p">session.timeout.ms</span>: 45000</pre>
-<pre class="narrow"><span class="p">spring</span>:
-  <span class="p">kafka</span>:
-    <span class="p">consumer</span>:
-      <span class="p">properties</span>:
-        <span class="c"># org.apache.kafka.clients.consumer.*</span>
-        <span class="p">partition.assignment.strategy</span>:
-          CooperativeStickyAssignor
-        <span class="c"># имя пода StatefulSet — стабильное</span>
-        <span class="c"># между рестартами</span>
-        <span class="p">group.instance.id</span>: ${HOSTNAME}
-        <span class="p">session.timeout.ms</span>: 45000</pre>
-      <p>Почему ребалансировка болезненна: на время eager-ребалансировки группа не обрабатывает ничего; обработанные, но не закоммиченные сообщения переданной партиции будут обработаны повторно новым владельцем; локальное состояние (кеши по партиции, state store Streams) теряется или переезжает. Rolling deploy из 10 подов без static membership — 20 ребалансировок подряд.</p>
-      <p>Чтобы при отзыве партиции не было лишних повторов — коммитить обработанное в <code><span class="t">ConsumerRebalanceListener</span>.onPartitionsRevoked</code> (Spring Kafka делает это сам для своих AckMode).</p>
-      <p><b>max.poll.interval.ms.</b> Два разных механизма «жив ли консюмер»:</p>
-      <div class="table-wrap"><table>
-        <tr><th>Механизм</th><th>Параметр</th><th>Что проверяет</th></tr>
-        <tr><td>Heartbeat (фоновый поток)</td><td>session.timeout.ms (45 с), heartbeat.interval.ms</td><td>процесс жив и связан с брокером</td></tr>
-        <tr><td>Интервал poll</td><td>max.poll.interval.ms (5 мин)</td><td>поток обработки не завис и делает прогресс</td></tr>
-      </table></div>
-<pre class="wide"><span class="c">// типичный сценарий: max.poll.records = 500, обработка сообщения 1 с (внешний вызов)</span>
-<span class="c">// одна пачка = 500 с &gt; 300 с → консюмер выкинут посреди пачки</span>
-<span class="c">// новый владелец партиции получит её с последнего коммита → эти 500 сообщений обработаются дважды</span>
-<span class="c">// а старый консюмер при попытке коммита получит CommitFailedException</span>
-spring.kafka.consumer.max-poll-records: <span class="n">50</span>
-spring.kafka.consumer.properties.max.poll.interval.ms: <span class="n">300000</span></pre>
-<pre class="narrow"><span class="c">// типичный сценарий: max.poll.records = 500,</span>
-<span class="c">// обработка сообщения 1 с (внешний вызов)</span>
-<span class="c">// одна пачка = 500 с &gt; 300 с → консюмер</span>
-<span class="c">// выкинут посреди пачки</span>
-<span class="c">// новый владелец партиции получит её</span>
-<span class="c">// с последнего коммита → эти 500 сообщений</span>
-<span class="c">// обработаются дважды, а старый консюмер</span>
-<span class="c">// при попытке коммита получит</span>
-<span class="c">// CommitFailedException</span>
-spring.kafka.consumer:
-  max-poll-records: <span class="n">50</span>
-  properties.max.poll.interval.ms: <span class="n">300000</span></pre>
-      <p>Как считать безопасные значения: <code>max.poll.records × худшее время обработки сообщения &lt; max.poll.interval.ms</code> с запасом. Худшее время — с учётом таймаутов внешних вызовов и ретраев: вызов без таймаута делает формулу бессмысленной.</p>
-      <p>Если обработка принципиально долгая (минуты на сообщение): увеличивать max.poll.interval.ms (но тогда и обнаружение реально зависшего консюмера медленнее); вынести работу из потока poll с <code>pause()</code> партиций и <code>resume()</code> после окончания (poll продолжается и отдаёт пустые результаты); или превратить сообщение в задачу в БД и подтверждать сразу.</p>
+<p><b>Что происходит внутри.</b> В обычном синхронном consumer цикл такой:</p>
+<pre>poll → обработать пачку → commit → poll</pre>
+<p>Два таймаута отвечают за разные вещи:</p>
+<div class="table-wrap"><table>
+  <tr><th>Настройка</th><th>Что контролирует</th></tr>
+  <tr><td><code>session.timeout.ms</code></td><td>Как долго можно не получать heartbeat от consumer. В classic-протоколе задаётся клиентом, в новом consumer-протоколе соответствующий таймаут задаёт брокер через <code>group.consumer.session.timeout.ms</code>.</td></tr>
+  <tr><td><code>max.poll.interval.ms</code></td><td>Какой максимальный перерыв допустим между вызовами <code>poll()</code>. Heartbeat не отменяет это ограничение.</td></tr>
+</table></div>
+<p>Допустим, <code>poll()</code> вернул 500 сообщений, обработка каждого занимает секунду. Пачка займёт около 500 секунд — больше стандартного <code>max.poll.interval.ms</code> в 5 минут.</p>
+<p>Для обычного динамического участника превышение интервала приводит к выходу из группы и перераспределению партиций. Приложение при этом может продолжать старую обработку: <b>отзыв партиции не отменяет уже выполняющийся HTTP-запрос или транзакцию в БД</b>. Последующий commit может завершиться <code><span class="t">CommitFailedException</span></code>, а новый владелец прочитает сообщения с последнего закоммиченного offset.</p>
+<p>Получается неприятная петля:</p>
+<pre>медленная зависимость
+→ долгая пачка → rebalance
+→ повторная обработка
+→ дополнительная нагрузка
+→ ещё более долгая пачка</pre>
+
+<p><b>Как уменьшить боль — в порядке приоритета.</b></p>
+<ol>
+  <li><b>Ограничить время обработки.</b> Таймауты на БД и HTTP, ограниченные ретраи. Бесконечный retry внутри обработки легко удерживает consumer до потери партиций.</li>
+  <li><b>Уменьшить <code>max.poll.records</code>.</b> Это ограничивает количество записей, возвращаемых одним <code>poll()</code>, и помогает уложить пачку в бюджет времени.</li>
+  <li><b>Подобрать <code>max.poll.interval.ms</code> с запасом.</b> Учитывать медленные пачки, retries, commit и GC. Просто поставить час — значит разрешить зависшей обработке час удерживать партиции.</li>
+  <li><b>Идемпотентная обработка.</b> Повторная доставка возможна независимо от этих настроек: бизнес-эффекты должны выдерживать повтор.</li>
+</ol>
+
+<p><b>Пример настроек.</b> Для пачки из 100 записей со временем обработки около 200 мс на запись:</p>
+<pre>enable.auto.commit=<span class="k">false</span>
+max.poll.records=<span class="n">100</span>
+max.poll.interval.ms=<span class="n">120000</span></pre>
+<p>Получается примерно 20 секунд на обычную пачку при бюджете в 120 секунд. Это иллюстрация: значения выбираются по замерам медленных пачек, с учётом таймаутов и ретраев. При <code>enable.auto.commit=<span class="k">false</span></code> приложение должно явно коммитить offsets после успешной обработки.</p>
+
+<div class="follow">
+  <p><b>Поможет добавить консюмеров?</b> Да, пока есть свободные партиции и ресурс у зависимостей. В одной группе одну партицию одновременно назначают одному consumer.</p>
+  <p><b>Поможет <code>pause()</code>?</b> Позволит временно остановить получение записей из выбранных партиций, сохранив их назначение, но <code>poll()</code> всё равно нужно регулярно вызывать.</p>
+  <p><b>Что смотреть в проде?</b> Частоту и длительность ребалансов, время между <code>poll()</code>, время обработки пачек, lag, ошибки commit, задержки зависимостей и GC.</p>
+</div>
     </div></div></article>
 <article id="q229" hidden><div class="crumbs">Kafka</div><h2 tabindex="-1">229. Ошибки в консюмере: retry, Dead Letter Topic, poison pill</h2><div class="answer" hidden><div class="short"><p><b>Poison pill</b> — сообщение, которое никогда не обработается; бесконечные ретраи <b>блокируют всю партицию</b>.</p>
 <ul><li>В Spring Kafka — <b>DefaultErrorHandler</b>: ретраи с backoff, затем <b>Dead Letter Topic</b>.</li><li>Ошибки десериализации ловит <b>ErrorHandlingDeserializer</b>.</li><li><b>Классифицировать ошибки</b>: таймаут ретраим, невалидные данные — сразу в DLT.</li></ul>
