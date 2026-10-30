@@ -13816,332 +13816,131 @@ builder.stream(<span class="s">"payments"</span>, <span class="t">Consumed</span
     channel.basicAck(tag, <span class="k">false</span>);
 }</pre><p>Это успешная ветка. Ошибки listener отдельно обрабатывают по политике контейнера: ограниченные повторы, reject/nack и DLX. Для Spring AUTO подтверждение делает контейнер после успешного возврата listener; это не то же самое, что AMQP auto-ack при доставке.</p><ul><li><b>Confirms не доказывают маршрутизацию:</b> сообщение может не попасть ни в одну очередь. Для этого применяют mandatory и publisher returns.</li><li><b>DLX нужно настроить и связать с очередью:</b> один nack без requeue не создаёт место хранения ошибки.</li><li><b>requeue=true не лечит poison pill:</b> без ограничения попыток возникает бесконечный цикл.</li><li><b>Дубли возможны:</b> бизнес-эффект мог завершиться перед обрывом соединения и потерей ack.</li></ul><p class="follow"><b>Почему низкий prefetch иногда полезен?</b> Медленные задачи меньше накапливаются у одного работника и равномернее распределяются. Слишком маленькое значение, наоборот, добавляет простои на сетевом обмене.</p>
     </div></div></article>
-<article id="q239" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">239. Монолит или микросервисы? Как резать на сервисы</h2><div class="answer" hidden><div class="short"><p>Микросервисы дают <b>независимый деплой и масштабирование</b>, изоляцию отказов и автономию команд. Цена — <b>сеть</b> со сбоями и задержками, распределённые транзакции, сложная наблюдаемость и эксплуатация.</p>
-<p>Оправданы, когда <b>несколько команд мешают друг другу</b> в одном релизе и границы домена понятны. Резать по <b>bounded context</b>, а не по техническим слоям. Часто разумно начать с <b>модульного монолита</b>.</p></div>
+<article id="q239" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">239. Монолит или микросервисы? Как резать на сервисы</h2><div class="answer" hidden><div class="short"><p><b>Модульный монолит</b> позволяет держать бизнес-границы внутри одного приложения и использовать локальные вызовы и транзакции. Его проще разрабатывать и эксплуатировать небольшой командой.</p><p><b>Микросервисы</b> дают независимые релизы и масштабирование частей системы. Цена — сетевые отказы, согласование данных и больше эксплуатационной работы.</p><p>Выделяю сервис по бизнес-возможности и владению данными, когда независимость действительно нужна. Деление на «контроллеры», «логику» и «БД» самостоятельных сервисов не создаёт.</p></div>
     <div class="more">
-<div class="table-wrap"><table>
-        <tr><th></th><th>Монолит (модульный)</th><th>Микросервисы</th></tr>
-        <tr><td>Деплой</td><td>одно приложение; изменение любого модуля — релиз целиком</td><td>независимо по сервису</td></tr>
-        <tr><td>Масштабирование</td><td>всё вместе</td><td>горячие части отдельно</td></tr>
-        <tr><td>Транзакции</td><td>ACID в одной БД</td><td>саги, outbox, eventual consistency</td></tr>
-        <tr><td>Вызовы между модулями</td><td>вызов метода: наносекунды, без отказов</td><td>сеть: миллисекунды, таймауты, ретраи, частичные отказы</td></tr>
-        <tr><td>Команды</td><td>координация релизов</td><td>автономия — если границы сервисов совпадают с границами команд</td></tr>
-        <tr><td>Эксплуатация</td><td>проще</td><td>трейсинг, оркестрация, сотни пайплайнов, контракты между сервисами</td></tr>
-      </table></div>
-      <p>Когда микросервисы оправданы: несколько команд мешают друг другу в одной кодовой базе и релизном цикле; части системы имеют очень разные требования к масштабированию, доступности или технологиям; домен уже понятен и границы стабильны. Когда нет: маленькая команда, новый продукт с меняющимися границами — ошибочно нарезанные сервисы дают «распределённый монолит» (все сервисы приходится менять и деплоить вместе, но уже через сеть).</p>
-      <p>Как резать: по бизнес-возможностям и bounded context (платежи, клиенты, лимиты, уведомления), а не по слоям (сервис «БД», сервис «валидация») и не по сущностям (сервис «Клиент» с CRUD, через который ходят все). Признаки хорошей границы: сервис владеет своими данными, большинство изменений затрагивают один сервис, синхронных вызовов между сервисами на один пользовательский запрос немного.</p>
-      <p>Модульный монолит — промежуточный вариант: модули с явными API и собственными схемами в одной БД, проверка границ инструментами (ArchUnit, Spring Modulith). Выделить такой модуль в сервис потом относительно дёшево.</p>
+<div class="table-wrap"><table><tr><th>Критерий</th><th>Модульный монолит</th><th>Микросервисы</th></tr><tr><td>Релиз</td><td>Приложение развёртывается целиком</td><td>Сервисы могут выпускаться независимо</td></tr><tr><td>Взаимодействие</td><td>Вызов метода в процессе</td><td>Сеть: задержки, таймауты, неопределённый результат</td></tr><tr><td>Данные</td><td>Возможны транзакции одной БД</td><td>У каждого владельца свои данные; межсервисные операции требуют протокола</td></tr><tr><td>Масштабирование</td><td>Реплика всего приложения</td><td>Отдельное масштабирование нагруженной части</td></tr></table></div><p><b>Пример границы:</b> уведомления принимают запрос на отправку и сами управляют шаблонами, провайдерами и повторами. Платёжный сервис не меняет их таблицы и не выпускается вместе с ними при смене SMS-провайдера.</p><ul><li><b>Хороший признак:</b> большинство изменений сценария остаётся внутри одного владельца.</li><li><b>Плохой признак:</b> каждый релиз требует одновременно менять пять сервисов, общую БД и цепочку синхронных вызовов. Это распределённый монолит.</li><li><b>Начать проще:</b> выделить модули и их API в одном процессе; запретить обход границ через чужие таблицы и внутренние классы.</li></ul><p class="follow"><b>Микросервисы автоматически изолируют отказы?</b> Нет. Синхронные зависимости, общая БД или общий исчерпанный пул могут передать отказ дальше. Изоляцию обеспечивают границы ресурсов, таймауты и допустимая деградация.</p>
     </div></div></article>
-<article id="q240" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">240. DDD: bounded context, агрегат, доменные события</h2><div class="answer" hidden><div class="short"><ul><li><b>Bounded context</b> — граница, внутри которой у терминов один смысл («клиент» в KYC и в кредитовании — разные модели); кандидат на отдельный сервис.</li><li><b>Агрегат</b> — группа объектов, которую меняют <b>одной транзакцией через корень</b>; внутри держатся инварианты. Маленький, ссылки на другие — по id.</li><li>Между агрегатами и контекстами — <b>доменные события</b> и eventual consistency, к внешним системам — <b>anti-corruption layer</b>.</li></ul></div>
+<article id="q240" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">240. DDD: bounded context, агрегат, доменные события</h2><div class="answer" hidden><div class="short"><ul><li><b>Bounded context</b> — граница одной модели и языка: «клиент» для KYC и кредитования может означать разные наборы правил.</li><li><b>Агрегат</b> — объекты с общими инвариантами, которые изменяют через корень и сохраняют согласованно.</li><li><b>Доменное событие</b> — факт вроде OrderSubmitted, на который могут реагировать другие части системы.</li></ul><p>Контекст не обязан быть отдельным сервисом. Событие внутри приложения не обязано быть сообщением Kafka; для надёжной внешней публикации нужен отдельный механизм, например outbox.</p></div>
     <div class="more">
-<ul>
-      <li>Агрегат делают маленьким: большой агрегат — конфликты блокировок и тяжёлая загрузка.</li>
-    </ul>
-<div class="table-wrap"><table>
-        <tr><th>Понятие</th><th>Смысл</th><th>Пример в банке</th></tr>
-        <tr><td>Ubiquitous language</td><td>общий язык бизнеса и кода внутри контекста</td><td>«холд», «проводка», «операционный день»</td></tr>
-        <tr><td>Bounded context</td><td>граница, где модель и термины однозначны</td><td>«Клиент» в KYC (документы, проверки) и в кредитовании (скоринг, доход) — разные модели</td></tr>
-        <tr><td>Entity</td><td>объект с идентичностью, меняется во времени</td><td>Счёт, Договор</td></tr>
-        <tr><td>Value object</td><td>определяется значением, неизменяем</td><td>Money, IBAN, Period</td></tr>
-        <tr><td>Aggregate</td><td>группа объектов, изменяемая целиком через корень в одной транзакции; граница инвариантов</td><td>Заказ + позиции (сумма заказа = сумма позиций)</td></tr>
-        <tr><td>Domain event</td><td>факт, произошедший в домене</td><td>PaymentCompleted, AccountBlocked</td></tr>
-        <tr><td>Context map</td><td>как контексты взаимодействуют</td><td>anti-corruption layer к легаси-АБС, shared kernel, customer–supplier</td></tr>
-      </table></div>
-<pre class="wide"><span class="c">// агрегат защищает инварианты: никаких публичных сеттеров коллекции</span>
-<span class="k">public</span> <span class="k">class</span> <span class="t">Order</span> {
-    <span class="k">private</span> <span class="k">final</span> <span class="t">List</span>&lt;<span class="t">OrderLine</span>&gt; lines = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;();
-    <span class="k">private</span> <span class="t">OrderStatus</span> status;
+<p><b>Пример агрегата:</b> нельзя отправить пустой заказ или менять его позиции после отправки. Корень Order проверяет эти правила; наружу отдаётся неизменяемый снимок списка.</p><pre class="wide"><span class="k">class</span> <span class="t">Order</span> {
+    <span class="k">private</span> <span class="k">final</span> <span class="t">List</span>&lt;<span class="t">String</span>&gt; items = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;();
+    <span class="k">private</span> <span class="k">boolean</span> submitted;
 
-    <span class="k">public</span> <span class="k">void</span> addLine(<span class="t">Product</span> p, <span class="k">int</span> qty) {
-        <span class="k">if</span> (status != <span class="t">OrderStatus</span>.<span class="t">DRAFT</span>) <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>(<span class="s">"order is "</span> + status);
-        <span class="k">if</span> (lines.size() &gt;= <span class="n">100</span>) <span class="k">throw</span> <span class="k">new</span> <span class="t">DomainException</span>(<span class="s">"too many lines"</span>);
-        lines.add(<span class="k">new</span> <span class="t">OrderLine</span>(p.id(), p.price(), qty));
+    <span class="k">void</span> add(<span class="t">String</span> item) {
+        <span class="k">if</span> (submitted) <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>();
+        items.add(<span class="t">Objects</span>.requireNonNull(item));
     }
-    <span class="c">// другие агрегаты — только по id, не объектной ссылкой</span>
-    <span class="k">private</span> <span class="t">CustomerId</span> customerId;
-}</pre>
-<pre class="narrow"><span class="c">// агрегат защищает инварианты:</span>
-<span class="c">// никаких публичных сеттеров коллекции</span>
-<span class="k">public</span> <span class="k">class</span> <span class="t">Order</span> {
-    <span class="k">private</span> <span class="k">final</span> <span class="t">List</span>&lt;<span class="t">OrderLine</span>&gt; lines =
-            <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;();
-    <span class="k">private</span> <span class="t">OrderStatus</span> status;
-    <span class="c">// другие агрегаты — только по id,</span>
-    <span class="c">// не объектной ссылкой</span>
-    <span class="k">private</span> <span class="t">CustomerId</span> customerId;
 
-    <span class="k">public</span> <span class="k">void</span> addLine(<span class="t">Product</span> p, <span class="k">int</span> qty) {
-        <span class="k">if</span> (status != <span class="t">OrderStatus</span>.<span class="t">DRAFT</span>) {
-            <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>(
-                    <span class="s">"order is "</span> + status);
-        }
-        <span class="k">if</span> (lines.size() &gt;= <span class="n">100</span>) {
-            <span class="k">throw</span> <span class="k">new</span> <span class="t">DomainException</span>(
-                    <span class="s">"too many lines"</span>);
-        }
-        lines.add(<span class="k">new</span> <span class="t">OrderLine</span>(
-                p.id(), p.price(), qty));
+    <span class="k">void</span> submit() {
+        <span class="k">if</span> (submitted || items.isEmpty()) <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>();
+        submitted = <span class="k">true</span>;
+    }
+
+    <span class="t">List</span>&lt;<span class="t">String</span>&gt; items() { <span class="k">return</span> <span class="t">List</span>.copyOf(items); }
+}</pre>
+<pre class="narrow"><span class="k">class</span> <span class="t">Order</span> {
+  <span class="k">private</span> <span class="k">final</span> <span class="t">List</span>&lt;<span class="t">String</span>&gt; items =
+    <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;();
+  <span class="k">private</span> <span class="k">boolean</span> submitted;
+
+  <span class="k">void</span> add(<span class="t">String</span> item) {
+    <span class="k">if</span> (submitted) {
+      <span class="k">throw</span> <span class="k">new</span>
+        <span class="t">IllegalStateException</span>();
+    }
+    items.add(
+      <span class="t">Objects</span>.requireNonNull(item));
+  }
+
+  <span class="k">void</span> submit() {
+    <span class="k">if</span> (submitted || items.isEmpty()) {
+      <span class="k">throw</span> <span class="k">new</span>
+        <span class="t">IllegalStateException</span>();
+    }
+    submitted = <span class="k">true</span>;
+  }
+
+  <span class="t">List</span>&lt;<span class="t">String</span>&gt; items() {
+    <span class="k">return</span> <span class="t">List</span>.copyOf(items);
+  }
+}</pre><p>Это пример бизнес-правил в памяти. При конкурентном сохранении нужны ещё транзакция и контроль версии: два экземпляра одного заказа иначе могут перезаписать изменения друг друга.</p><div class="table-wrap"><table><tr><th>Понятие</th><th>Пример</th></tr><tr><td>Entity</td><td>Заказ узнаётся по id, даже если позиции изменились</td></tr><tr><td>Value object</td><td>Money определяется суммой и валютой</td></tr><tr><td>Anti-corruption layer</td><td>Адаптер переводит статусы легаси в свою модель</td></tr><tr><td>Граница агрегата</td><td>То, что должно удовлетворять инварианту в момент COMMIT</td></tr></table></div><p class="follow"><b>Каждая транзакция обязана менять ровно один агрегат?</b> Это полезный ориентир для небольших независимых границ, а не запрет платформы. Если атомарное изменение нескольких агрегатов постоянно необходимо, стоит проверить модель и реальные бизнес-инварианты.</p>
+    </div></div></article>
+<article id="q241" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">241. Гексагональная архитектура (порты и адаптеры)</h2><div class="answer" hidden><div class="short"><p><b>Бизнес-логика отделена от способов входа и хранения данных.</b> Входящий порт описывает сценарий приложения, исходящий — нужную ему возможность: сохранить заказ, проверить лимит.</p><p><b>Адаптеры связывают порты с REST, Kafka, JPA или HTTP.</b> Зависимости кода направлены к приложению и его контрактам; домен не обращается к контроллеру или конкретному JPA-репозиторию.</p><p>Так сценарий можно проверить без Spring и настоящей БД. Дополнительные модели и интерфейсы нужны там, где защищают полезную границу.</p></div>
+    <div class="more">
+<figure class="concept" aria-labelledby="arch-ports-caption"><svg viewBox="0 0 320 280" role="img" aria-labelledby="arch-ports-title arch-ports-desc" xmlns="http://www.w3.org/2000/svg"><title id="arch-ports-title">Зависимости в портах и адаптерах</title><desc id="arch-ports-desc">Стрелки показывают зависимости кода: адаптеры знают порты приложения, домен не знает REST, JPA и Kafka.</desc><defs><marker id="arch-ports-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 62 V100" marker-end="url(#arch-ports-arrow)"/><path class="concept-edge" d="M160 218 V178" marker-end="url(#arch-ports-arrow)"/><rect class="concept-node plain" x="16" y="12" width="288" height="50" rx="9"/><text x="160.0" y="42.0" text-anchor="middle">REST / Kafka адаптеры</text><rect class="concept-node accent" x="16" y="104" width="288" height="70" rx="9"/><text x="160.0" y="134.0" text-anchor="middle">Приложение и домен</text><text x="160.0" y="154.0" text-anchor="middle">Use case + порты</text><rect class="concept-node plain" x="16" y="218" width="288" height="50" rx="9"/><text x="160.0" y="248.0" text-anchor="middle">JPA / HTTP адаптеры</text></svg><figcaption id="arch-ports-caption">Стрелки показывают зависимости кода: адаптеры знают порты приложения, домен не знает REST, JPA и Kafka.</figcaption></figure><pre class="wide"><span class="k">interface</span> <span class="t">LimitCheck</span> {
+    <span class="k">boolean</span> allowed(<span class="k">long</span> accountId);
+}
+
+<span class="a">@RequiredArgsConstructor</span>
+<span class="k">class</span> <span class="t">PaymentService</span> {
+    <span class="k">private</span> <span class="k">final</span> <span class="t">LimitCheck</span> limits;
+
+    <span class="k">void</span> pay(<span class="k">long</span> accountId) {
+        <span class="k">if</span> (!limits.allowed(accountId)) <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>();
+        <span class="c">// Далее выполняется сценарий платежа.</span>
     }
 }</pre>
-      <p>Правила проектирования агрегатов (Вернон): маленькие агрегаты; ссылки на другие агрегаты по id; одна транзакция — один агрегат; согласованность между агрегатами — eventual, через доменные события. Если бизнес требует атомарно менять два агрегата — возможно, границы выбраны неверно.</p>
-      <p>Anti-corruption layer — слой трансляции между своей моделью и чужой (легаси, внешний партнёр), чтобы чужие понятия не протекали в домен. На практике — адаптер, переводящий DTO внешней системы в доменные объекты.</p>
-    </div></div></article>
-<article id="q241" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">241. Гексагональная архитектура (порты и адаптеры)</h2><div class="answer" hidden><div class="short"><p>Доменная логика <b>в центре</b> и не зависит от фреймворков и инфраструктуры.</p>
-<ul><li><b>Порты</b> — интерфейсы, которые объявляет домен: репозиторий, отправка уведомлений.</li><li><b>Адаптеры</b> — их реализации (JPA, Kafka, REST) и входящие адаптеры (контроллеры).</li><li>Зависимости — <b>только внутрь</b>, к домену.</li></ul>
-<p>Плюсы: домен тестируется <b>без базы и Spring</b>, транспорт меняется без правки логики. Для простого CRUD — лишние слои.</p></div>
-    <div class="more">
-<ul>
-      <li>Плюс — домен тестируется без БД и Spring. Для CRUD-сервиса это лишние слои.</li>
-    </ul>
-<pre class="wide">ru.bank.payments
-├── domain            <span class="c">// чистая Java: сущности, value objects, доменные сервисы, порты</span>
-│   ├── <span class="t">Payment</span>, <span class="t">Money</span>, <span class="t">PaymentPolicy</span>
-│   └── port
-│       ├── in/  <span class="t">CreatePaymentUseCase</span>          <span class="c">// входящий порт: что умеет приложение</span>
-│       └── out/ <span class="t">PaymentRepository</span>, <span class="t">FraudCheck</span>, <span class="t">PaymentEvents</span>   <span class="c">// исходящие: что нужно домену</span>
-├── application       <span class="c">// реализация use case: оркестрация, транзакции</span>
-│   └── <span class="t">CreatePaymentService</span> <span class="k">implements</span> <span class="t">CreatePaymentUseCase</span>
-└── adapter
-    ├── in/web        <span class="c">// REST-контроллер → CreatePaymentUseCase</span>
-    ├── in/kafka      <span class="c">// листенер → use case</span>
-    ├── out/jpa       <span class="c">// JpaPaymentRepository implements PaymentRepository</span>
-    ├── out/http      <span class="c">// FraudClient implements FraudCheck</span>
-    └── out/kafka     <span class="c">// KafkaPaymentEvents implements PaymentEvents</span></pre>
-<pre class="narrow">ru.bank.payments
-├── domain
-│   │  <span class="c">// чистая Java: сущности, value</span>
-│   │  <span class="c">// objects, доменные сервисы, порты</span>
-│   ├── <span class="t">Payment</span>, <span class="t">Money</span>, <span class="t">PaymentPolicy</span>
-│   └── port
-│       ├── in/  <span class="t">CreatePaymentUseCase</span>
-│       │        <span class="c">// что умеет приложение</span>
-│       └── out/ <span class="t">PaymentRepository</span>,
-│                <span class="t">FraudCheck</span>, <span class="t">PaymentEvents</span>
-│                <span class="c">// что нужно домену</span>
-├── application
-│   │  <span class="c">// use case: оркестрация, транзакции</span>
-│   └── <span class="t">CreatePaymentService</span>
-│         <span class="k">implements</span> <span class="t">CreatePaymentUseCase</span>
-└── adapter
-    ├── in/web     <span class="c">// REST → use case</span>
-    ├── in/kafka   <span class="c">// листенер → use case</span>
-    ├── out/jpa    <span class="c">// JpaPaymentRepository</span>
-    │              <span class="c">//   → PaymentRepository</span>
-    ├── out/http   <span class="c">// FraudClient → FraudCheck</span>
-    └── out/kafka  <span class="c">// KafkaPaymentEvents</span>
-                   <span class="c">//   → PaymentEvents</span></pre>
-      <p>Ключевое — направление зависимостей: адаптеры зависят от домена, домен ни от чего (ни JPA-аннотаций, ни Spring, ни Kafka). Интерфейс репозитория объявляет домен в своих терминах, реализует инфраструктура. Это и есть Dependency Inversion из SOLID на уровне архитектуры.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Плюсы</th><th>Минусы</th></tr>
-        <tr><td>домен тестируется юнит-тестами без контекста и БД</td><td>больше классов и маппингов (доменная модель ↔ JPA-сущность ↔ DTO)</td></tr>
-        <tr><td>замена транспорта или БД не трогает бизнес-логику</td><td>для CRUD без логики — церемония без пользы</td></tr>
-        <tr><td>один use case доступен через REST, Kafka, CLI одинаково</td><td>требует дисциплины, иначе слои протекают</td></tr>
-      </table></div>
-      <p>Родственные подходы — Clean Architecture и Onion: те же идеи с разными названиями слоёв. Прагматичный вариант — не дублировать модели без нужды: JPA-аннотации на доменных классах допустимы, если команда так решила, а границы контролировать ArchUnit-тестами (<code>domain</code> не зависит от <code>adapter</code>).</p>
-    </div></div></article>
-<article id="q242" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">242. Синхронное или асинхронное взаимодействие сервисов</h2><div class="answer" hidden><div class="short"><ul><li><b>Синхронно</b> (REST, gRPC) — просто и сразу ответ, но <b>доступность связана</b>: упал вызываемый — не работает и вызывающий, задержки цепочки складываются.</li><li><b>Асинхронно</b> (события) — сервисы развязаны во времени, пики сглаживаются, но <b>eventual consistency</b> и сложная отладка.</li></ul>
-<p>Правило: <b>ответ нужен сейчас</b> — синхронно; <b>уведомить о свершившемся факте</b> — событием. Часто комбинируют.</p></div>
-    <div class="more">
-<ul>
-      <li>Запрос, на который нужен ответ сейчас, — синхронно; уведомить других о факте — событием.</li>
-    </ul>
-<div class="table-wrap"><table>
-        <tr><th>Критерий</th><th>Синхронно (REST/gRPC)</th><th>Асинхронно (события, очереди)</th></tr>
-        <tr><td>Связанность по доступности</td><td>вызывающий зависит от вызываемого прямо сейчас</td><td>брокер буферизует, потребитель может лежать</td></tr>
-        <tr><td>Латентность цепочки</td><td>суммируется</td><td>пользователь получает «принято», обработка позже</td></tr>
-        <tr><td>Согласованность</td><td>ответ отражает актуальное состояние</td><td>eventual</td></tr>
-        <tr><td>Пиковая нагрузка</td><td>передаётся вниз мгновенно</td><td>сглаживается очередью</td></tr>
-        <tr><td>Отладка</td><td>трейс одного запроса</td><td>цепочки событий, корреляция по id</td></tr>
-        <tr><td>Ошибки</td><td>сразу вызывающему</td><td>DLT, компенсации, мониторинг «зависших»</td></tr>
-      </table></div>
-      <p>Типичные смешанные схемы: <b>команда синхронно, последствия асинхронно</b> — API платежа синхронно проверяет и сохраняет платёж, а уведомления, аналитика, начисление кешбэка — подписчики события. <b>Асинхронный запрос-ответ</b> — 202 Accepted + id операции, клиент опрашивает статус или получает webhook/событие. <b>Локальная копия данных</b> — вместо синхронного вызова сервиса клиентов на каждый платёж держать реплицированную событиями проекцию нужных полей.</p>
-      <p>Вопрос для самопроверки: «если этот сервис лежит час, что должно продолжать работать?» Всё, что должно, не может синхронно от него зависеть.</p>
-    </div></div></article>
-<article id="q243" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">243. Service discovery и конфигурация</h2><div class="answer" hidden><div class="short"><ul><li><b>Discovery</b>: в Kubernetes — DNS-имя Service и kube-proxy; вне — реестр (Consul, Eureka) и клиентская балансировка; <b>service mesh</b> добавляет L7-балансировку, mTLS и ретраи.</li><li><b>Конфигурация</b> — вне образа: <b>один образ на все окружения</b>, различия — ConfigMap и переменные окружения, секреты — Vault или Secret, динамические настройки — сервис конфигурации или фича-флаги.</li></ul></div>
-    <div class="more">
-<pre class="wide"><span class="c"># Kubernetes: discovery через DNS сервиса — клиенту нужен только адрес</span>
-<span class="p">payments.partner.url</span>: http://limits-service.limits.svc.cluster.local:8080
-<span class="c"># kube-proxy балансирует соединения по готовым (ready) подам — L4</span>
+<pre class="narrow"><span class="k">interface</span> <span class="t">LimitCheck</span> {
+    <span class="k">boolean</span> allowed(<span class="k">long</span> accountId);
+}
 
-<span class="c"># конфигурация: ConfigMap как файл + секрет как переменная окружения</span>
-<span class="p">spring.config.import</span>: optional:configtree:/etc/config/
-<span class="p">spring.datasource.password</span>: ${DB_PASSWORD}</pre>
-<pre class="narrow"><span class="c"># Kubernetes: discovery через DNS сервиса —</span>
-<span class="c"># клиенту нужен только адрес</span>
-<span class="p">payments.partner.url</span>:
-  http://limits.limits.svc.cluster.local:8080
-<span class="c"># kube-proxy балансирует соединения</span>
-<span class="c"># по готовым (ready) подам — L4</span>
+<span class="a">@RequiredArgsConstructor</span>
+<span class="k">class</span> <span class="t">PaymentService</span> {
+    <span class="k">private</span> <span class="k">final</span> <span class="t">LimitCheck</span> limits;
 
-<span class="c"># конфигурация: ConfigMap как файл +</span>
-<span class="c"># секрет как переменная окружения</span>
-<span class="p">spring.config.import</span>:
-  optional:configtree:/etc/config/
-<span class="p">spring.datasource.password</span>: ${DB_PASSWORD}</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Модель</th><th>Как</th><th>Примеры</th></tr>
-        <tr><td>Серверная (platform)</td><td>клиент идёт на виртуальный адрес, балансирует инфраструктура</td><td>Kubernetes Service, AWS ALB</td></tr>
-        <tr><td>Клиентская</td><td>клиент получает список адресов из реестра и сам выбирает</td><td>Eureka + Spring Cloud LoadBalancer, Consul, gRPC с headless service</td></tr>
-        <tr><td>Service mesh</td><td>sidecar-прокси (Envoy) рядом с каждым подом: discovery, L7-балансировка, mTLS, ретраи, метрики</td><td>Istio, Linkerd</td></tr>
-      </table></div>
-      <p>Конфигурация — принцип 12-factor: один и тот же образ на все окружения, различия — только в окружении. Уровни: значения по умолчанию в <code>application.yml</code> внутри образа; специфичное для окружения — ConfigMap/переменные; секреты — Secret/Vault; динамически меняемые без рестарта параметры (фича-флаги, лимиты) — отдельный сервис конфигурации или флагов (Spring Cloud Config с refresh, Unleash, LaunchDarkly).</p>
-      <p>Изменение ConfigMap не перезапускает поды: смонтированные файлы обновятся через какое-то время (переменные окружения — нет), приложение должно перечитать конфигурацию само, иначе нужен rolling restart (часто его триггерит хеш конфигурации в аннотации пода через Helm/Kustomize).</p>
+    <span class="k">void</span> pay(<span class="k">long</span> accountId) {
+        <span class="k">if</span> (!limits.allowed(accountId)) {
+            <span class="k">throw</span> <span class="k">new</span>
+                <span class="t">IllegalStateException</span>();
+        }
+        <span class="c">// Далее — сценарий платежа.</span>
+    }
+}</pre><p>Входящий порт здесь — метод pay, исходящий — LimitCheck. HTTP-адаптер реализует LimitCheck через удалённый вызов, тест передаёт простую реализацию. Проверка лимита сама по себе не резервирует его: при требовании атомарного расходования нужен другой контракт.</p><p class="follow"><b>Направление вызовов тоже всегда внутрь?</b> Нет. Сценарий вызывает исходящий порт, а выполняется код инфраструктурного адаптера. Внутрь направлена зависимость от интерфейса, а не каждый runtime-вызов.</p>
     </div></div></article>
-<article id="q244" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">244. 12-factor app: принципы и как они ложатся на Spring Boot и Kubernetes</h2><div class="answer" hidden><div class="short"><p>12-factor — принципы для сервисов, которые легко деплоить и масштабировать в облаке. Главное:</p>
-<ul><li><b>конфигурация в окружении</b>, один образ на все окружения;</li><li><b>без состояния</b>: сессии и файлы — во внешних хранилищах;</li><li><b>сборка, релиз и запуск разделены</b>, зависимости явные;</li><li><b>быстрый старт</b> и корректная остановка по SIGTERM;</li><li><b>логи — поток в stdout</b>;</li><li>dev и prod похожи, админ-задачи — отдельными процессами.</li></ul>
-<p>Spring Boot и Kubernetes закрывают большую часть из коробки.</p></div>
+<article id="q242" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">242. Синхронное или асинхронное взаимодействие сервисов</h2><div class="answer" hidden><div class="short"><p><b>Синхронный вызов</b> подходит, когда результат другого сервиса нужен для текущего решения. Вызывающий ждёт ответ и зависит от задержки и доступности этой зависимости.</p><p><b>Асинхронное сообщение</b> позволяет принять работу сейчас, а выполнить позже. Нужны идентификатор операции, хранение статуса, повторы и обработка дублей.</p><p>Часто комбинируют: платёж сохраняется синхронно, уведомления и аналитика получают событие. Сам REST не гарантирует сильную согласованность, а брокер — отсутствие потерь.</p></div>
     <div class="more">
-<div class="table-wrap"><table>
-        <tr><th>Фактор</th><th>В Spring Boot / Kubernetes</th></tr>
-        <tr><td>Codebase — одна база, много деплоев</td><td>один репозиторий, один образ на все окружения</td></tr>
-        <tr><td>Dependencies — явные</td><td>Maven/Gradle, всё в образе</td></tr>
-        <tr><td>Config — в окружении</td><td>env, ConfigMap, Secret, <code>${…}</code> в <code>application.yml</code></td></tr>
-        <tr><td>Backing services — подключаемые ресурсы</td><td>БД, Kafka по URL из конфигурации</td></tr>
-        <tr><td>Build, release, run — раздельно</td><td>CI собирает образ, релиз = образ + конфиг</td></tr>
-        <tr><td>Processes — без состояния</td><td>сессии в Redis или JWT, файлы в S3</td></tr>
-        <tr><td>Port binding</td><td>встроенный Tomcat/Netty</td></tr>
-        <tr><td>Concurrency — масштаб процессами</td><td>реплики Deployment, HPA</td></tr>
-        <tr><td>Disposability — быстрый старт и остановка</td><td>graceful shutdown, пробы</td></tr>
-        <tr><td>Dev/prod parity</td><td>Testcontainers, те же версии БД</td></tr>
-        <tr><td>Logs — поток событий</td><td>stdout в JSON, сбор агентом</td></tr>
-        <tr><td>Admin processes</td><td>Kubernetes Job, миграции тем же образом</td></tr>
-      </table></div>
-<pre><span class="c"># одна конфигурация для всех окружений,</span>
-<span class="c"># значения — из переменных окружения</span>
+<div class="table-wrap"><table><tr><th>Сценарий</th><th>Вариант</th></tr><tr><td>Нужно узнать, разрешена ли операция сейчас</td><td>Синхронная проверка с дедлайном; для расходуемого ресурса — резервирование</td></tr><tr><td>Отправить письмо после платежа</td><td>Событие с надёжной публикацией и идемпотентным получателем</td></tr><tr><td>Операция занимает минуты</td><td>Принять команду, вернуть 202 и адрес статуса</td></tr><tr><td>Зависимость может не работать час</td><td>Накопление работы с лимитами, мониторинг возраста и сроком исполнения</td></tr></table></div><pre><span class="t">POST</span> /reports <span class="t">HTTP</span>/<span class="n">1.1</span>
+<span class="t">Idempotency</span>-<span class="t">Key</span>: report-<span class="n">42</span></pre><pre><span class="t">HTTP</span>/<span class="n">1.1</span> <span class="n">202</span> <span class="t">Accepted</span>
+<span class="t">Location</span>: /operations/<span class="n">42</span>
+
+{<span class="s">"status"</span>:<span class="s">"PENDING"</span>}</pre><p>202 означает принятие, а не успешное завершение. Принятая команда должна переживать рестарт: например, статус и outbox пишутся одной транзакцией. Для асинхронной схемы заранее определяют срок ожидания, правила отмены и видимый клиенту результат ошибки.</p><p class="follow"><b>Асинхронность убирает зависимость по доступности полностью?</b> Нет. В момент приёма нужны доступные хранилище или брокер, а буфер конечен. Она позволяет отложить зависимость от обработчика, пока хватает места и допустимого времени ожидания.</p>
+    </div></div></article>
+<article id="q243" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">243. Service discovery и конфигурация</h2><div class="answer" hidden><div class="short"><p><b>Service discovery находит актуальный адрес сервиса, балансировка выбирает получателя.</b> В Kubernetes обычный Service даёт стабильное DNS-имя и виртуальный адрес поверх меняющихся Pod.</p><p><b>Конфигурация окружения хранится вне образа.</b> Адреса и обычные параметры — в ConfigMap/env, секреты — в защищённом хранилище с ограничением доступа и ротацией.</p><p>Обновление конфигурации не означает, что приложение уже применило её: для env обычно нужен новый процесс, для файлов — явное перечитывание или рестарт.</p></div>
+    <div class="more">
+<div class="table-wrap"><table><tr><th>Модель</th><th>Как работает</th></tr><tr><td>Kubernetes Service</td><td>DNS ведёт на Service; реализация сети направляет соединения к endpoints</td></tr><tr><td>Headless Service</td><td>DNS возвращает адреса endpoints; выбор и балансировка нужны клиенту</td></tr><tr><td>Реестр вне Kubernetes</td><td>Клиент получает адреса из Consul/Eureka и выбирает экземпляр</td></tr><tr><td>Service mesh</td><td>Прокси получает адреса и политики от control plane</td></tr></table></div><pre><span class="p">partner</span>:
+  <span class="p">url</span>: http://limits:8080
 <span class="p">spring</span>:
   <span class="p">datasource</span>:
-    <span class="p">url</span>: ${DB_URL}
-    <span class="p">username</span>: ${DB_USER}
-    <span class="p">password</span>: ${DB_PASSWORD}
-  <span class="p">kafka</span>:
-    <span class="p">bootstrap-servers</span>: ${KAFKA_BROKERS}
-<span class="p">server</span>:
-  <span class="p">shutdown</span>: graceful</pre>
-      <p class="follow"><b>Какой фактор чаще всего нарушают в Java-сервисах?</b>Состояние в процессе: HTTP-сессии в памяти, локальные файлы, кеш, который считается источником истины, или <code><span class="a">@Scheduled</span></code>, рассчитанный на один экземпляр. При двух подах это ломается.</p>
+    <span class="p">password</span>: ${DB_PASSWORD}</pre><p>Это application.yml; limits — Service в том же namespace. Между namespace используют limits.risk или полное DNS-имя. У долгоживущего HTTP/2-соединения L4-балансировка не обязана распределять каждый запрос заново.</p><p>ConfigMap как volume может обновиться позже, но Spring не обязан автоматически пересоздать клиент с новым URL. Secret с base64 — не шифрование: отдельно нужны права, защита хранения и ограничение выдачи.</p><p class="follow"><b>Нужен ли Eureka поверх Kubernetes?</b> Обычно хватает Service/DNS. Дополнительный реестр оправдан отдельными требованиями к нескольким платформам или клиентскому discovery, а не самим наличием микросервисов.</p>
     </div></div></article>
-<article id="q245" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">245. API: совместимость, версионирование, REST или gRPC <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li><b>Совместимость</b>: добавлять только необязательные поля, клиенты игнорируют неизвестные; ломающее изменение — <b>новая версия</b> с периодом поддержки старой. Ловушки — новые значения enum и смена смысла поля. Проверяют <b>контрактными тестами</b>.</li><li><b>REST + JSON</b> — для публичных API, <b>gRPC</b> — для внутренних: Protobuf, HTTP/2, стриминг и дедлайны, но нужна L7-балансировка.</li></ul></div>
+<article id="q244" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">244. 12-factor app: принципы и как они ложатся на Spring Boot и Kubernetes</h2><div class="answer" hidden><div class="short"><p><b>12-factor описывает, как сделать приложение воспроизводимым в сборке, настройке и запуске.</b> Зависимости объявлены явно, конфигурация отделена от кода, один собранный артефакт используется в разных окружениях.</p><p>Процессы заменяемы: важное состояние хранится снаружи, логи идут потоком, завершение корректно обрабатывает сигнал остановки. Spring Boot и Kubernetes дают инструменты, но не выполняют эти правила за разработчика.</p></div>
     <div class="more">
-<div class="table-wrap"><table>
-        <tr><th>Изменение</th><th>Совместимо?</th></tr>
-        <tr><td>Добавить необязательное поле в ответ</td><td>да, если клиенты игнорируют неизвестные поля (принцип Postel: «будь терпим к входящему»)</td></tr>
-        <tr><td>Добавить необязательный параметр запроса</td><td>да</td></tr>
-        <tr><td>Добавить новое значение enum в ответ</td><td>опасно — строгие клиенты падают на десериализации</td></tr>
-        <tr><td>Сделать необязательное поле запроса обязательным</td><td>нет</td></tr>
-        <tr><td>Удалить или переименовать поле, сменить тип или формат</td><td>нет</td></tr>
-        <tr><td>Изменить семантику (сумма в копейках вместо рублей)</td><td>нет — и самое коварное, потому что схема не меняется</td></tr>
-      </table></div>
-      <p>Способы версионирования: в пути (<code>/api/v2/payments</code>) — просто и наглядно, стандарт для публичных API; заголовок или media type (<code><span class="p">Accept</span>: application/vnd.bank.v2+json</code>) — чище с точки зрения REST, сложнее в использовании; без версий, только совместимые изменения + новые эндпоинты для ломающих. Главное — политика: сколько поддерживается старая версия, как клиенты узнают о депрекации (заголовки <code><span class="t">Deprecation</span></code>, <code><span class="t">Sunset</span></code>), метрики использования старой версии.</p>
-      <div class="table-wrap"><table>
-        <tr><th></th><th>REST + JSON</th><th>gRPC</th></tr>
-        <tr><td>Транспорт</td><td>HTTP/1.1 или 2</td><td>HTTP/2, мультиплексирование</td></tr>
-        <tr><td>Контракт</td><td>OpenAPI (опционально)</td><td>.proto обязателен, кодогенерация</td></tr>
-        <tr><td>Размер и скорость</td><td>текст, больше</td><td>бинарный, в разы компактнее</td></tr>
-        <tr><td>Стриминг</td><td>SSE, WebSocket отдельно</td><td>встроенный в обе стороны</td></tr>
-        <tr><td>Браузер, отладка curl’ом</td><td>да</td><td>нужен gRPC-Web, grpcurl</td></tr>
-        <tr><td>Дедлайны и отмена</td><td>вручную</td><td>встроены и передаются по цепочке</td></tr>
-      </table></div>
-      <p>Балансировка gRPC: клиент держит одно HTTP/2-соединение, L4-балансировщик (Kubernetes Service на iptables) распределяет соединения, а не запросы — весь трафик клиента идёт в один под. Нужна L7-балансировка (Envoy, service mesh, Ingress с поддержкой gRPC) или клиентская балансировка по списку адресов (headless service + gRPC round_robin).</p>
-<p class="follow"><b>Почему gRPC плохо балансируется через L4?</b> HTTP/2 мультиплексирует запросы в одном долгоживущем соединении — весь трафик идёт в один под.</p>
+<div class="table-wrap"><table><tr><th>Фактор</th><th>Практика</th></tr><tr><td>Codebase</td><td>Одна кодовая база приложения под контролем версий, много развёртываний</td></tr><tr><td>Dependencies</td><td>Явные зависимости Maven/Gradle, без случайных библиотек на сервере</td></tr><tr><td>Config</td><td>Параметры окружения не зашиты в образ</td></tr><tr><td>Backing services</td><td>БД и брокер подключаются через конфигурацию</td></tr><tr><td>Build / release / run</td><td>Сборка артефакта, привязка конфигурации и запуск разделены</td></tr><tr><td>Processes</td><td>Без локального незаменимого состояния</td></tr><tr><td>Port binding</td><td>Приложение само обслуживает порт</td></tr><tr><td>Concurrency</td><td>Горизонтальное масштабирование процессами</td></tr><tr><td>Disposability</td><td>Быстрый старт и корректное завершение</td></tr><tr><td>Dev/prod parity</td><td>Минимизировать различия сред и зависимостей</td></tr><tr><td>Logs</td><td>Поток событий, сбором и хранением занимается платформа</td></tr><tr><td>Admin processes</td><td>Разовые задачи запускаются как отдельные процессы релиза</td></tr></table></div><pre><span class="p">server</span>:
+  <span class="p">shutdown</span>: graceful
+<span class="p">spring</span>:
+  <span class="p">lifecycle</span>:
+    <span class="p">timeout-per-shutdown-phase</span>: 20s</pre><p>Пример настройки Boot: платформе нужно дать больше времени на остановку, чем разрешено приложению. При SIGTERM снимают готовность к новым запросам, завершают или сохраняют незавершённую работу. Файл отчёта на диске Pod и сессия только в heap нарушают заменяемость процесса.</p><p class="follow"><b>12-factor требует отдельный Git-репозиторий на каждый сервис?</b> Не обязательно. Важна отдельная кодовая база приложения и воспроизводимый артефакт; monorepo может содержать несколько таких приложений с независимой сборкой.</p>
     </div></div></article>
-<article id="q246" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">246. CAP и PACELC</h2><div class="answer" hidden><div class="short"><p><b>CAP</b>: при <b>сетевом разделении</b> система выбирает между <b>согласованностью</b> (все видят последнюю запись) и <b>доступностью</b> (каждый запрос получает ответ). Разделение неизбежно — «CA-система» миф.</p>
-<p><b>PACELC</b>: и без разделения есть выбор между <b>задержкой и согласованностью</b> (синхронная или асинхронная репликация). На практике выбирают для каждой операции: деньги — консистентность, лента и счётчики — доступность.</p></div>
+<article id="q245" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">245. API: совместимость, версионирование, REST или gRPC <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Совместимость API — возможность обновить одну сторону без одновременного обновления другой.</b> Проверяю не только JSON/Protobuf, но и смысл полей, обязательность, ошибки и новые значения enum.</p><p><b>REST/JSON</b> удобен для браузеров и широкого круга клиентов. <b>gRPC</b> даёт строгий контракт Protobuf, генерацию клиентов, стриминг и deadlines; его можно использовать там, где это поддерживает инфраструктура.</p><p>Ломающее изменение вводят отдельно с периодом миграции. Добавление поля безопасно только при готовности старых клиентов игнорировать его.</p></div>
     <div class="more">
-<p>Точная формулировка CAP: при сетевом разделении (P) система не может одновременно гарантировать линеаризуемую согласованность (C — каждое чтение видит последнюю запись) и доступность (A — каждый запрос к работающему узлу получает ответ без ошибки). Это теорема про поведение во время разделения, а не классификация «БД выбирает 2 из 3».</p>
-      <div class="table-wrap"><table>
-        <tr><th>Выбор при разделении</th><th>Поведение</th><th>Примеры</th></tr>
-        <tr><td>CP</td><td>узлы без кворума отказывают в записи (и иногда в чтении)</td><td>etcd, ZooKeeper, Consul, PostgreSQL с синхронной репликацией, Kafka с min.insync.replicas и без unclean election</td></tr>
-        <tr><td>AP</td><td>отвечают все, данные расходятся, потом сводятся</td><td>Cassandra, DynamoDB (настраиваемо), DNS, кеши</td></tr>
-      </table></div>
-      <p>PACELC: if Partition — A или C; Else — Latency или Consistency. Даже без отказов синхронная репликация на кворум делает каждую запись медленнее (ждём ответов удалённых реплик), а асинхронная быстрее, но реплики отстают. Cassandra и DynamoDB — PA/EL, классическая СУБД с синхронной репликацией — PC/EC, PostgreSQL с асинхронными репликами — PC на мастере, но EL при чтении с реплик.</p>
-      <p>Почему «CA не бывает»: сетевое разделение в распределённой системе не выбирают — оно случается. Система одного узла «CA», но она и не распределённая.</p>
-      <p>Как применять на интервью: для каждой части системы сказать, что важнее при отказе. Баланс и списания — C (лучше отказать, чем списать дважды); каталог товаров, лента, счётчики просмотров — A (устаревшие данные приемлемы). Многие системы выбирают по-разному для разных операций и настраивают уровень согласованности на запрос (Cassandra QUORUM vs ONE).</p>
+<div class="table-wrap"><table><tr><th>Изменение</th><th>Риск</th></tr><tr><td>Новое необязательное поле ответа</td><td>Строгий старый десериализатор может отклонить его</td></tr><tr><td>Новое обязательное поле запроса</td><td>Старый клиент не сможет его передать</td></tr><tr><td>Новое значение enum</td><td>Старый клиент может упасть на неизвестном значении</td></tr><tr><td>Сумма в копейках вместо рублей</td><td>Тип прежний, но бизнес-контракт уже сломан</td></tr></table></div><p>Для Protobuf удалённые номера полей резервируют, существующие номера не переиспользуют. Для REST заранее определяют стратегию версии и прекращения поддержки. Контрактные тесты проверяют совместимость реальных ожиданий клиентов, но не доказывают весь бизнес-смысл.</p><p><b>gRPC и балансировка:</b> множество запросов идёт по долгоживущему HTTP/2-соединению. L4-балансировка одного соединения может закрепить поток за одной репликой; выбирают подходящую клиентскую или L7-балансировку.</p><p class="follow"><b>POST всегда нельзя безопасно повторять?</b> HTTP не обещает идемпотентность произвольного POST. Но конкретный API может обеспечить её стабильным ключом операции и серверной дедупликацией.</p>
     </div></div></article>
-<article id="q247" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">247. Идемпотентность API и Idempotency-Key</h2><div class="answer" hidden><div class="short"><p>Идемпотентная операция при повторе <b>не меняет результат</b>. GET, PUT, DELETE идемпотентны по семантике HTTP, <b>POST — нет</b>.</p>
-<ul><li>Клиент генерирует <b>Idempotency-Key</b> на логическую операцию и при повторе шлёт тот же ключ.</li><li>Сервер хранит ключ и результат <b>под уникальным ограничением</b> и на повтор возвращает сохранённый ответ.</li><li>Тот же ключ с другим телом — ошибка (422), одновременный повтор — «в процессе» (409).</li></ul></div>
+<article id="q246" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">246. CAP и PACELC</h2><div class="answer" hidden><div class="short"><p><b>CAP:</b> при разрыве связи между частями системы нельзя одновременно гарантировать линеаризуемость и доступность каждого запроса к исправному узлу. Линеаризуемость означает поведение как у одной актуальной копии с учётом порядка завершённых операций.</p><p><b>PACELC:</b> при разделении обсуждают availability/consistency, а при нормальной связи — latency/consistency. Согласование реплик может добавлять сетевую задержку.</p><p>Выбор делают для конкретных операций и режимов отказа; надпись «CP» или «AP» сама по себе не описывает всю систему.</p></div>
     <div class="more">
-<ul><li>Тот же ключ с другим телом запроса — ошибка 409 или 422.</li></ul>
-<pre class="wide"><span class="k">create</span> <span class="k">table</span> idempotency_key (
-    <span class="k">key</span>          text <span class="k">primary</span> <span class="k">key</span>,
-    client_id    <span class="k">bigint</span>      <span class="k">not</span> <span class="k">null</span>,
-    request_hash text        <span class="k">not</span> <span class="k">null</span>,             <span class="c">-- чтобы отличить повтор от другого запроса с тем же ключом</span>
-    status       text        <span class="k">not</span> <span class="k">null</span>,             <span class="c">-- IN_PROGRESS / COMPLETED</span>
-    response     jsonb,
-    created_at   <span class="k">timestamptz</span> <span class="k">not</span> <span class="k">null</span> <span class="k">default</span> now()
-);
-
-@PostMapping("/payments")
-ResponseEntity&lt;?&gt; <span class="k">create</span>(@RequestHeader("Idempotency-<span class="k">Key</span>") String <span class="k">key</span>, @RequestBody PaymentRequest req) {
-    var existing = idempotency.tryStart(<span class="k">key</span>, clientId(), hash(req));   // <span class="k">insert</span> ... <span class="k">on</span> conflict <span class="k">do</span> nothing
-    <span class="k">if</span> (existing.isPresent()) {
-        var e = existing.get();
-        <span class="k">if</span> (!e.requestHash().equals(hash(req))) return ResponseEntity.unprocessableEntity().build();
-        <span class="k">if</span> (e.inProgress()) return ResponseEntity.status(<span class="n">409</span>).build();    // первый запрос ещё выполняется
-        return ResponseEntity.status(e.httpStatus()).body(e.response());  // повтор — тот же ответ
-    }
-    var result = payments.<span class="k">create</span>(req);                                    // бизнес-операция
-    idempotency.complete(<span class="k">key</span>, result);                                    // лучше в той же транзакции
-    return ResponseEntity.status(<span class="n">201</span>).body(result);
-}</pre>
-<pre class="narrow"><span class="k">create</span> <span class="k">table</span> idempotency_key (
-    <span class="k">key</span>          text <span class="k">primary</span> <span class="k">key</span>,
-    client_id    <span class="k">bigint</span> <span class="k">not</span> <span class="k">null</span>,
-    <span class="c">-- отличить повтор от другого запроса</span>
-    <span class="c">-- с тем же ключом</span>
-    request_hash text <span class="k">not</span> <span class="k">null</span>,
-    <span class="c">-- IN_PROGRESS / COMPLETED</span>
-    status       text <span class="k">not</span> <span class="k">null</span>,
-    response     jsonb,
-    created_at   <span class="k">timestamptz</span> <span class="k">not</span> <span class="k">null</span>
-                 <span class="k">default</span> now()
-);
-
-@PostMapping("/payments")
-ResponseEntity&lt;?&gt; <span class="k">create</span>(
-        @RequestHeader("Idempotency-<span class="k">Key</span>")
-        String <span class="k">key</span>,
-        @RequestBody PaymentRequest req) {
-    // <span class="k">insert</span> ... <span class="k">on</span> conflict <span class="k">do</span> nothing
-    String h = hash(req);
-    var existing = idempotency.tryStart(
-            <span class="k">key</span>, clientId(), h);
-
-    <span class="k">if</span> (existing.isPresent()) {
-        var e = existing.get();
-        // тот же ключ, другой запрос
-        <span class="k">if</span> (!e.requestHash().equals(h)) {
-            return ResponseEntity
-                    .unprocessableEntity()
-                    .build();
-        }
-        // первый запрос ещё выполняется
-        <span class="k">if</span> (e.inProgress()) {
-            return ResponseEntity.status(<span class="n">409</span>)
-                    .build();
-        }
-        // повтор — тот же ответ
-        return ResponseEntity
-                .status(e.httpStatus())
-                .body(e.response());
-    }
-    // бизнес-операция
-    var result = payments.<span class="k">create</span>(req);
-    // лучше в той же транзакции
-    idempotency.complete(<span class="k">key</span>, result);
-    return ResponseEntity.status(<span class="n">201</span>)
-            .body(result);
-}</pre>
-      <p>Зачем это нужно: клиент отправил платёж, ответ потерялся по таймауту. Клиент не знает, прошёл ли платёж, и повторяет. Без идемпотентности — двойное списание. Ключ генерирует клиент (UUID на одну логическую операцию), повтор отправляется с тем же ключом.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Нюанс</th><th>Решение</th></tr>
-        <tr><td>Два одинаковых запроса одновременно</td><td>уникальный ключ в БД — второй INSERT не пройдёт; ответ «в процессе» (409) или ожидание</td></tr>
-        <tr><td>Упали посреди обработки</td><td>запись IN_PROGRESS с таймаутом; бизнес-операция сама идемпотентна (уникальный ключ на платёж)</td></tr>
-        <tr><td>Сколько хранить ключи</td><td>дольше максимального окна повторов клиента (сутки–неделя), потом чистить</td></tr>
-        <tr><td>Ключ уникален глобально или для клиента</td><td>в пространстве клиента (client_id, key) — один клиент не может «занять» ключ другого</td></tr>
-      </table></div>
-      <p>Естественная идемпотентность лучше искусственной там, где возможна: PUT с полным состоянием, «установить статус X», UPSERT по бизнес-ключу (номер документа клиента).</p>
+<p><b>Пример:</b> две реплики перестали видеть друг друга. На первой подтверждено списание, затем клиент читает баланс со второй.</p><div class="table-wrap"><table><tr><th>Решение</th><th>Следствие</th></tr><tr><td>Отказать или ждать на стороне без нужного кворума</td><td>Сохраняется требуемый порядок, часть запросов недоступна</td></tr><tr><td>Вернуть локальное значение</td><td>Ответ доступен, но может не учитывать завершённое списание</td></tr><tr><td>Принимать конфликтующие записи на обеих сторонах</td><td>После восстановления потребуется разрешать конфликт; строгий инвариант мог быть нарушен</td></tr></table></div><p>Доступность в <a href="https://groups.csail.mit.edu/tds/papers/Gilbert/Brewer2.pdf">CAP</a> — формальное требование, а не месячный процент uptime. Ответ «ошибка, попробуйте позже» не сохраняет A для операции. Согласованность C здесь — линеаризуемость, а не буква C из ACID.</p><p class="follow"><b>До разрыва сети можно получать и согласованность, и доступность?</b> CAP не запрещает это в нормальной связи. Но задержки, сбои узлов и выбранный протокол всё равно влияют на практическую доступность и время ответа — отсюда польза PACELC.</p>
     </div></div></article>
-<article id="q248" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">248. Распределённые транзакции: 2PC или Saga</h2><div class="answer" hidden><div class="short"><p><b>2PC</b> — координатор опрашивает участников (prepare), затем фиксирует. Протокол <b>блокирующий</b>: ресурсы держатся до решения, падение координатора оставляет участников в подвешенном состоянии; Kafka и REST его не поддерживают.</p>
-<p>В микросервисах — <b>сага</b>: цепочка локальных транзакций, у каждого шага — <b>компенсация</b>. Ведут хореографией (события) или <b>оркестратором</b>. Шаги и компенсации <b>идемпотентны</b>.</p></div>
+<article id="q247" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">247. Идемпотентность API и Idempotency-Key</h2><div class="answer" hidden><div class="short"><p><b>Идемпотентность означает, что повтор логической операции не добавляет нового бизнес-эффекта.</b> Ответы при этом могут отличаться: повтор DELETE может вернуть 404 вместо 204.</p><p><b>Idempotency-Key</b> клиент создаёт один раз на операцию и сохраняет при повторах. Сервер связывает ключ с владельцем, параметрами запроса и результатом под уникальным ограничением.</p><p>Проверка «ключа ещё нет» без атомарной регистрации не защищает от одновременных запросов. Внешний HTTP-эффект также не становится атомарным вместе с локальной БД.</p></div>
+    <div class="more">
+<ol><li>Ограничить ключ клиентом и типом операции.</li><li>В транзакции зарегистрировать ключ под UNIQUE; сравнить отпечаток значимых параметров.</li><li>Выполнить локальное бизнес-изменение и сохранить результат в той же транзакции.</li><li>При повторе вернуть сохранённый результат; при другом payload — отклонить запрос по контракту.</li></ol><pre><span class="k">CREATE</span> <span class="k">TABLE</span> api_operation (
+    client_id <span class="k">bigint</span> <span class="k">NOT</span> <span class="k">NULL</span>,
+    operation_key text <span class="k">NOT</span> <span class="k">NULL</span>,
+    request_hash text <span class="k">NOT</span> <span class="k">NULL</span>,
+    payment_id <span class="k">bigint</span> <span class="k">NOT</span> <span class="k">NULL</span>,
+    <span class="k">PRIMARY</span> <span class="k">KEY</span>
+        (client_id, operation_key)
+);</pre><p>Это минимальное хранилище для одной разновидности локальной операции. Если тот же ключ допускается для разных endpoint, область уникальности дополняют типом операции. Ограничение БД — последняя защита от гонки; запись ключа, платёж и результат должны фиксироваться согласованно.</p><div class="table-wrap"><table><tr><th>Ситуация</th><th>Поведение</th></tr><tr><td>Повтор после потери ответа</td><td>Вернуть прежний результат, не создать второй платёж</td></tr><tr><td>Одинаковый ключ, другое тело</td><td>Ошибка использования ключа; конкретный HTTP-код задаёт контракт</td></tr><tr><td>Операция ещё выполняется</td><td>Ожидание или статус IN_PROGRESS с понятным способом опроса</td></tr><tr><td>Ключ удалён по TTL</td><td>Старый повтор снова может считаться новым; срок хранения входит в гарантию API</td></tr></table></div><p class="follow"><b>Что делать при таймауте платёжного провайдера?</b> Результат неизвестен: он мог списать деньги. Повторяют с тем же поддерживаемым провайдером ключом либо запрашивают статус и выполняют сверку. Новый ключ может вызвать второе списание.</p>
+    </div></div></article>
+<article id="q248" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">248. Распределённые транзакции: 2PC или Saga</h2><div class="answer" hidden><div class="short"><p><b>2PC</b> согласует решение общей транзакции: участники сначала готовятся, затем фиксируют или откатывают. После prepare они могут удерживать ресурсы и ждать решения координатора.</p><p><b>Saga</b> — последовательность локальных COMMIT. При сбое запускаются бизнес-компенсации уже завершённых шагов: вернуть резерв, отменить платёж.</p><p><b>Компенсация — не rollback:</b> промежуточные результаты видимы, а возврат может задержаться или завершиться ошибкой. Нужны сохранённое состояние, идемпотентность и восстановление после рестарта.</p></div>
     <div class="more">
 <figure class="concept" aria-labelledby="saga-compensation-caption">
 <svg viewBox="0 0 320 392" role="img" aria-labelledby="saga-compensation-title saga-compensation-desc" xmlns="http://www.w3.org/2000/svg">
@@ -14165,428 +13964,138 @@ ResponseEntity&lt;?&gt; <span class="k">create</span>(
 <text x="160.0" y="361.0" text-anchor="middle">Затем отменить заказ</text>
 </svg>
 <figcaption id="saga-compensation-caption">Уже завершённые шаги компенсируются бизнес-операциями в обратном порядке. Компенсация тоже может требовать повторов.</figcaption>
-</figure>
-<ul><li>Шаги и компенсации идемпотентны — сообщения могут прийти повторно. Компенсация — семантический откат (закрыть счёт, а не удалить).</li></ul>
-<div class="table-wrap"><table>
-        <tr><th></th><th>2PC (XA)</th><th>Saga</th></tr>
-        <tr><td>Согласованность</td><td>атомарная, строгая</td><td>в конечном счёте, промежуточные состояния видны</td></tr>
-        <tr><td>Блокировки</td><td>держатся у всех участников между prepare и commit</td><td>только в локальных транзакциях шагов</td></tr>
-        <tr><td>Отказ координатора</td><td>участники в «in-doubt» с заблокированными ресурсами</td><td>оркестратор восстанавливается из своего состояния</td></tr>
-        <tr><td>Поддержка</td><td>нужен XA у всех ресурсов; Kafka и REST-сервисы его не поддерживают</td><td>любые участники с идемпотентными операциями</td></tr>
-        <tr><td>Откат</td><td>автоматический</td><td>компенсации пишутся вручную</td></tr>
-      </table></div>
-<pre class="wide"><span class="c">// оркестрируемая сага перевода между банками-сервисами</span>
-<span class="c">// шаг                         компенсация</span>
-<span class="c">// 1. reserve(from, amount)    → release(from, reservationId)</span>
-<span class="c">// 2. checkLimits(client)      → (нет — шаг только читает)</span>
-<span class="c">// 3. credit(to, amount)       → debit(to, amount) — если зачисление уже видно получателю, это не «откат», а новая операция</span>
-<span class="c">// 4. capture(reservationId)   → (последний шаг — точка невозврата, после него компенсаций нет)</span></pre>
-<pre class="narrow"><span class="c">// оркестрируемая сага перевода</span>
-<span class="c">// шаг → компенсация</span>
-<span class="c">// 1. reserve(from, amount)</span>
-<span class="c">//    → release(from, reservationId)</span>
-<span class="c">// 2. checkLimits(client)</span>
-<span class="c">//    → нет — шаг только читает</span>
-<span class="c">// 3. credit(to, amount)</span>
-<span class="c">//    → debit(to, amount) — если зачисление</span>
-<span class="c">//      уже видно получателю, это не «откат»,</span>
-<span class="c">//      а новая операция</span>
-<span class="c">// 4. capture(reservationId)</span>
-<span class="c">//    → нет: последний шаг — точка</span>
-<span class="c">//      невозврата, после него компенсаций нет</span></pre>
-      <div class="table-wrap"><table>
-        <tr><th>Хореография</th><th>Оркестрация</th></tr>
-        <tr><td>каждый сервис реагирует на события предыдущего</td><td>центральный оркестратор вызывает шаги и решает, что дальше</td></tr>
-        <tr><td>нет центральной точки, слабая связанность</td><td>логика процесса в одном месте, легко видеть статус и менять порядок</td></tr>
-        <tr><td>процесс «размазан» — сложно понять, где застряло</td><td>оркестратор нужно делать надёжным (персистентное состояние, ретраи)</td></tr>
-        <tr><td>хорошо для 2–3 шагов</td><td>для длинных процессов с ветвлениями, таймерами, ручными шагами</td></tr>
-      </table></div>
-      <p>Проблемы саг, о которых спрашивают: отсутствие изоляции (другой процесс видит зарезервированные, но ещё не списанные деньги) — решают семантическими блокировками (статус PENDING), коммутативными операциями, повторным чтением перед шагом. Компенсация может сама упасть — она тоже должна ретраиться до успеха, а если невозможна — ручной разбор. Порядок шагов: сначала то, что легко компенсировать (резерв), необратимое (отправка денег наружу) — последним.</p>
+</figure><div class="table-wrap"><table><tr><th>Критерий</th><th>2PC</th><th>Saga</th></tr><tr><td>Согласование</td><td>Единое решение поддерживающих протокол участников</td><td>Локальные решения + сообщения/вызовы</td></tr><tr><td>Отказ</td><td>Prepared-участник может ждать решения</td><td>Повторы шагов и компенсаций</td></tr><tr><td>Изоляция процесса</td><td>Зависит от транзакционных ресурсов</td><td>Общей ACID-изоляции нет</td></tr><tr><td>Поддержка</td><td>Нужны соответствующие участники, например XA</td><td>Можно координировать API и события</td></tr></table></div><p><b>Пример:</b> резерв товара → резерв оплаты → подтверждение заказа. Если оплата отклонена, снимают резерв товара. Если отмена не удалась, состояние остаётся COMPENSATING, а не ложно меняется на CANCELLED.</p><ul><li><b>Оркестрация:</b> координатор хранит шаги и явно решает, что выполнить дальше.</li><li><b>Хореография:</b> сервисы реагируют на события; цепочку зависимостей и обработку сбоев сложнее увидеть целиком.</li><li><b>Необратимый шаг:</b> отправку посылки нельзя «откатить» технически — порядок процесса и бизнес-процедуру возврата продумывают заранее.</li></ul><p class="follow"><b>Достаточно @Transactional вокруг REST-вызовов?</b> Нет. Локальная транзакция Spring не включает произвольные удалённые вызовы. Kafka-транзакции тоже не являются XA-транзакцией вместе с вашей БД.</p>
     </div></div></article>
-<article id="q249" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">249. Event Sourcing и CQRS: когда оправданы <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li><b>Event Sourcing</b> хранит состояние как <b>последовательность неизменяемых событий</b>: полный аудит, состояние на любой момент, новые представления задним числом — естественно для леджеров.</li><li><b>CQRS</b> разделяет модели записи и чтения и может жить без Event Sourcing.</li></ul>
-<p>Цена: <b>eventual consistency</b>, вечная поддержка старых схем, снапшоты для длинных историй, сложное удаление персональных данных. Для CRUD — <b>лишняя сложность</b>.</p></div>
+<article id="q249" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">249. Event Sourcing и CQRS: когда оправданы <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li><b>Event Sourcing:</b> источником истины служит история событий. Текущее состояние восстанавливают, применяя их по порядку.</li><li><b>CQRS:</b> команды и запросы используют разные модели. Это возможно и с обычной БД, без Event Sourcing.</li></ul><p>Оправданы, когда важны история изменений, сложные правила и несколько представлений данных. Цена — версии событий, проекции, восстановление и возможное отставание чтения. Для простого CRUD обычно достаточно обычной модели.</p></div>
     <div class="more">
-<ul><li>Пересборка проекции: проиграть события в новую таблицу и переключить чтение. CQRS не требует Event Sourcing: read-модель можно наполнять событиями обычного сервиса.</li></ul>
-<pre class="wide"><span class="c">// состояние счёта не хранится — выводится из событий</span>
-<span class="k">sealed</span> <span class="k">interface</span> <span class="t">AccountEvent</span> <span class="k">permits</span> <span class="t">Opened</span>, <span class="t">Deposited</span>, <span class="t">Withdrawn</span>, <span class="t">Closed</span> {}
+<figure class="concept" aria-labelledby="arch-cqrs-caption"><svg viewBox="0 0 320 268" role="img" aria-labelledby="arch-cqrs-title arch-cqrs-desc" xmlns="http://www.w3.org/2000/svg"><title id="arch-cqrs-title">Запись событий и проекция чтения</title><desc id="arch-cqrs-desc">Команда меняет журнал событий. Отдельный обработчик строит read-модель; чтение может отставать от записи.</desc><defs><marker id="arch-cqrs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 62 V92" marker-end="url(#arch-cqrs-arrow)"/><path class="concept-edge" d="M160 156 V192" marker-end="url(#arch-cqrs-arrow)"/><rect class="concept-node plain" x="16" y="12" width="288" height="50" rx="9"/><text x="160.0" y="42.0" text-anchor="middle">Команда: изменить состояние</text><rect class="concept-node accent" x="16" y="96" width="288" height="60" rx="9"/><text x="160.0" y="121.0" text-anchor="middle">Event store</text><text x="160.0" y="141.0" text-anchor="middle">события + версия потока</text><rect class="concept-node plain" x="16" y="196" width="288" height="60" rx="9"/><text x="160.0" y="231.0" text-anchor="middle">Проекция → read-модель</text></svg><figcaption id="arch-cqrs-caption">Команда меняет журнал событий. Отдельный обработчик строит read-модель; чтение может отставать от записи.</figcaption></figure><p><b>Пример восстановления баланса:</b> delta хранится в минимальных единицах одной валюты; бизнес-проверки выполнялись до записи события.</p><pre class="wide"><span class="k">record</span> <span class="t">BalanceChanged</span>(<span class="k">long</span> delta) {}
 
-<span class="t">Account</span> rehydrate(<span class="t">List</span>&lt;<span class="t">AccountEvent</span>&gt; history) {
-    <span class="t">Account</span> a = <span class="t">Account</span>.empty();
-    <span class="k">for</span> (<span class="t">AccountEvent</span> e : history) a = a.apply(e);     <span class="c">// apply — чистая функция без проверок</span>
-    <span class="k">return</span> a;
-}
-
-<span class="c">// команда: загрузить события → проверить инварианты → дописать новые события</span>
-<span class="k">void</span> withdraw(<span class="t">String</span> accountId, <span class="t">Money</span> amount) {
-    <span class="k">var</span> events = store.load(accountId);                       <span class="c">// + версия потока</span>
-    <span class="k">var</span> account = rehydrate(events);
-    <span class="k">if</span> (account.balance().lessThan(amount)) <span class="k">throw</span> <span class="k">new</span> <span class="t">InsufficientFunds</span>();
-    store.append(accountId, events.size(), <span class="k">new</span> <span class="t">Withdrawn</span>(amount));   <span class="c">// оптимистичная проверка версии</span>
+<span class="k">long</span> restore(<span class="t">List</span>&lt;<span class="t">BalanceChanged</span>&gt; history) {
+    <span class="k">long</span> balance = <span class="n">0</span>;
+    <span class="k">for</span> (<span class="k">var</span> event : history) balance = <span class="t">Math</span>.addExact(balance, event.delta());
+    <span class="k">return</span> balance;
 }</pre>
-<pre class="narrow"><span class="c">// состояние счёта не хранится —</span>
-<span class="c">// выводится из событий</span>
-<span class="k">sealed</span> <span class="k">interface</span> <span class="t">AccountEvent</span>
-        <span class="k">permits</span> <span class="t">Opened</span>, <span class="t">Deposited</span>,
-                <span class="t">Withdrawn</span>, <span class="t">Closed</span> {}
+<pre class="narrow"><span class="k">record</span> <span class="t">BalanceChanged</span>(<span class="k">long</span> delta) {}
 
-<span class="t">Account</span> rehydrate(<span class="t">List</span>&lt;<span class="t">AccountEvent</span>&gt; events) {
-    <span class="t">Account</span> a = <span class="t">Account</span>.empty();
-    <span class="c">// apply — чистая функция без проверок</span>
-    <span class="k">for</span> (<span class="t">AccountEvent</span> e : events) {
-        a = a.apply(e);
+<span class="k">long</span> restore(
+    <span class="t">List</span>&lt;<span class="t">BalanceChanged</span>&gt; history) {
+    <span class="k">long</span> balance = <span class="n">0</span>;
+    <span class="k">for</span> (<span class="k">var</span> event : history) {
+        balance = <span class="t">Math</span>.addExact(
+            balance, event.delta());
     }
-    <span class="k">return</span> a;
-}
-
-<span class="c">// команда: загрузить события → проверить</span>
-<span class="c">// инварианты → дописать новые события</span>
-<span class="k">void</span> withdraw(<span class="t">String</span> accountId,
-              <span class="t">Money</span> amount) {
-    <span class="c">// + версия потока</span>
-    <span class="k">var</span> events = store.load(accountId);
-    <span class="k">var</span> account = rehydrate(events);
-    <span class="k">if</span> (account.balance().lessThan(amount)) {
-        <span class="k">throw</span> <span class="k">new</span> <span class="t">InsufficientFunds</span>();
-    }
-    <span class="c">// оптимистичная проверка версии</span>
-    store.append(accountId, events.size(),
-            <span class="k">new</span> <span class="t">Withdrawn</span>(amount));
-}</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Даёт</th><th>Стоит</th></tr>
-        <tr><td>полная история и аудит «бесплатно»</td><td>события неизменяемы навсегда — их схемы надо поддерживать вечно (upcasting старых версий)</td></tr>
-        <tr><td>состояние на любой момент, отладка «как мы сюда пришли»</td><td>длинные потоки — снапшоты</td></tr>
-        <tr><td>новые read-модели задним числом (проиграть историю)</td><td>eventual consistency между записью и чтением</td></tr>
-        <tr><td>естественная интеграция — события уже есть</td><td>запросы по состоянию только через проекции</td></tr>
-        <tr><td></td><td>удаление персональных данных (GDPR/152-ФЗ) — crypto-shredding</td></tr>
-      </table></div>
-      <p>CQRS отдельно от Event Sourcing: команды идут в нормализованную модель записи (обычные таблицы, инварианты), а для чтения строятся денормализованные представления под конкретные экраны — в той же БД (materialized view), в отдельной таблице, в Elasticsearch. Наполняются событиями или CDC. Это гораздо более частый и дешёвый случай.</p>
-      <p>Где Event Sourcing уместен: леджеры и бухгалтерия (проводки — по сути и есть события), системы с юридическими требованиями к аудиту, домены, где важна история изменений (страховые полисы, договоры). Где нет: CRUD-справочники, сервисы без сложной логики — сложность не окупится.</p>
-<p class="follow"><b>Как удалить персональные данные из неизменяемого журнала?</b> Crypto-shredding: шифровать их ключом пользователя и удалить ключ.</p>
+    <span class="k">return</span> balance;
+}</pre><ol><li>Загрузить поток агрегата и его версию.</li><li>Восстановить состояние, проверить команду, получить новые события.</li><li>Дописывать только при прежней версии; при конфликте перечитать и заново проверить команду.</li><li>Обновить проекции с учётом повторной доставки; при необходимости перестроить из истории.</li></ol><p>Snapshot ускоряет восстановление длинного потока, но не заменяет источник истины. Replay не должен повторно отправлять письма и платежи: применение старых событий отделяют от внешних эффектов. Схемы и правила интерпретации старых событий поддерживают явно.</p><p class="follow"><b>CQRS обязательно означает разные базы и eventual consistency?</b> Нет. Разные модели могут работать с одной БД и обновляться одной транзакцией. Отставание появляется при асинхронном построении read-модели.</p>
     </div></div></article>
-<article id="q250" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">250. Устойчивость: таймауты, ретраи, circuit breaker, каскадные отказы</h2><div class="answer" hidden><div class="short"><p><b>Медленная зависимость опаснее упавшей</b>: вызывающий копит потоки и соединения, отказ поднимается по цепочке. Защита:</p>
-<ul><li><b>таймаут</b> на любой сетевой вызов;</li><li><b>ретраи</b> только для идемпотентных операций и транзиентных ошибок, с backoff и jitter, на одном уровне;</li><li><b>circuit breaker</b> — перестать звать мёртвую зависимость;</li><li><b>bulkhead</b> — свои лимиты на каждую зависимость;</li><li><b>load shedding</b> — быстрый отказ вместо медленной смерти.</li></ul></div>
+<article id="q250" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">250. Устойчивость: таймауты, ретраи, circuit breaker, каскадные отказы</h2><div class="answer" hidden><div class="short"><p><b>Медленная зависимость удерживает потоки и соединения</b> и может исчерпать ресурсы вызывающего сервиса. Поэтому защиту строят до массовых ошибок.</p><ul><li><b>Таймаут и общий deadline</b> ограничивают ожидание.</li><li><b>Retry</b> повторяет временную ошибку с backoff и jitter, в пределах бюджета и безопасной семантики.</li><li><b>Circuit breaker</b> временно прекращает вызовы при высокой доле ошибок/медленных ответов.</li><li><b>Bulkhead</b> ограничивает конкурентные вызовы зависимости; load shedding быстро отвергает лишнюю работу.</li></ul></div>
     <div class="more">
-<ul><li>Retry storm: три уровня по три попытки — до 27 запросов в нижний сервис. Ретраят на одном уровне.</li>
-      <li>TimeLimiter в Resilience4j работает только для асинхронных вызовов (<code><span class="t">CompletableFuture</span></code>, <code><span class="t">Mono</span></code>). Блокирующий вызов через RestClient он не ограничит: таймаут синхронного вызова — это connect и read timeout HTTP-клиента.</li></ul>
-<pre class="wide"><span class="p">resilience4j</span>:
-  <span class="p">retry.instances.partner</span>:
-    <span class="p">max-attempts</span>: 3
-    <span class="p">wait-duration</span>: 200ms
-    <span class="p">enable-exponential-backoff</span>: <span class="k">true</span>
-    <span class="p">exponential-backoff-multiplier</span>: 2
-    <span class="p">enable-randomized-wait</span>: <span class="k">true</span>                 <span class="c"># jitter — ретраи клиентов не синхронизируются</span>
-    <span class="p">retry-exceptions</span>: [java.net.SocketTimeoutException, org.springframework.web.client.HttpServerErrorException]
-    <span class="p">ignore-exceptions</span>: [io.github.resilience4j.circuitbreaker.CallNotPermittedException]
-  <span class="p">circuitbreaker.instances.partner</span>:
-    <span class="p">sliding-window-size</span>: 50
-    <span class="p">failure-rate-threshold</span>: 50                   <span class="c"># 50% ошибок в окне → OPEN</span>
-    <span class="p">slow-call-duration-threshold</span>: 1s
-    <span class="p">slow-call-rate-threshold</span>: 80                 <span class="c"># медленные вызовы тоже считаются сбоем</span>
-    <span class="p">wait-duration-in-open-state</span>: 30s             <span class="c"># потом HALF_OPEN: пробные вызовы</span>
-  <span class="p">bulkhead.instances.partner.max-concurrent-calls</span>: 20</pre>
-<pre class="narrow"><span class="p">resilience4j</span>:
-  <span class="p">retry.instances.partner</span>:
-    <span class="p">max-attempts</span>: 3
-    <span class="p">wait-duration</span>: 200ms
-    <span class="p">enable-exponential-backoff</span>: <span class="k">true</span>
-    <span class="p">exponential-backoff-multiplier</span>: 2
-    <span class="c"># jitter — ретраи клиентов</span>
-    <span class="c"># не синхронизируются</span>
-    <span class="p">enable-randomized-wait</span>: <span class="k">true</span>
-    <span class="p">retry-exceptions</span>:
-      - java.net.SocketTimeoutException
-      - org.springframework.web.client
-          .HttpServerErrorException
-    <span class="p">ignore-exceptions</span>:
-      - io.github.resilience4j.circuitbreaker
-          .CallNotPermittedException
-  <span class="p">circuitbreaker.instances.partner</span>:
-    <span class="p">sliding-window-size</span>: 50
-    <span class="c"># 50% ошибок в окне → OPEN</span>
-    <span class="p">failure-rate-threshold</span>: 50
-    <span class="p">slow-call-duration-threshold</span>: 1s
-    <span class="c"># медленные вызовы тоже считаются сбоем</span>
-    <span class="p">slow-call-rate-threshold</span>: 80
-    <span class="c"># потом HALF_OPEN: пробные вызовы</span>
-    <span class="p">wait-duration-in-open-state</span>: 30s
-  <span class="p">bulkhead.instances.partner</span>:
-    <span class="p">max-concurrent-calls</span>: 20</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Механизм</th><th>От чего защищает</th></tr>
-        <tr><td>Таймаут (connect + read, и общий дедлайн)</td><td>потоки и соединения навечно заняты ожиданием</td></tr>
-        <tr><td>Ретрай с backoff и jitter</td><td>кратковременные сбои; без jitter все клиенты повторяют синхронно и добивают сервис</td></tr>
-        <tr><td>Circuit breaker</td><td>долгие сбои: перестать звать мёртвую зависимость, быстро отвечать фолбэком, дать ей восстановиться</td></tr>
-        <tr><td>Bulkhead</td><td>одна медленная зависимость съедает все потоки и ломает вызовы к здоровым</td></tr>
-        <tr><td>Rate limiter / load shedding</td><td>перегрузка: отказать части запросов быстро, чтобы обслужить остальные</td></tr>
-        <tr><td>Fallback</td><td>деградация вместо ошибки: кеш, значение по умолчанию, «повторите позже»</td></tr>
-      </table></div>
-      <p>Каскадный отказ на примере: сервис C начал отвечать за 30 с вместо 100 мс. У B пул из 200 потоков заполняется ожиданием C за секунды, B перестаёт отвечать A, у A тоже кончаются потоки — падает вся цепочка, хотя сломан один сервис. Таймаут 1 с + circuit breaker у B ограничили бы ущерб.</p>
-      <p>Правила ретраев: ретраить только идемпотентные операции (или с Idempotency-Key); только транзиентные ошибки (таймаут, 503, 429 с Retry-After), а не 400/404; на одном уровне стека; с бюджетом ретраев (не больше 10–20% от трафика), чтобы при массовом сбое ретраи не удвоили нагрузку. Таймауты вниз по цепочке должны уменьшаться: если у A таймаут 2 с, B не должен ждать C 5 с (deadline propagation, как в gRPC).</p>
-    </div></div></article>
-<article id="q251" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">251. Кеширование: стратегии и проблемы</h2><div class="answer" hidden><div class="short"><p>Стандарт — <b>cache-aside</b>: при промахе читаем из базы и кладём в кеш, при записи обновляем базу и <b>удаляем ключ</b>, а не обновляем его.</p>
-<ul><li><b>Stampede</b> — популярный ключ истёк, все пошли в базу: одна загрузка на ключ, раннее обновление.</li><li><b>Несуществующие ключи</b> — кешировать «пусто».</li><li><b>Массовое истечение</b> — разброс TTL.</li></ul>
-<p>Главный вопрос перед кешированием — какая <b>устарелость данных допустима</b>.</p></div>
-    <div class="more">
-<ul><li>Caffeine — быстро, но несогласованно между инстансами; Redis — общий, но сетевой вызов.</li></ul>
-<div class="table-wrap"><table>
-        <tr><th>Стратегия</th><th>Чтение</th><th>Запись</th><th>Когда</th></tr>
-        <tr><td>Cache-aside</td><td>приложение: кеш → промах → БД → положить</td><td>в БД, ключ удалить</td><td>стандарт</td></tr>
-        <tr><td>Read-through</td><td>кеш сам грузит из БД (LoadingCache)</td><td>—</td><td>когда загрузка однотипная</td></tr>
-        <tr><td>Write-through</td><td>—</td><td>синхронно в кеш и БД</td><td>кеш всегда свежий, запись медленнее</td></tr>
-        <tr><td>Write-behind</td><td>—</td><td>в кеш, в БД асинхронно пачками</td><td>счётчики, высокая запись; риск потери при падении</td></tr>
-        <tr><td>Refresh-ahead</td><td>фоновое обновление до истечения</td><td>—</td><td>горячие ключи, нельзя допустить промах</td></tr>
-      </table></div>
-      <p>Почему «удалить ключ после записи в БД», а не «обновить кеш»: при параллельных записях обновления кеша могут прийти в обратном порядке, и в кеше навсегда останется старое значение. Удаление безопаснее, но и у него есть гонка: читатель прочитал старое значение из БД до записи, писатель записал и удалил ключ, читатель положил старое значение в кеш. Её ограничивают TTL, отложенным повторным удалением (delayed double delete) или инвалидацией по событиям CDC.</p>
-      <div class="table-wrap"><table>
-        <tr><th>Проблема</th><th>Что это</th><th>Лечение</th></tr>
-        <tr><td>Cache stampede (dogpile)</td><td>популярный ключ истёк, тысячи запросов разом в БД</td><td>single-flight (одна загрузка, остальные ждут), ранний вероятностный refresh, фоновое обновление</td></tr>
-        <tr><td>Cache penetration</td><td>запросы несуществующих ключей всегда мимо кеша</td><td>кешировать «пусто» с коротким TTL, Bloom-фильтр</td></tr>
-        <tr><td>Cache avalanche</td><td>массовое истечение одновременно (прогрев при старте с одинаковым TTL) или падение Redis</td><td>случайный разброс TTL, деградация без кеша с ограничением нагрузки на БД</td></tr>
-        <tr><td>Горячий ключ</td><td>один ключ упирается в один шард Redis</td><td>локальный L1-кеш поверх Redis, реплики ключа</td></tr>
-      </table></div>
-      <p>Главный вопрос перед кешированием — какая устарелость допустима. Баланс счёта для операции — нельзя кешировать; для отображения в списке — секунды допустимы; справочник валют — минуты.</p>
-    </div></div></article>
-<article id="q252" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">252. Redis: структуры данных, персистентность, блокировки</h2><div class="answer" hidden><div class="short"><p>Redis выполняет команды <b>в одном потоке</b> в памяти — каждая команда атомарна, составные — через <b>MULTI или Lua</b>.</p>
-<ul><li>Структуры: строка и <b>INCR</b> — счётчики, rate limit; <b>hash</b> — объект; <b>sorted set</b> — рейтинг, очередь с задержкой; <b>set</b> — уникальность; <b>stream</b> — лёгкая очередь.</li><li>Персистентность: <b>RDB</b> (снимки) или <b>AOF</b> (журнал) — возможна потеря последней секунды.</li><li>Блокировка — <code><span class="t">SET</span> <span class="t">NX</span></code> с токеном и TTL, но для корректности нужен <b>fencing</b>.</li></ul></div>
-    <div class="more">
-<ul>
-      <li>Персистентность: RDB — снимки (теряется всё после последнего), AOF — журнал команд (fsync everysec — до секунды потерь). Источником истины для денег не делают.</li>
-      <li>При maxmemory работает политика вытеснения (allkeys-lru, volatile-ttl…); noeviction — ошибки на запись.</li>
-      <li>Блокировка: <code><span class="t">SET</span> key token <span class="t">NX</span> <span class="t">PX</span> <span class="n">30000</span></code>, снятие — Lua-скриптом с проверкой токена. При failover реплика может не получить ключ — корректность даёт fencing-токен, а не Redlock.</li>
-      <li>Лицензия: в 2024 Redis ушёл с открытой лицензии на RSALv2/SSPL, Linux Foundation сделала форк Valkey (на него перешли многие облака и дистрибутивы), с Redis 8.0 (2025) добавлена AGPLv3. Вопрос «Redis или Valkey» на собеседовании реален.</li>
-      <li>Cluster: 16384 слота, мультиключевые команды — только в одном слоте (hash tag <code>{client:<span class="n">1</span>}</code>); горячий ключ упирается в один шард.</li>
-    </ul>
-<pre class="wide"><span class="t">INCR</span> rate:client:<span class="n">42</span>:<span class="n">202610221015</span>             -- fixed window rate limit
-<span class="t">EXPIRE</span> rate:client:<span class="n">42</span>:<span class="n">202610221015</span> <span class="n">60</span>
+<p><b>Порядок действий:</b> сначала задать бюджет времени и лимиты ресурсов, затем повторы и допустимый fallback. Если общий deadline 2 секунды, три попытки по 2 секунды в него не помещаются.</p><pre class="wide"><span class="k">class</span> <span class="t">PartnerCalls</span> {
+    <span class="k">private</span> <span class="k">final</span> <span class="t">Semaphore</span> slots = <span class="k">new</span> <span class="t">Semaphore</span>(<span class="n">20</span>);
 
-<span class="t">HSET</span> session:abc user <span class="n">42</span> role <span class="t">ADMIN</span>          -- объект полями, можно менять одно поле
-<span class="t">ZADD</span> delayed <span class="n">1761123600</span> <span class="s">"task:991"</span>           -- очередь отложенных задач, score = время запуска
-<span class="t">ZRANGEBYSCORE</span> delayed -inf <span class="n">1761120000</span> <span class="t">LIMIT</span> <span class="n">0</span> <span class="n">100</span>   -- что пора выполнить
-<span class="t">SADD</span> seen:<span class="n">2026</span>-<span class="n">10</span>-<span class="n">22</span> <span class="s">"event-77"</span>              -- дедупликация за день
-<span class="t">PFADD</span> visitors:<span class="n">2026</span>-<span class="n">10</span>-<span class="n">22</span> <span class="s">"user-42"</span>          -- <span class="t">HyperLogLog</span>: приблизительный подсчёт уникальных, <span class="n">12</span> КБ на ключ
-<span class="t">XADD</span> events * type paid id <span class="n">9</span>                 -- stream; <span class="t">XREADGROUP</span> — группы консюмеров с ack
-
-<span class="t">SET</span> lock:report-daily 7f3c <span class="t">NX</span> <span class="t">PX</span> <span class="n">30000</span>       -- лок с токеном и <span class="t">TTL</span>
-<span class="t">EVAL</span> <span class="s">"if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end"</span> <span class="n">1</span> lock:report-daily 7f3c</pre>
-<pre class="narrow"><span class="c">-- fixed window rate limit</span>
-INCR rate:client:<span class="n">42</span>:<span class="n">202610221015</span>
-EXPIRE rate:client:<span class="n">42</span>:<span class="n">202610221015</span> <span class="n">60</span>
-
-<span class="c">-- объект полями, можно менять одно поле</span>
-HSET session:abc user <span class="n">42</span> role ADMIN
-<span class="c">-- очередь отложенных задач,</span>
-<span class="c">-- score = время запуска</span>
-ZADD delayed <span class="n">1761123600</span> "task:<span class="n">991</span>"
-<span class="c">-- что пора выполнить</span>
-ZRANGEBYSCORE delayed -inf <span class="n">1761120000</span>
-    <span class="k">LIMIT</span> <span class="n">0</span> <span class="n">100</span>
-<span class="c">-- дедупликация за день</span>
-SADD seen:<span class="n">2026</span>-<span class="n">10</span>-<span class="n">22</span> "event-<span class="n">77</span>"
-<span class="c">-- HyperLogLog: приблизительный подсчёт</span>
-<span class="c">-- уникальных, 12 КБ на ключ</span>
-PFADD visitors:<span class="n">2026</span>-<span class="n">10</span>-<span class="n">22</span> "user-<span class="n">42</span>"
-<span class="c">-- stream; XREADGROUP — группы консюмеров</span>
-<span class="c">-- с ack</span>
-XADD events * type paid id <span class="n">9</span>
-
-<span class="c">-- лок с токеном и TTL</span>
-<span class="k">SET</span> <span class="k">lock</span>:report-daily 7f3c NX PX <span class="n">30000</span>
-<span class="c">-- снять, только если лок ещё наш</span>
-EVAL "<span class="k">if</span> redis.call(<span class="s">'get'</span>, KEYS[<span class="n">1</span>])
-          == ARGV[<span class="n">1</span>]
-      <span class="k">then</span> return redis.call(<span class="s">'del'</span>, KEYS[<span class="n">1</span>])
-      <span class="k">else</span> return <span class="n">0</span> <span class="k">end</span>"
-     <span class="n">1</span> <span class="k">lock</span>:report-daily 7f3c</pre>
-      <div class="table-wrap"><table>
-        <tr><th>Режим</th><th>Отказоустойчивость</th><th>Масштабирование</th></tr>
-        <tr><td>Standalone</td><td>нет</td><td>нет</td></tr>
-        <tr><td>Master–replica + Sentinel</td><td>автоматический failover; асинхронная репликация — последние записи могут потеряться</td><td>чтение с реплик</td></tr>
-        <tr><td>Cluster</td><td>failover на шард</td><td>запись — шардированием по 16384 слотам</td></tr>
-      </table></div>
-      <p>Почему однопоточность — не слабость: выполнение команды в памяти занимает микросекунды, узкое место — сеть; один поток избавляет от блокировок и делает команды атомарными. С Redis 6 есть I/O threads для разбора сетевых запросов, но сами команды по-прежнему исполняются последовательно. Отсюда правило: никаких O(N) команд на больших структурах в проде (<code><span class="t">KEYS</span></code>, <code><span class="t">SMEMBERS</span></code> на миллион элементов, <code><span class="t">DEL</span></code> огромного ключа — <code><span class="t">UNLINK</span></code> удаляет в фоне).</p>
-      <p>Типичные проблемы в эксплуатации: большие ключи (bigkeys) — медленные операции и неравномерные шарды; горячие ключи; память без политики вытеснения; использование Redis как основной БД для критичных данных без понимания потерь при failover.</p>
-<p class="follow"><b>Почему KEYS * в проде нельзя?</b> Блокирует однопоточный сервер на весь обход — используйте SCAN.</p>
-    </div></div></article>
-<article id="q253" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">253. Наблюдаемость: метрики, трейсы, логи, SLO</h2><div class="answer" hidden><div class="short"><ul><li><b>Метрики</b> — что и насколько сломалось (Micrometer, Prometheus, Grafana).</li><li><b>Трейсы</b> — где в цепочке теряется время (OpenTelemetry).</li><li><b>Логи</b> с traceId — почему именно.</li></ul>
-<p>Латентность — <b>перцентили p95 и p99</b>, а не среднее. Качество задают <b>SLO</b>: 99,9% успешных запросов — около 43 минут «плохой работы» в месяц (<b>error budget</b>). Алертят по <b>скорости сжигания бюджета</b>, а не на «CPU 80%».</p></div>
-    <div class="more">
-<ul><li>Перцентили p95/p99 вместо среднего; перцентили инстансов не усредняют — агрегируют гистограммы.</li></ul>
-<div class="table-wrap"><table>
-        <tr><th>Сигнал</th><th>Отвечает на вопрос</th><th>Стек</th><th>Ловушка</th></tr>
-        <tr><td>Метрики</td><td>что и насколько плохо, тренды, алерты</td><td>Micrometer → Prometheus → Grafana</td><td>высокая кардинальность тегов (userId, URL с id) — взрыв числа временных рядов</td></tr>
-        <tr><td>Трейсы</td><td>где в цепочке сервисов теряется время</td><td>Micrometer Tracing / OpenTelemetry → Tempo, Jaeger</td><td>семплирование: 1% трейсов может не содержать редкую ошибку — tail-based sampling</td></tr>
-        <tr><td>Логи</td><td>почему: детали конкретного случая</td><td>JSON-логи с traceId → Loki, Elasticsearch</td><td>объём и стоимость; персональные данные в логах</td></tr>
-        <tr><td>Профили</td><td>какой код тратит CPU и память</td><td>Pyroscope, JFR, async-profiler</td><td></td></tr>
-      </table></div>
-      <p>Методики выбора метрик: <b>RED</b> для сервисов (Rate, Errors, Duration — на каждый эндпоинт и зависимость), <b>USE</b> для ресурсов (Utilization, Saturation, Errors — CPU, пулы потоков и соединений, очереди), четыре «золотых сигнала» Google SRE (латентность, трафик, ошибки, насыщенность).</p>
-<pre class="wide"># <span class="t">SLO</span>: <span class="n">99.9</span>% запросов /payments успешны и быстрее <span class="n">500</span> мс за <span class="n">30</span> дней
-# error budget = <span class="n">0.1</span>% → <span class="n">43</span> минуты «плохой работы» в месяц
-# алерт по скорости сжигания бюджета (burn rate), два окна — быстрое и медленное:
-#   за <span class="n">1</span> час сожгли <span class="n">2</span>% месячного бюджета (burn rate <span class="n">14.4</span>) → пейджер
-#   за <span class="n">6</span> часов — <span class="n">5</span>% (burn rate <span class="n">6</span>) → пейджер
-#   за <span class="n">3</span> дня — <span class="n">10</span>% (burn rate <span class="n">1</span>) → тикет
-sum(rate(http_server_requests_seconds_count{uri=<span class="s">"/payments"</span>,status=~<span class="s">"5.."</span>}[1h]))
-  / sum(rate(http_server_requests_seconds_count{uri=<span class="s">"/payments"</span>}[1h])) &gt; <span class="n">14.4</span> * <span class="n">0.001</span></pre>
-<pre class="narrow"># <span class="t">SLO</span>: <span class="n">99.9</span>% запросов /payments успешны
-# и быстрее <span class="n">500</span> мс за <span class="n">30</span> дней
-# error budget = <span class="n">0.1</span>% → <span class="n">43</span> минуты
-# «плохой работы» в месяц
-# алерт по скорости сжигания бюджета
-# (burn rate), два окна — быстрое и медленное:
-#   за <span class="n">1</span> час сожгли <span class="n">2</span>% месячного бюджета
-#     (burn rate <span class="n">14.4</span>) → пейджер
-#   за <span class="n">6</span> часов — <span class="n">5</span>% (burn rate <span class="n">6</span>) → пейджер
-#   за <span class="n">3</span> дня — <span class="n">10</span>% (burn rate <span class="n">1</span>) → тикет
-sum(rate(http_server_requests_seconds_count{
-      uri=<span class="s">"/payments"</span>, status=~<span class="s">"5.."</span>}[1h]))
-/ sum(rate(http_server_requests_seconds_count{
-      uri=<span class="s">"/payments"</span>}[1h]))
-&gt; <span class="n">14.4</span> * <span class="n">0.001</span></pre>
-      <p>Почему перцентили, а не среднее: среднее 50 мс при p99 = 3 с означает, что каждый сотый запрос очень медленный — а пользователь, делающий 100 запросов за сессию, почти гарантированно с ним столкнётся. Перцентили нельзя усреднять между инстансами — нужно собирать гистограммы (<code>publishPercentileHistogram</code>) и считать перцентиль по сумме бакетов (<code>histogram_quantile</code>).</p>
-    </div></div></article>
-<article id="q254" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">254. Фича-флаги и dark launch: релиз отдельно от деплоя</h2><div class="answer" hidden><div class="short"><p>Фича-флаг включает функциональность <b>без нового деплоя</b>: деплой (код на проде) отделён от <b>релиза</b> (пользователи видят изменение). <b>Dark launch</b> — код выкачен, но выключен или работает в тени, логируя расхождения со старым.</p>
-<ul><li>Виды: <b>релизные</b> (временные), <b>kill switch</b>, экспериментальные (A/B), по правам.</li><li>Включают постепенно: сотрудники → процент клиентов → все.</li><li>Цена — <b>техдолг</b>: у флага владелец и срок удаления, тесты покрывают обе ветки.</li></ul></div>
-    <div class="more">
-<ul>
-      <li>Флаг в hot path читают из локального кеша с обновлением в фоне, а не запросом в сервис флагов на каждый вызов.</li>
-      <li>Процентный rollout делают по стабильному ключу (хеш clientId), иначе клиент будет прыгать между старой и новой логикой.</li>
-      <li>Флаг не спасает от несовместимой миграции БД: схема должна поддерживать обе ветки (expand → migrate → contract).</li>
-      <li>Kill switch проверяют заранее: выключение на проде должно быть отработанным действием, а не экспериментом во время аварии.</li>
-    </ul>
-<pre><span class="t">Money</span> fee(<span class="t">Payment</span> p) {
-    <span class="k">if</span> (features.isEnabled(<span class="s">"new-fee-engine"</span>,
-            p.clientId())) {
-        <span class="k">return</span> newEngine.calculate(p);
-    }
-    <span class="k">return</span> legacyEngine.calculate(p);
-}
-
-<span class="c">// dark launch: новая логика считает</span>
-<span class="c">// в тени, ответ — по старой</span>
-<span class="t">Money</span> feeShadow(<span class="t">Payment</span> p) {
-    <span class="t">Money</span> old = legacyEngine.calculate(p);
-    <span class="k">try</span> {
-        <span class="t">Money</span> neu = newEngine.calculate(p);
-        <span class="k">if</span> (!neu.equals(old)) {
-            log.warn(<span class="s">"fee mismatch id={}"</span>,
-                    p.id());
+    <span class="t">String</span> call(<span class="t">Callable</span>&lt;<span class="t">String</span>&gt; action) <span class="k">throws</span> <span class="t">Exception</span> {
+        <span class="k">if</span> (!slots.tryAcquire()) <span class="k">throw</span> <span class="k">new</span> <span class="t">RejectedExecutionException</span>();
+        <span class="k">try</span> {
+            <span class="k">return</span> action.call();
+        } <span class="k">finally</span> {
+            slots.release();
         }
-    } <span class="k">catch</span> (<span class="t">Exception</span> e) {
-        log.warn(<span class="s">"new engine failed"</span>, e);
     }
-    <span class="k">return</span> old;
 }</pre>
-      <p class="follow"><b>Чем фича-флаг отличается от canary-деплоя?</b>Canary отправляет часть трафика на новую версию сервиса целиком и работает на уровне инфраструктуры. Флаг включает конкретную функцию внутри одной версии, по любому признаку (клиент, регион), и откатывается мгновенно, без деплоя.</p>
-    </div></div></article>
-<article id="q255" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">255. Логирование: уровни, структурные логи, что нельзя логировать</h2><div class="answer" hidden><div class="short"><ul><li><b>Уровни</b>: ERROR — сломалось, требует внимания; WARN — нештатное, но справились; INFO — ключевые бизнес-события; DEBUG/TRACE — в проде выключены.</li><li><b>Структурные логи</b> в JSON: уровень, время, сервис и поля из <b>MDC</b> (traceId, paymentId) — отдельные поля для поиска в Kibana или Loki.</li><li><b>Нельзя логировать</b> пароли, токены, номера карт, персональные данные.</li><li>Исключение логируют <b>один раз со стектрейсом</b>, а не на каждом уровне.</li></ul></div>
-    <div class="more">
-<ul>
-      <li>Параметризованные сообщения (<code>log.info(<span class="s">"paid {}"</span>, id)</code>) не собирают строку, если уровень выключен. Конкатенация собирает её всегда.</li>
-      <li>Последний аргумент-исключение SLF4J печатает со стектрейсом: <code>log.error(<span class="s">"failed {}"</span>, id, e)</code>. Сообщение без <code>e</code> теряет причину.</li>
-      <li><code>toString</code> у record и Lombok <code><span class="a">@Data</span></code> печатает все поля — логировать DTO целиком опасно.</li>
-      <li>MDC живёт в ThreadLocal: очищать в <code><span class="k">finally</span></code>, переносить в пулы через <code><span class="t">TaskDecorator</span></code>. С Micrometer Tracing <code>traceId</code> попадает в MDC сам.</li>
-      <li>Лог — не метрика: «сколько платежей в минуту» считают счётчиком, а не grep по логам. Логи в цикле на горячем пути стоят дорого.</li>
-    </ul>
-<pre><span class="c">// плохо: строка собирается всегда,</span>
-<span class="c">// карта в логе, причина потеряна</span>
-log.debug(<span class="s">"req: "</span> + request);
-log.error(<span class="s">"pay failed for card "</span>
-        + card.number());
+<pre class="narrow"><span class="k">class</span> <span class="t">PartnerCalls</span> {
+  <span class="k">private</span> <span class="k">final</span> <span class="t">Semaphore</span> slots =
+    <span class="k">new</span> <span class="t">Semaphore</span>(<span class="n">20</span>);
 
-<span class="c">// хорошо</span>
-<span class="t">MDC</span>.put(<span class="s">"paymentId"</span>, payment.id());
-<span class="k">try</span> {
-    log.info(<span class="s">"payment accepted, amount={}"</span>,
-            payment.amount());
-    process(payment);
-} <span class="k">catch</span> (<span class="t">PartnerException</span> e) {
-    <span class="c">// один раз, со стектрейсом</span>
-    log.error(<span class="s">"partner call failed"</span>, e);
-    <span class="k">throw</span> e;
-} <span class="k">finally</span> {
-    <span class="t">MDC</span>.remove(<span class="s">"paymentId"</span>);
-}</pre><pre><span class="c"># Spring Boot 3.4+: JSON-логи без</span>
-<span class="c"># дополнительных библиотек</span>
+  <span class="t">String</span> call(<span class="t">Callable</span>&lt;<span class="t">String</span>&gt; action)
+    <span class="k">throws</span> <span class="t">Exception</span> {
+    <span class="k">if</span> (!slots.tryAcquire()) {
+      <span class="k">throw</span> <span class="k">new</span>
+        <span class="t">RejectedExecutionException</span>();
+    }
+    <span class="k">try</span> {
+      <span class="k">return</span> action.call();
+    } <span class="k">finally</span> {
+      slots.release();
+    }
+  }
+}</pre><p>Один общий экземпляр PartnerCalls допускает не больше 20 одновременных вызовов. Остальные сразу получают отказ. Внутри action должны действовать таймауты HTTP/БД: semaphore сам зависший вызов не остановит.</p><div class="table-wrap"><table><tr><th>Механизм</th><th>Чего не гарантирует</th></tr><tr><td>Circuit breaker</td><td>Не ограничивает число уже выполняющихся вызовов: для этого bulkhead</td></tr><tr><td>TimeLimiter / timeout future</td><td>Не доказывает остановку сетевой операции или удалённого бизнес-эффекта</td></tr><tr><td>Retry</td><td>Не делает неидемпотентную операцию безопасной</td></tr><tr><td>Fallback</td><td>Не должен подменять неуспешный платёж фиктивным успехом</td></tr></table></div><p>Состояния breaker: CLOSED пропускает и измеряет; OPEN быстро отклоняет; HALF_OPEN допускает ограниченные пробные вызовы. Повторы на нескольких уровнях перемножаются: по три попытки у клиента и сервиса могут дать девять запросов к зависимости.</p><p class="follow"><b>Таймаут означает, что удалённая операция не произошла?</b> Нет, результат неизвестен. Для платежа нужны ключ идемпотентности, проверка статуса или сверка, а не слепая новая операция.</p>
+    </div></div></article>
+<article id="q251" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">251. Кеширование: стратегии и проблемы</h2><div class="answer" hidden><div class="short"><p><b>Cache-aside:</b> читаем кеш; при промахе загружаем из БД и сохраняем результат с TTL. При изменении сначала фиксируем БД, затем инвалидируем кеш.</p><p><b>TTL и удаление ключа не дают строгой согласованности.</b> Конкурентный читатель может вернуть в кеш старое значение. Сначала определяю допустимую устарелость, затем выбираю защиту от гонок и перегрузки.</p></div>
+    <div class="more">
+<div class="table-wrap"><table><tr><th>Стратегия</th><th>Механизм</th></tr><tr><td>Cache-aside</td><td>Загрузкой и инвалидацией управляет приложение</td></tr><tr><td>Read-through</td><td>Кеш вызывает настроенный loader при промахе</td></tr><tr><td>Write-through</td><td>Запись в постоянное хранилище проходит через кеширующий слой; гарантия зависит от реализации</td></tr><tr><td>Write-behind</td><td>Изменение сначала в буфере/кеше, в БД позже: нужен протокол восстановления</td></tr><tr><td>Refresh-ahead</td><td>Популярные данные обновляются до истечения TTL</td></tr></table></div><p><b>Гонка после удаления ключа:</b></p><div class="table-wrap"><table><tr><th>Шаг</th><th>Что происходит</th></tr><tr><td>1</td><td>Читатель получил старое значение из БД, но ещё не положил его в кеш</td></tr><tr><td>2</td><td>Писатель сделал COMMIT нового значения и удалил ключ</td></tr><tr><td>3</td><td>Читатель сохранил старое значение в пустой кеш</td></tr></table></div><p>TTL ограничивает время жизни этой копии, но не отменяет гонку. Для более строгого протокола нужны версии, координация чтения/записи или упорядоченная инвалидация. При ошибке удаления после COMMIT требуется повторная доставка инвалидации; outbox/CDC помогают не потерять её, но сами по себе не устраняют любую гонку.</p><div class="table-wrap"><table><tr><th>Проблема</th><th>Защита</th></tr><tr><td>Stampede: один ключ истёк у всех</td><td>Одна загрузка на ключ, остальные ждут или получают допустимое старое значение</td></tr><tr><td>Несуществующие ключи</td><td>Короткий кеш отрицательного результата</td></tr><tr><td>Много ключей истекли вместе</td><td>Разброс TTL, контролируемый прогрев</td></tr><tr><td>Redis недоступен</td><td>Ограничить нагрузку на БД, а не отправить туда весь поток</td></tr></table></div><p class="follow"><b>Caffeine или Redis?</b> Caffeine быстрее и локален одному процессу, но копии разных инстансов расходятся. Redis даёт общий кеш и сетевой вызов. Два уровня имеют смысл только с понятной политикой свежести.</p>
+    </div></div></article>
+<article id="q252" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">252. Redis: структуры данных, персистентность, блокировки</h2><div class="answer" hidden><div class="short"><p><b>Redis хранит структуры данных в памяти.</b> Обычные команды выполняются последовательно в основном потоке; сеть и фоновые операции могут использовать другие потоки. Атомарность команды не превращает несколько вызовов в одну операцию.</p><p><b>RDB</b> сохраняет снимки, <b>AOF</b> — журнал: допустимые потери зависят от fsync, репликации и сценария отказа. <b>Lock через SET NX + TTL</b> — аренда, которая может истечь, пока старый владелец ещё работает.</p></div>
+    <div class="more">
+<div class="table-wrap"><table><tr><th>Структура</th><th>Сценарий</th></tr><tr><td>String / INCR</td><td>Значение, счётчик, часть rate limiter</td></tr><tr><td>Hash</td><td>Поля сессии или объекта</td></tr><tr><td>Set / Sorted set</td><td>Уникальность / ранжирование и выбор по score</td></tr><tr><td>Stream</td><td>Лог с consumer groups, подтверждением и обработкой pending</td></tr></table></div><p><b>Взять аренду:</b> token генерируется заново для каждого захвата.</p><pre><span class="t">SET</span> lock:report token-<span class="t">A</span> <span class="t">NX</span> <span class="t">PX</span> <span class="n">30000</span></pre><p><b>Снять только свою аренду:</b> Lua получает имя ключа в KEYS[1], ожидаемый token — в ARGV[1].</p><pre class="wide"><span class="k">if</span> redis.call('<span class="t">GET</span>', <span class="t">KEYS</span>[<span class="n">1</span>]) == <span class="t">ARGV</span>[<span class="n">1</span>] then
+    <span class="k">return</span> redis.call('<span class="t">DEL</span>', <span class="t">KEYS</span>[<span class="n">1</span>])
+end
+<span class="k">return</span> <span class="n">0</span></pre>
+<pre class="narrow">local owner = redis.call('<span class="t">GET</span>', <span class="t">KEYS</span>[<span class="n">1</span>])
+<span class="k">if</span> owner == <span class="t">ARGV</span>[<span class="n">1</span>] then
+    <span class="k">return</span> redis.call('<span class="t">DEL</span>', <span class="t">KEYS</span>[<span class="n">1</span>])
+end
+<span class="k">return</span> <span class="n">0</span></pre><p>Проверка и удаление выполняются атомарно. Но после паузы GC старый владелец может продолжить работу, уже потеряв TTL. Fencing означает, что защищаемое хранилище отвергает операции с устаревшим монотонным номером; случайный token из примера такого свойства не имеет.</p><ul><li><b>MULTI/EXEC:</b> пакет выполняется без вмешательства других клиентов, но ошибка команды не откатывает уже выполненные команды. Для условного изменения применяют WATCH или Lua.</li><li><b>Персистентность:</b> RDB теряет изменения после последнего снимка; AOF everysec обычно оставляет окно около секунды, а failover с асинхронной репликацией — отдельный риск.</li><li><b>Эксплуатация:</b> ограничить память, выбрать eviction policy, избегать длинных блокирующих команд и больших ключей. SCAN обходит данные порциями, а не гарантирует снимок.</li></ul><p class="follow"><b>Почему отдельные INCR и EXPIRE — плохой rate limiter?</b> Процесс может упасть между ними, оставив ключ без TTL. Даже без сбоя продление TTL на каждом запросе меняет семантику окна. Условную установку срока делают атомарно.</p>
+    </div></div></article>
+<article id="q253" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">253. Наблюдаемость: метрики, трейсы, логи, SLO</h2><div class="answer" hidden><div class="short"><ul><li><b>Метрики</b> показывают масштаб проблемы: ошибки, задержки, нагрузка и насыщение ресурсов.</li><li><b>Трейсы</b> связывают вызовы и показывают, где запрос проводит время.</li><li><b>Логи</b> дают детали конкретного сбоя и связываются с traceId.</li></ul><p><b>SLI</b> — измеряемое качество, <b>SLO</b> — его целевой уровень за окно. Error budget — допустимая доля плохих событий. Алерт должен отражать риск для пользователя, а не только высокий CPU.</p></div>
+    <div class="more">
+<p><b>Пример:</b> за 30 дней 99,9% корректных запросов платежа должны завершаться успешно и быстрее 500 мс. При 10 млн запросов бюджет — 10 тыс. плохих запросов, а не автоматически 43 минуты простоя.</p><div class="table-wrap"><table><tr><th>Показатель</th><th>Что смотреть</th></tr><tr><td>Пользовательский запрос</td><td>Rate, errors, latency; p95/p99 и доля уложившихся в SLO</td></tr><tr><td>Пулы и очереди</td><td>Занятость, ожидание, отказы, возраст работы</td></tr><tr><td>Асинхронный процесс</td><td>Возраст события до завершения, доля успешных операций</td></tr><tr><td>Зависимость</td><td>Задержки, таймауты, повторы и влияние на общий deadline</td></tr></table></div><pre>Плохая доля = bad / total
+Бюджетная доля = <span class="n">1</span> - <span class="t">SLO</span>
+<span class="t">Burn</span> rate = плохая / бюджетная доля
+
+<span class="t">SLO</span> <span class="n">99</span>,<span class="n">9</span>%, плохая доля <span class="n">1</span>%:
+burn rate = <span class="n">0</span>,<span class="n">01</span> / <span class="n">0</span>,<span class="n">001</span> = <span class="n">10</span></pre><p>Burn rate 10 означает расход бюджета в десять раз быстрее устойчивого темпа. Практические алерты используют короткое и длинное окна, чтобы различать всплеск и длительное ухудшение. Для перцентилей нескольких инстансов объединяют гистограммы, а не усредняют их p99.</p><p class="follow"><b>Можно добавить paymentId в каждый label метрики?</b> Нет: число комбинаций labels будет расти с каждым платежом. Идентификаторы конкретных операций оставляют логам и трейсам, а метрики группируют по ограниченному набору признаков.</p>
+    </div></div></article>
+<article id="q254" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">254. Фича-флаги и dark launch: релиз отдельно от деплоя</h2><div class="answer" hidden><div class="short"><p><b>Фича-флаг отделяет деплой кода от включения функции.</b> Новый путь можно открыть сотрудникам, затем части клиентов и затем всем, наблюдая ошибки и бизнес-результат.</p><p><b>Dark/shadow launch</b> запускает новый путь без влияния на ответ пользователя и сравнивает его со старым. Побочные эффекты новой ветки должны быть изолированы, иначе платёж или письмо выполнятся дважды.</p><p>У временного флага нужны владелец, срок удаления и тесты обеих веток. Выключение флага не откатывает уже записанные данные.</p></div>
+    <div class="more">
+<p><b>Стабильная группа клиентов:</b> один clientId всегда попадает в тот же bucket; увеличение процента расширяет группу, не перемешивая её.</p><pre class="wide"><span class="k">boolean</span> enabled(<span class="t">String</span> clientId, <span class="k">int</span> percent) {
+    <span class="k">if</span> (percent &lt; <span class="n">0</span> || percent &gt; <span class="n">100</span>) <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalArgumentException</span>();
+    <span class="k">int</span> bucket = <span class="t">Math</span>.floorMod(clientId.hashCode(), <span class="n">100</span>);
+    <span class="k">return</span> bucket &lt; percent;
+}</pre>
+<pre class="narrow"><span class="k">boolean</span> enabled(
+    <span class="t">String</span> clientId, <span class="k">int</span> percent) {
+    <span class="k">if</span> (percent &lt; <span class="n">0</span> || percent &gt; <span class="n">100</span>) {
+        <span class="k">throw</span> <span class="k">new</span>
+            <span class="t">IllegalArgumentException</span>();
+    }
+    <span class="k">int</span> bucket = <span class="t">Math</span>.floorMod(
+        clientId.hashCode(), <span class="n">100</span>);
+    <span class="k">return</span> bucket &lt; percent;
+}</pre><p>Это простой пример постепенного включения, не средство безопасности и не полноценное A/B-назначение. В реальном SDK фиксируют алгоритм и ключ группы, а значение флага обычно читают из локального кеша с фоновым обновлением.</p><ul><li><b>Shadow:</b> считать новую комиссию и сравнивать, но списывать только по выбранному рабочему пути. Дать теневому расчёту отдельный бюджет ресурсов.</li><li><b>Kill switch:</b> заранее проверить скорость распространения отключения и поведение при недоступности сервиса флагов.</li><li><b>Миграция:</b> обе версии кода должны поддерживать промежуточную схему БД, иначе выключение не поможет.</li></ul><p class="follow"><b>Чем отличается canary?</b> Canary направляет часть трафика на новую версию приложения. Флаг выбирает конкретное поведение внутри версии. Их можно применять вместе.</p>
+    </div></div></article>
+<article id="q255" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">255. Логирование: уровни, структурные логи, что нельзя логировать</h2><div class="answer" hidden><div class="short"><p><b>Уровень лога отражает значение события:</b> INFO — важный штатный факт, WARN — отклонение, ERROR — неуспешная операция, DEBUG/TRACE — диагностические детали по необходимости.</p><p><b>Структурные поля</b> service, traceId, operationId помогают искать и связывать записи. Исключение логируют со stack trace в месте, где оно окончательно обрабатывается.</p><p>Не логирую секреты и полные DTO с персональными данными. Параметризованный SLF4J экономит форматирование, но не отменяет вычисление аргументов до вызова log.</p></div>
+    <div class="more">
+<pre class="wide">log.info(<span class="s">"payment accepted, id={}"</span>, paymentId);
+log.error(<span class="s">"partner failed, paymentId={}"</span>, paymentId, error);</pre>
+<pre class="narrow">log.info(<span class="s">"payment accepted, id={}"</span>,
+    paymentId);
+log.error(<span class="s">"partner failed, paymentId={}"</span>,
+    paymentId, error);</pre><p>Throwable в последнем аргументе второго вызова даёт stack trace. Простое <code>log.info(<span class="s">"id={}"</span>, id)</code> ещё не означает отдельное JSON-поле id: для этого нужны structured arguments, key-value API или MDC и подходящий encoder.</p><pre><span class="c"># Spring Boot 3.4+</span>
 <span class="p">logging</span>:
   <span class="p">structured</span>:
     <span class="p">format</span>:
-      <span class="p">console</span>: ecs
-  <span class="p">level</span>:
-    <span class="p">root</span>: info
-    <span class="p">ru.bank.payments</span>: info
-    <span class="p">org.hibernate.SQL</span>: warn</pre>
-      <p class="follow"><b>Как поменять уровень логирования в проде без перезапуска?</b>Через Actuator: <code><span class="t">POST</span> /actuator/loggers/ru.bank.payments</code> с <code>{<span class="p">"configuredLevel"</span>: <span class="s">"DEBUG"</span>}</code>. Эндпоинт должен быть закрыт от внешнего доступа, а уровень потом нужно вернуть обратно.</p>
+      <span class="p">console</span>: ecs</pre><ul><li><b>Не логировать DTO целиком:</b> toString может раскрыть вложенные секреты, создать огромную строку или пройти по связям сущностей.</li><li><b>Дорогой аргумент:</b> log.debug("{}", serialize(dto)) вызывает serialize даже при выключенном DEBUG. Проверяют уровень или используют ленивый API.</li><li><b>MDC:</b> контекст обычного потока очищают после операции и явно переносят в executor/reactive-контекст подходящим инструментированием.</li><li><b>Шум:</b> не писать один stack trace на каждом уровне и не считать бизнес-метрики разбором миллионов INFO-строк.</li></ul><p class="follow"><b>DEBUG никогда не включают в проде?</b> Включают адресно и на ограниченное время, с контролем объёма и чувствительных данных. Диагностика не должна сама перегрузить сервис или хранилище логов.</p>
     </div></div></article>
-<article id="q256" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">256. Безопасность сервисов <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ul><li><b>Пользователи</b> — OIDC с Authorization Code и <b>PKCE</b>, сервисы проверяют JWT.</li><li><b>Между сервисами</b> — client credentials или <b>mTLS</b>, без доверия «потому что внутри сети».</li><li><b>Секреты</b> — в Vault, никогда в git и логах.</li></ul>
-<p>Частые дыры: <b>IDOR</b> (нет проверки владельца), <b>SQL-инъекции</b>, <b>SSRF</b> (сервис ходит по URL из запроса), приём сущностей вместо DTO (<b>mass assignment</b>).</p></div>
+<article id="q256" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">256. Безопасность сервисов <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Аутентификация отвечает «кто», авторизация — «что ему разрешено».</b> Для пользователя применяют OIDC/OAuth, для сервиса — собственную машинную идентичность, например client credentials или mTLS.</p><p>API проверяет предназначенный ему access token: подпись, issuer, audience, срок действия и нужные права. <b>Валидный JWT не даёт доступа к любому accountId.</b> Право на конкретный ресурс проверяется отдельно.</p><p>Секреты ограничивают по доступу и ротируют; входные DTO и исходящие ответы содержат только разрешённые поля.</p></div>
     <div class="more">
-<div class="table-wrap"><table>
-        <tr><th>Уязвимость (OWASP API Top 10)</th><th>Пример</th><th>Защита</th></tr>
-        <tr><td>BOLA / IDOR</td><td><code><span class="t">GET</span> /accounts/<span class="n">42</span></code> отдаёт чужой счёт, если подставить другой id</td><td>проверка владельца в каждом запросе к ресурсу, фильтр по владельцу в SQL, тесты на доступ к чужому</td></tr>
-        <tr><td>Broken authentication</td><td>JWT без проверки подписи/audience, слабые секреты</td><td>стандартные библиотеки, проверка iss/aud/exp, короткие токены</td></tr>
-        <tr><td>Mass assignment</td><td>в теле запроса <code><span class="s">"role"</span>: <span class="s">"ADMIN"</span></code> биндится прямо в сущность</td><td>отдельные DTO для ввода с явным набором полей</td></tr>
-        <tr><td>Injection</td><td>конкатенация пользовательского ввода в SQL/JPQL, логи (log injection)</td><td>параметризованные запросы, экранирование, валидация</td></tr>
-        <tr><td>SSRF</td><td>сервис скачивает URL из запроса — атакующий передаёт <code>http:<span class="c">//169.254.169.254/</span></code> (метаданные облака) или внутренний адрес</td><td>allowlist доменов, запрет приватных диапазонов, отдельный egress-прокси</td></tr>
-        <tr><td>Excessive data exposure</td><td>API отдаёт сущность целиком, фронт показывает часть</td><td>DTO под ответ, маскирование (PAN, паспорт)</td></tr>
-        <tr><td>Unrestricted resource consumption</td><td>нет лимитов на размер страницы, частоту, размер файла</td><td>rate limiting, лимиты пагинации и тела запроса</td></tr>
-      </table></div>
-      <p>Сервис-сервис: <b>client credentials</b> — сервис получает свой токен у провайдера и передаёт его, получатель проверяет scope; <b>token exchange</b> — передать контекст пользователя дальше по цепочке с сужением прав; <b>mTLS</b> — взаимная аутентификация по сертификатам на транспортном уровне (часто прозрачно через service mesh). Zero trust — не доверять запросу только потому, что он пришёл из внутренней сети.</p>
-      <p>Секреты: в Vault/Kubernetes Secrets (с шифрованием etcd) или облачном KMS, подставляются в рантайме, ротируются; не в git, не в образе, не в логах (маскирование в логировании, осторожно с toString у DTO). Зависимости — сканирование CVE в CI (OWASP Dependency-Check, Trivy, Snyk) — уязвимость в библиотеке (Log4Shell) — частый вектор.</p>
-<p class="follow"><b>Как системно ловить IDOR?</b> Фильтр по владельцу в самом запросе (<code><span class="t">WHERE</span> owner_id = :currentUser</code>) и тесты на доступ к чужим ресурсам.</p>
+<div class="table-wrap"><table><tr><th>Риск</th><th>Пример защиты</th></tr><tr><td>IDOR / BOLA</td><td>Проверить владельца/политику доступа к запрошенному счёту</td></tr><tr><td>SQL injection</td><td>Передавать параметры отдельно от текста SQL</td></tr><tr><td>Mass assignment</td><td>Не привязывать тело запроса прямо к JPA-сущности с role/status</td></tr><tr><td>SSRF</td><td>Ограничивать цели исходящих запросов, IP после DNS и редиректы</td></tr><tr><td>Неограниченное потребление</td><td>Лимиты тела, пагинации, запросов и времени обработки</td></tr></table></div><pre><span class="k">SELECT</span> id, balance
+<span class="k">FROM</span> account
+<span class="k">WHERE</span> id = :accountId
+  <span class="k">AND</span> owner_id = :currentUser;</pre><p>currentUser берётся из проверенного контекста аутентификации, а не из тела запроса. Для доступа по ролям и делегированию правило будет шире, но проверка ресурса остаётся обязательной.</p><p>Для входа через браузер применяют Authorization Code с PKCE; ID token не подменяет access token API. Межсервисный mTLS подтверждает сервис, а не права конечного пользователя. Kubernetes Secret с base64 не означает шифрование: отдельно настраивают хранение, выдачу и ротацию.</p><p class="follow"><b>Если gateway уже проверил JWT, сервис может доверять любому запросу?</b> Только при явно защищённой границе, которая исключает обход и подмену идентичности. Проверки доменных прав на ресурс всё равно остаются в сервисе; внутренняя сеть сама по себе доверия не даёт.</p>
     </div></div></article>
-<article id="q257" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">257. Service mesh (Istio, Linkerd) и mTLS между сервисами <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p>Service mesh выносит сетевую логику в <b>sidecar-прокси</b> рядом с каждым подом (Envoy у Istio), а <b>control plane</b> раздаёт им настройки.</p>
-<ul><li>Без изменений в коде: <b>mTLS</b> с автоматической ротацией сертификатов, политики «кто к кому», ретраи, таймауты, canary-разделение трафика, метрики и трейсы на каждый вызов.</li><li>Цена: ещё один компонент, <b>задержка и память</b> на каждый под, сложная отладка.</li></ul>
-<p>Оправдан, когда сервисов <b>много</b> и общие требования дорого реализовывать в каждом.</p></div>
+<article id="q257" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">257. Service mesh (Istio, Linkerd) и mTLS между сервисами <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Service mesh выносит общие сетевые функции в инфраструктурный слой:</b> взаимную аутентификацию, политики доступа, маршрутизацию и наблюдение за трафиком. Control plane раздаёт настройки компонентам, через которые проходит трафик.</p><p><b>mTLS</b> означает, что обе стороны проверяют сертификат другой стороны. Это устанавливает идентичность, а разрешения задаются отдельной политикой.</p><p>В Istio возможны sidecar-прокси или ambient с node-level прокси и необязательными L7-waypoint. Mesh полезен при общей потребности, но добавляет ресурсы и сложность эксплуатации.</p></div>
     <div class="more">
-<ul>
-      <li>mTLS — взаимный TLS: не только клиент проверяет сервер, но и сервер — клиента по сертификату. Идентичность сервиса берётся из сертификата (SPIFFE ID), а не из IP.</li>
-      <li>Ретраи в mesh и в коде (Resilience4j) складываются: 3 × 3 = 9 попыток. Настраивают в одном месте.</li>
-      <li>Ambient mode (Istio) и eBPF (Cilium) обходятся без sidecar: прокси на уровне ноды, меньше накладных расходов.</li>
-      <li>Без mesh mTLS делают на уровне приложения (Spring SSL bundles) или ограничиваются NetworkPolicy и JWT между сервисами.</li>
-    </ul>
-<pre><span class="c"># Istio: только mTLS внутри namespace</span>
-<span class="p">apiVersion</span>: security.istio.io/v1
+<div class="table-wrap"><table><tr><th>Часть</th><th>Ответственность</th></tr><tr><td>Data plane</td><td>Проксирует трафик, применяет нужные TLS/сетевые политики</td></tr><tr><td>Control plane</td><td>Распространяет конфигурацию и идентичности</td></tr><tr><td>Приложение</td><td>Принимает бизнес-решение, проверяет права на ресурс, выбирает безопасный повтор</td></tr></table></div><p><b>Пример Istio для sidecar-сценария:</b> требовать mTLS в namespace payments. Предполагается, что workload включён в mesh.</p><pre><span class="p">apiVersion</span>: security.istio.io/v1
 <span class="p">kind</span>: PeerAuthentication
 <span class="p">metadata</span>:
   <span class="p">name</span>: default
   <span class="p">namespace</span>: payments
 <span class="p">spec</span>:
   <span class="p">mtls</span>:
-    <span class="p">mode</span>: STRICT
----
-<span class="c"># к payments ходит только gateway</span>
-<span class="p">apiVersion</span>: security.istio.io/v1
-<span class="p">kind</span>: AuthorizationPolicy
-<span class="p">metadata</span>:
-  <span class="p">name</span>: payments-from-gateway
-  <span class="p">namespace</span>: payments
-<span class="p">spec</span>:
-  <span class="p">selector</span>:
-    <span class="p">matchLabels</span>: { <span class="p">app</span>: payments }
-  <span class="p">rules</span>:
-    - <span class="p">from</span>:
-      - <span class="p">source</span>:
-          <span class="p">principals</span>:
-          - cluster.local/ns/edge/sa/gateway</pre>
-      <p class="follow"><b>Если есть mesh, нужен ли Resilience4j в коде?</b>Mesh ретраит и рвёт цепь на сетевом уровне, но не знает бизнес-смысла: что запрос неидемпотентен, какой fallback вернуть, что ошибка 409 — не повод повторять. Обычно таймауты и mTLS отдают mesh, а fallback и решения, зависящие от домена, оставляют в коде.</p>
+    <span class="p">mode</span>: STRICT</pre><p>STRICT требует взаимный TLS, но само по себе не ограничивает вызовы одним gateway: для «кто кому» нужна AuthorizationPolicy. В ambient L4-политики и L7-политики обрабатываются разными компонентами; наличие шифрования не означает автоматического включения всего L7.</p><ul><li><b>Ретраи:</b> не дублировать независимо в mesh, HTTP-клиенте и бизнес-сервисе.</li><li><b>Deadline:</b> согласовать сетевые таймауты с общим бюджетом операции.</li><li><b>Трейсы:</b> прокси видит сетевой вызов, но приложению всё равно нужно передавать контекст и размечать внутренние стадии.</li></ul><p class="follow"><b>Mesh заменит Resilience4j целиком?</b> Нет. Лимит конкретной бизнес-операции, идемпотентность и допустимый fallback требуют знания приложения. Общие транспортные механизмы можно централизовать, согласовав их с кодом.</p>
     </div></div></article>
-<article id="q258" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">258. Как распилить монолит: strangler fig</h2><div class="answer" hidden><div class="short"><p><b>Strangler fig</b> — монолит заменяют постепенно. Перед ним ставят <b>прокси или gateway</b>, новые и вынесенные части делают в новых сервисах, а маршруты <b>по одному</b> переключают со старого кода на новый — каждый шаг откатывается.</p>
-<p>Начинают с <b>краёв с понятными границами</b>, а не с ядра. Самое сложное — <b>данные</b>: сначала сервис владеет своими таблицами в общей базе, затем переезжает в свою с синхронизацией через события.</p></div>
+<article id="q258" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">258. Как распилить монолит: strangler fig</h2><div class="answer" hidden><div class="short"><p><b>Strangler fig — постепенная замена функций монолита.</b> Фасад направляет выбранный сценарий в новый сервис, остальные запросы продолжают идти в старый код.</p><p>Сначала выбирают понятную бизнес-границу и контракт, затем переносят поведение и владение данными. <b>Переключение HTTP-маршрута не решает синхронизацию данных.</b></p><p>Откат готовят заранее: если новый сервис уже изменил собственную БД, возврат трафика на старый код может требовать обратного переноса или совместимого протокола.</p></div>
     <div class="more">
-<ul>
-      <li>Данные разносят отдельно: сначала сервис владеет своей схемой в общей БД, потом отдельной базой с синхронизацией через события.</li>
-    </ul>
-<ol>
-        <li><b>Выбрать первый кусок</b>: слабо связанный с остальным, с понятной границей, приносящий пользу при выделении (часто меняется, требует отдельного масштабирования). Не ядро и не самое запутанное.</li>
-        <li><b>Поставить фасад</b> перед монолитом (API Gateway, nginx), через который идёт весь трафик — ничего не меняя.</li>
-        <li><b>Реализовать функцию в новом сервисе</b>; внутри монолита — обращения к ней через интерфейс, за которым сначала старый код.</li>
-        <li><b>Переключить маршрут</b> на новый сервис, постепенно (по проценту трафика, по клиентам, с фича-флагом), с возможностью мгновенно вернуть.</li>
-        <li><b>Перенести данные</b>: сначала сервис работает со своими таблицами в общей БД (доступ монолита к ним — только через API сервиса), затем отдельная БД; синхронизация на переходный период — события, CDC, двойная запись.</li>
-        <li><b>Удалить старый код</b> из монолита. Повторить для следующего куска.</li>
-      </ol>
-      <p>Приёмы на переходный период: <b>parallel run</b> — новый сервис получает копию трафика, ответы сравниваются со старым, но клиенту отдаётся старый; <b>branch by abstraction</b> — внутри монолита интерфейс, за которым переключаются старая и новая реализация; <b>event interception</b> — монолит публикует события, новый сервис строит по ним свою копию данных.</p>
-      <p>Самая трудная часть — данные: таблицы, к которым напрямую ходят десятки модулей, отчёты с JOIN по всей базе, общие транзакции. Признак, что распил идёт плохо: новые сервисы синхронно вызывают монолит на каждый запрос, и отказ монолита по-прежнему валит всё.</p>
+<figure class="concept" aria-labelledby="arch-strangler-caption"><svg viewBox="0 0 320 206" role="img" aria-labelledby="arch-strangler-title arch-strangler-desc" xmlns="http://www.w3.org/2000/svg"><title id="arch-strangler-title">Постепенное переключение маршрутов</title><desc id="arch-strangler-desc">Фасад направляет выбранные операции в новый сервис, остальные — в монолит. Владение данными переключается отдельным управляемым шагом.</desc><defs><marker id="arch-strangler-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 62 V92 H80 V120" marker-end="url(#arch-strangler-arrow)"/><path class="concept-edge" d="M160 62 V92 H240 V120" marker-end="url(#arch-strangler-arrow)"/><rect class="concept-node accent" x="16" y="12" width="288" height="50" rx="9"/><text x="160.0" y="42.0" text-anchor="middle">Gateway / фасад</text><rect class="concept-node plain" x="8" y="124" width="144" height="70" rx="9"/><text x="80.0" y="154.0" text-anchor="middle">Старые операции</text><text x="80.0" y="174.0" text-anchor="middle">Монолит</text><rect class="concept-node plain" x="168" y="124" width="144" height="70" rx="9"/><text x="240.0" y="154.0" text-anchor="middle">Вынесенный API</text><text x="240.0" y="174.0" text-anchor="middle">Новый сервис</text></svg><figcaption id="arch-strangler-caption">Фасад направляет выбранные операции в новый сервис, остальные — в монолит. Владение данными переключается отдельным управляемым шагом.</figcaption></figure><ol><li>Выбрать функцию, где независимый релиз или масштабирование дадут пользу.</li><li>Отделить её контрактом внутри монолита; закрыть прямые обращения к чужим таблицам.</li><li>Сделать новый сервис и проверить поведение на безопасном shadow-трафике.</li><li>Подготовить данные: snapshot + CDC/события, сверка и контроль отставания.</li><li>Определить единственного владельца записи и переключить его по плану.</li><li>Постепенно направить рабочий трафик, сравнить SLO и бизнес-результаты.</li><li>Удалить старую ветку, временную синхронизацию и лишние доступы.</li></ol><p>Общая БД на переходе допустима, если у таблиц понятный владелец и нет бесконтрольных записей с обеих сторон. Двойная запись «сначала сюда, потом туда» без журнала намерения и восстановления создаёт тот же dual-write разрыв, что и запись в БД плюс Kafka.</p><p class="follow"><b>Что нельзя делать в parallel run?</b> Повторять реальные списания и внешние необратимые действия обеими реализациями. Тень сравнивает расчёты или изолированные результаты; рабочий бизнес-эффект выполняет выбранный владелец.</p>
     </div></div></article>
 <article id="q259" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">259. Как проходить System Design интервью <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><ol><li><b>Требования</b>: что входит, пользователи, нагрузка, латентность, доступность, консистентность.</li><li><b>Оценки</b> на салфетке — только чтобы обосновать решения.</li><li><b>API, модель данных, общая схема</b> — пройти основной сценарий.</li><li><b>Углубиться</b> в одно-два сложных места: отказы, узкие места, мониторинг.</li></ol>
 <p>Каждое решение — <b>с компромиссом</b>, думать вслух и слушать подсказки.</p></div>
