@@ -6805,21 +6805,24 @@ withContext(vt) { jdbcRepo.load(id) }</pre>
 
 <span class="a">@Configuration</span>
 <span class="k">class</span> <span class="t">MvcConfig</span> {
-    <span class="t">MvcConfig</span>() {
+    <span class="a">@Bean</span>
+    <span class="t">TaskDecorator</span> mdcTaskDecorator() {
         <span class="t">ContextRegistry</span>.getInstance().registerThreadLocalAccessor(
             <span class="s">"productId"</span>, () -&gt; <span class="t">MDC</span>.get(<span class="s">"productId"</span>),
             value -&gt; <span class="t">MDC</span>.put(<span class="s">"productId"</span>, value),
             () -&gt; <span class="t">MDC</span>.remove(<span class="s">"productId"</span>));
+        <span class="k">return</span> <span class="k">new</span> <span class="t">ContextPropagatingTaskDecorator</span>();
     }
 
     <span class="a">@Bean</span>
-    <span class="t">ThreadPoolTaskExecutor</span> productIo() {
+    <span class="t">ThreadPoolTaskExecutor</span> productIo(<span class="t">TaskDecorator</span> mdcTaskDecorator) {
         <span class="k">var</span> pool = <span class="k">new</span> <span class="t">ThreadPoolTaskExecutor</span>();
         pool.setCorePoolSize(<span class="n">10</span>);
         pool.setMaxPoolSize(<span class="n">10</span>);
         pool.setQueueCapacity(<span class="n">100</span>);
+        pool.setRejectedExecutionHandler(<span class="k">new</span> <span class="t">ThreadPoolExecutor</span>.<span class="t">CallerRunsPolicy</span>());
         pool.setThreadNamePrefix(<span class="s">"product-io-"</span>);
-        pool.setTaskDecorator(<span class="k">new</span> <span class="t">ContextPropagatingTaskDecorator</span>());
+        pool.setTaskDecorator(mdcTaskDecorator);
         <span class="k">return</span> pool;
     }
 
@@ -6953,26 +6956,33 @@ withContext(vt) { jdbcRepo.load(id) }</pre>
 
 <span class="a">@Configuration</span>
 <span class="k">class</span> <span class="t">MvcConfig</span> {
-  <span class="t">MvcConfig</span>() {
+  <span class="a">@Bean</span>
+  <span class="t">TaskDecorator</span> mdcTaskDecorator() {
     <span class="t">ContextRegistry</span>.getInstance()
       .registerThreadLocalAccessor(
         <span class="s">"productId"</span>,
         () -&gt; <span class="t">MDC</span>.get(<span class="s">"productId"</span>),
         v -&gt; <span class="t">MDC</span>.put(<span class="s">"productId"</span>, v),
         () -&gt; <span class="t">MDC</span>.remove(<span class="s">"productId"</span>));
+    <span class="k">return</span> <span class="k">new</span>
+      <span class="t">ContextPropagatingTaskDecorator</span>();
   }
 
   <span class="a">@Bean</span>
-  <span class="t">ThreadPoolTaskExecutor</span> productIo() {
+  <span class="t">ThreadPoolTaskExecutor</span> productIo(
+      <span class="t">TaskDecorator</span> mdcTaskDecorator) {
     <span class="k">var</span> pool =
       <span class="k">new</span> <span class="t">ThreadPoolTaskExecutor</span>();
     pool.setCorePoolSize(<span class="n">10</span>);
     pool.setMaxPoolSize(<span class="n">10</span>);
     pool.setQueueCapacity(<span class="n">100</span>);
+    pool.setRejectedExecutionHandler(<span class="k">new</span>
+      <span class="t">ThreadPoolExecutor</span>
+        .<span class="t">CallerRunsPolicy</span>());
     pool.setThreadNamePrefix(
       <span class="s">"product-io-"</span>);
-    pool.setTaskDecorator(<span class="k">new</span>
-      <span class="t">ContextPropagatingTaskDecorator</span>());
+    pool.setTaskDecorator(
+      mdcTaskDecorator);
     <span class="k">return</span> pool;
   }
 
@@ -7140,12 +7150,12 @@ withContext(vt) { jdbcRepo.load(id) }</pre>
 }</pre>
 <p><b>Порядок выполнения:</b> сначала <code>findById</code>; если товара нет — 404 без вызовов внешних сервисов. Затем два <code>supplyAsync</code> отправляют запросы остатка и цены в общий <code>productIo</code>. Они могут выполняться одновременно, если в пуле есть свободные потоки; <code>commonPool</code> здесь не используется. Пока HTTP выполняется, MVC-поток читает файл. <code>allOf(...).join()</code> ждёт оба результата; последующие <code>join()</code> берут готовые значения.</p>
 <p><b>Таймауты и ретрай:</b> HTTP-клиент ограничивает подключение и ожидание ответа. У stock — максимум 3 попытки с растущими паузами 200/400 мс, только при сетевых ошибках и HTTP 5xx. Пауза ретрая тоже занимает рабочий поток; у price ретрая нет. Это не общий deadline запроса: очередь executor, чтение БД и файла требуют отдельного контроля.</p>
-<p><b>Ошибки:</b> отсутствующий файл даёт «Описание отсутствует», остальные ошибки чтения выходят из метода. Ошибка HTTP-задачи приходит из <code>join()</code> как <code><span class="t">CompletionException</span></code>; исходная причина — в <code>getCause()</code>. Контроллер пишет лог и передаёт ошибку обработчику Spring; без своего маппинга неожиданные ошибки дадут 500. Ошибка файла или отказ executor не отменяют автоматически уже запущенные HTTP-задачи. <code>allOf</code> ждёт завершения обеих задач, даже если одна уже упала.</p>
-<p><b>MDC:</b> контроллер задаёт productId до отправки задач. <code><span class="t">ContextPropagatingTaskDecorator</span></code> захватывает зарегистрированный ключ при отправке, восстанавливает его в рабочем потоке и возвращает прежнее состояние после задачи. Файловый лог выполняется в MVC-потоке с тем же MDC. Reactor Context и настройка <code>spring.reactor.context-propagation</code> этому варианту не нужны. Чтобы видеть ключ:</p>
+<p><b>Ошибки:</b> отсутствующий файл даёт «Описание отсутствует», остальные ошибки чтения выходят из метода. Ошибка HTTP-задачи приходит из <code>join()</code> как <code><span class="t">CompletionException</span></code>; исходная причина — в <code>getCause()</code>. Контроллер пишет лог и передаёт ошибку обработчику Spring; без своего маппинга неожиданные ошибки дадут 500. Ошибка файла не отменяет автоматически уже запущенные HTTP-задачи. <code>allOf</code> ждёт завершения обеих задач, даже если одна уже упала.</p>
+<p><b>MDC:</b> контроллер задаёт productId до отправки задач. Бин <code>mdcTaskDecorator</code> регистрирует accessor и создаёт декоратор; Spring передаёт этот бин параметром в <code>productIo</code>, где он явно подключается через <code>setTaskDecorator</code>. <code><span class="t">ContextPropagatingTaskDecorator</span></code> захватывает зарегистрированный ключ при отправке, восстанавливает его в рабочем потоке и возвращает прежнее состояние после задачи. Файловый лог выполняется в MVC-потоке с тем же MDC. Reactor Context и настройка <code>spring.reactor.context-propagation</code> этому варианту не нужны. Чтобы видеть ключ:</p>
 <pre><span class="p">logging</span>:
   <span class="p">pattern</span>:
     <span class="p">level</span>: <span class="s">"%5p [productId=%X{productId}]"</span></pre>
-<p><b>Границы ресурсов:</b> размеры 10 потоков и 100 задач — пример, а не универсальная настройка. При заполнении очереди executor отклонит новую задачу; для API обычно явно выбирают ответ 503. Общая транзакция вокруг HTTP здесь не открывается: используются обычные поля найденной сущности, ленивые связи не передаются в executor. Рекомендуемая настройка — <code><span class="p">spring.jpa.open-in-view</span>: <span class="k">false</span></code>.</p>
+<p><b>Границы ресурсов:</b> размеры 10 потоков и 100 задач — пример, а не универсальная настройка. Если заняты все 10 рабочих потоков и заполнена очередь, <code><span class="t">CallerRunsPolicy</span></code> выполняет новую задачу прямо в вызывающем MVC-потоке. Это естественный backpressure: отправка задачи замедляется на время её выполнения. Поэтому при перегрузке HTTP-вызовы могут выполняться последовательно; <code>supplyAsync</code> не гарантирует переключение потока. Число 10 ограничивает только потоки executor: дополнительные HTTP-вызовы могут выполнять MVC-потоки, поэтому это не строгий лимит нагрузки на внешний API. После shutdown эта политика отбрасывает задачу; новые запросы должны перестать поступать до остановки пула, иначе future может остаться незавершённой. Общая транзакция вокруг HTTP здесь не открывается: используются обычные поля найденной сущности, ленивые связи не передаются в executor. Рекомендуемая настройка — <code><span class="p">spring.jpa.open-in-view</span>: <span class="k">false</span></code>.</p>
 <p class="follow"><b>CompletableFuture превращает этот пример в неблокирующий?</b> Нет. Он позволяет перекрыть ожидание двух HTTP-вызовов, но рабочие потоки блокируются внутри RestClient, а MVC-поток — на join. В следующем WebFlux-примере ожидание HTTP организовано через неблокирующие источники.</p>
     </div></div></article>
 <article id="q156" class="responsive-code" hidden><div class="crumbs">Spring</div><h2 tabindex="-1">156. WebFlux на примере: контроллер → сервис → R2DBC и WebClient <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Контроллер возвращает Mono/Flux всей операции, а Spring управляет подпиской и HTTP-ответом.</b> R2DBC и WebClient отдают результаты сигналами, поэтому ожидание не должно занимать event loop синхронным blocking-вызовом.</p><p><b>map</b> преобразует значение, <b>flatMap</b> связывает следующий асинхронный шаг. Пустой результат БД переводят в нужный HTTP-исход, внешний вызов ограничивают временем.</p><p>Реактивная транзакция относится к своей цепочке БД; держать её открытой во время долгого HTTP-вызова обычно не нужно.</p></div>
