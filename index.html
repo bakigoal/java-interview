@@ -6785,10 +6785,12 @@ withContext(vt) { jdbcRepo.load(id) }</pre>
     </div></div></article>
 <article id="q155" class="responsive-code" hidden><div class="crumbs">Spring</div><h2 tabindex="-1">155. WebFlux на примере: контроллер → сервис → R2DBC и WebClient <span class="tag">senior</span></h2><div class="answer" hidden><div class="short"><p><b>Контроллер возвращает Mono/Flux всей операции, а Spring управляет подпиской и HTTP-ответом.</b> R2DBC и WebClient отдают результаты сигналами, поэтому ожидание не должно занимать event loop синхронным blocking-вызовом.</p><p><b>map</b> преобразует значение, <b>flatMap</b> связывает следующий асинхронный шаг. Пустой результат БД переводят в нужный HTTP-исход, внешний вызов ограничивают временем.</p><p>Реактивная транзакция относится к своей цепочке БД; держать её открытой во время долгого HTTP-вызова обычно не нужно.</p></div>
     <div class="more">
-<figure class="concept" aria-labelledby="spring-web-reactive-request-caption"><svg viewBox="0 0 320 360" role="img" aria-labelledby="spring-web-reactive-request-title spring-web-reactive-request-desc" xmlns="http://www.w3.org/2000/svg"><title id="spring-web-reactive-request-title">Три источника для ProductView</title><desc id="spring-web-reactive-request-desc">Сначала найден Product. Затем Mono.zip объединяет HTTP-остаток и описание из файла; блокирующее чтение выполняется на boundedElastic.</desc><defs><marker id="spring-web-reactive-request-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 56 V88" marker-end="url(#spring-web-reactive-request-arrow)"/><path class="concept-edge" d="M160 146 V166 H80 V186" marker-end="url(#spring-web-reactive-request-arrow)"/><path class="concept-edge" d="M160 146 V166 H240 V186" marker-end="url(#spring-web-reactive-request-arrow)"/><path class="concept-edge" d="M80 254 V276 H160 V294" marker-end="url(#spring-web-reactive-request-arrow)"/><path class="concept-edge" d="M240 254 V276 H160" marker-end="url(#spring-web-reactive-request-arrow)"/><rect class="concept-node plain" x="16" y="12" width="288" height="44" rx="9"/><text x="160.0" y="39.0" text-anchor="middle">Controller → Mono</text><rect class="concept-node accent" x="16" y="92" width="288" height="54" rx="9"/><text x="160.0" y="124.0" text-anchor="middle">R2DBC: найти Product</text><rect class="concept-node plain" x="8" y="190" width="144" height="64" rx="9"/><text x="80.0" y="217.0" text-anchor="middle">InventoryClient</text><text x="80.0" y="237.0" text-anchor="middle">WebClient: Stock</text><rect class="concept-node plain" x="168" y="190" width="144" height="64" rx="9"/><text x="240.0" y="217.0" text-anchor="middle">ProductFileReader</text><text x="240.0" y="237.0" text-anchor="middle">boundedElastic</text><rect class="concept-node accent" x="16" y="298" width="288" height="50" rx="9"/><text x="160.0" y="328.0" text-anchor="middle">Mono.zip → ProductView</text></svg><figcaption id="spring-web-reactive-request-caption">Сначала найден Product. Затем Mono.zip объединяет HTTP-остаток и описание из файла; блокирующее чтение выполняется на boundedElastic.</figcaption></figure><p><b>Пример чтения:</b> Product из R2DBC, текущий остаток из HTTP и описание из небольшого файла descriptions/{id}.txt относительно рабочего каталога приложения. Нужны R2DBC starter/драйвер и WebClient; таблицу создают миграцией.</p><pre class="wide"><span class="a">@Table</span>(<span class="s">"product"</span>)
+<figure class="concept" aria-labelledby="spring-web-reactive-request-caption"><svg viewBox="0 0 320 360" role="img" aria-labelledby="spring-web-reactive-request-title spring-web-reactive-request-desc" xmlns="http://www.w3.org/2000/svg"><title id="spring-web-reactive-request-title">Четыре источника для ProductView</title><desc id="spring-web-reactive-request-desc">После R2DBC сервис через Mono.zip объединяет два независимых HTTP-вызова и чтение файла на boundedElastic.</desc><defs><marker id="spring-web-reactive-request-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 56 V88" marker-end="url(#spring-web-reactive-request-arrow)"/><path class="concept-edge" d="M160 146 V166 H54 V186" marker-end="url(#spring-web-reactive-request-arrow)"/><path class="concept-edge" d="M54 254 V276 H160 V294" marker-end="url(#spring-web-reactive-request-arrow)"/><path class="concept-edge" d="M160 146 V166 H160 V186" marker-end="url(#spring-web-reactive-request-arrow)"/><path class="concept-edge" d="M160 254 V276 H160 V294" marker-end="url(#spring-web-reactive-request-arrow)"/><path class="concept-edge" d="M160 146 V166 H266 V186" marker-end="url(#spring-web-reactive-request-arrow)"/><path class="concept-edge" d="M266 254 V276 H160 V294" marker-end="url(#spring-web-reactive-request-arrow)"/><rect class="concept-node plain" x="16" y="12" width="288" height="44" rx="9"/><text x="160.0" y="39.0" text-anchor="middle">Controller → Mono</text><rect class="concept-node accent" x="16" y="92" width="288" height="54" rx="9"/><text x="160.0" y="124.0" text-anchor="middle">R2DBC: найти Product</text><rect class="concept-node plain" x="4" y="190" width="100" height="64" rx="9"/><text x="54.0" y="217.0" text-anchor="middle">HTTP</text><text x="54.0" y="237.0" text-anchor="middle">Stock</text><rect class="concept-node plain" x="110" y="190" width="100" height="64" rx="9"/><text x="160.0" y="217.0" text-anchor="middle">HTTP</text><text x="160.0" y="237.0" text-anchor="middle">Price</text><rect class="concept-node plain" x="216" y="190" width="100" height="64" rx="9"/><text x="266.0" y="217.0" text-anchor="middle">Файл</text><text x="266.0" y="237.0" text-anchor="middle">описание</text><rect class="concept-node accent" x="16" y="298" width="288" height="50" rx="9"/><text x="160.0" y="328.0" text-anchor="middle">Mono.zip → ProductView</text></svg><figcaption id="spring-web-reactive-request-caption">После R2DBC сервис через Mono.zip объединяет два независимых HTTP-вызова и чтение файла на boundedElastic.</figcaption></figure><p><b>Пример чтения:</b> Product из R2DBC, текущий остаток и цена из двух HTTP-сервисов, описание из небольшого файла descriptions/{id}.txt относительно рабочего каталога приложения. Нужны R2DBC starter/драйвер и WebClient; таблицу создают миграцией.</p><pre class="wide"><span class="a">@Table</span>(<span class="s">"product"</span>)
 <span class="k">record</span> <span class="t">Product</span>(<span class="a">@Id</span> <span class="t">Long</span> id, <span class="t">String</span> name) {}
 <span class="k">record</span> <span class="t">Stock</span>(<span class="k">int</span> available) {}
-<span class="k">record</span> <span class="t">ProductView</span>(<span class="t">Long</span> id, <span class="t">String</span> name, <span class="k">int</span> available, <span class="t">String</span> description) {}
+<span class="k">record</span> <span class="t">Price</span>(<span class="t">BigDecimal</span> amount) {}
+<span class="k">record</span> <span class="t">ProductView</span>(<span class="t">Long</span> id, <span class="t">String</span> name, <span class="k">int</span> available,
+    <span class="t">BigDecimal</span> price, <span class="t">String</span> description) {}
 
 <span class="k">interface</span> <span class="t">Products</span> <span class="k">extends</span> <span class="t">ReactiveCrudRepository</span>&lt;<span class="t">Product</span>, <span class="t">Long</span>&gt; {}
 
@@ -6803,14 +6805,18 @@ withContext(vt) { jdbcRepo.load(id) }</pre>
 }
 
 <span class="a">@Configuration</span>
-<span class="k">class</span> <span class="t">InventoryConfig</span> {
+<span class="k">class</span> <span class="t">HttpClientsConfig</span> {
     <span class="a">@Bean</span>
-    <span class="t">WebClient</span> inventory(<span class="t">WebClient</span>.<span class="t">Builder</span> builder) {
-        <span class="k">return</span> builder.baseUrl(<span class="s">"http://inventory"</span>).build();
+    <span class="t">InventoryClient</span> inventoryClient(<span class="t">WebClient</span>.<span class="t">Builder</span> builder) {
+        <span class="k">return</span> <span class="k">new</span> <span class="t">InventoryClient</span>(builder.baseUrl(<span class="s">"http://inventory"</span>).build());
+    }
+
+    <span class="a">@Bean</span>
+    <span class="t">PricingClient</span> pricingClient(<span class="t">WebClient</span>.<span class="t">Builder</span> builder) {
+        <span class="k">return</span> <span class="k">new</span> <span class="t">PricingClient</span>(builder.baseUrl(<span class="s">"http://pricing"</span>).build());
     }
 }
 
-<span class="a">@Component</span>
 <span class="a">@RequiredArgsConstructor</span>
 <span class="k">class</span> <span class="t">InventoryClient</span> {
     <span class="k">private</span> <span class="k">final</span> <span class="t">WebClient</span> webClient;
@@ -6834,6 +6840,18 @@ withContext(vt) { jdbcRepo.load(id) }</pre>
     }
 }
 
+<span class="a">@RequiredArgsConstructor</span>
+<span class="k">class</span> <span class="t">PricingClient</span> {
+    <span class="k">private</span> <span class="k">final</span> <span class="t">WebClient</span> webClient;
+
+    <span class="t">Mono</span>&lt;<span class="t">Price</span>&gt; price(<span class="k">long</span> id) {
+        <span class="k">return</span> webClient.get().uri(<span class="s">"/prices/{id}"</span>, id)
+            .retrieve().bodyToMono(<span class="t">Price</span>.<span class="k">class</span>)
+            .switchIfEmpty(<span class="t">Mono</span>.error(<span class="k">new</span> <span class="t">IllegalStateException</span>(<span class="s">"empty price"</span>)))
+            .timeout(<span class="t">Duration</span>.ofSeconds(<span class="n">2</span>));
+    }
+}
+
 <span class="a">@Slf4j</span>
 <span class="a">@Component</span>
 <span class="k">class</span> <span class="t">ProductFileReader</span> {
@@ -6851,14 +6869,16 @@ withContext(vt) { jdbcRepo.load(id) }</pre>
 <span class="k">class</span> <span class="t">ProductService</span> {
     <span class="k">private</span> <span class="k">final</span> <span class="t">Products</span> products;
     <span class="k">private</span> <span class="k">final</span> <span class="t">InventoryClient</span> client;
+    <span class="k">private</span> <span class="k">final</span> <span class="t">PricingClient</span> pricing;
     <span class="k">private</span> <span class="k">final</span> <span class="t">ProductFileReader</span> files;
 
     <span class="t">Mono</span>&lt;<span class="t">ProductView</span>&gt; load(<span class="k">long</span> id) {
         <span class="k">return</span> products.findById(id)
             .switchIfEmpty(<span class="t">Mono</span>.error(<span class="k">new</span> <span class="t">ResponseStatusException</span>(<span class="t">HttpStatus</span>.<span class="t">NOT_FOUND</span>)))
-            .flatMap(p -&gt; <span class="t">Mono</span>.zip(client.stock(p.id()), files.description(p.id()))
+            .flatMap(p -&gt; <span class="t">Mono</span>.zip(client.stock(p.id()), pricing.price(p.id()),
+                    files.description(p.id()))
                 .map(data -&gt; <span class="k">new</span> <span class="t">ProductView</span>(p.id(), p.name(),
-                    data.getT1().available(), data.getT2())));
+                    data.getT1().available(), data.getT2().amount(), data.getT3())));
     }
 }
 
@@ -6883,8 +6903,10 @@ withContext(vt) { jdbcRepo.load(id) }</pre>
 <span class="k">record</span> <span class="t">Product</span>(
   <span class="a">@Id</span> <span class="t">Long</span> id, <span class="t">String</span> name) {}
 <span class="k">record</span> <span class="t">Stock</span>(<span class="k">int</span> available) {}
+<span class="k">record</span> <span class="t">Price</span>(<span class="t">BigDecimal</span> amount) {}
 <span class="k">record</span> <span class="t">ProductView</span>(<span class="t">Long</span> id, <span class="t">String</span> name,
-  <span class="k">int</span> available, <span class="t">String</span> description) {}
+  <span class="k">int</span> available, <span class="t">BigDecimal</span> price,
+  <span class="t">String</span> description) {}
 
 <span class="k">interface</span> <span class="t">Products</span>
   <span class="k">extends</span> <span class="t">ReactiveCrudRepository</span>&lt;
@@ -6903,17 +6925,24 @@ withContext(vt) { jdbcRepo.load(id) }</pre>
 }
 
 <span class="a">@Configuration</span>
-<span class="k">class</span> <span class="t">InventoryConfig</span> {
+<span class="k">class</span> <span class="t">HttpClientsConfig</span> {
   <span class="a">@Bean</span>
-  <span class="t">WebClient</span> inventory(
-    <span class="t">WebClient</span>.<span class="t">Builder</span> builder) {
-    <span class="k">return</span> builder
+  <span class="t">InventoryClient</span> inventoryClient(
+      <span class="t">WebClient</span>.<span class="t">Builder</span> builder) {
+    <span class="k">return</span> <span class="k">new</span> <span class="t">InventoryClient</span>(builder
       .baseUrl(<span class="s">"http://inventory"</span>)
-      .build();
+      .build());
+  }
+
+  <span class="a">@Bean</span>
+  <span class="t">PricingClient</span> pricingClient(
+      <span class="t">WebClient</span>.<span class="t">Builder</span> builder) {
+    <span class="k">return</span> <span class="k">new</span> <span class="t">PricingClient</span>(builder
+      .baseUrl(<span class="s">"http://pricing"</span>)
+      .build());
   }
 }
 
-<span class="a">@Component</span>
 <span class="a">@RequiredArgsConstructor</span>
 <span class="k">class</span> <span class="t">InventoryClient</span> {
   <span class="k">private</span> <span class="k">final</span> <span class="t">WebClient</span> webClient;
@@ -6948,6 +6977,22 @@ withContext(vt) { jdbcRepo.load(id) }</pre>
   }
 }
 
+<span class="a">@RequiredArgsConstructor</span>
+<span class="k">class</span> <span class="t">PricingClient</span> {
+  <span class="k">private</span> <span class="k">final</span> <span class="t">WebClient</span> webClient;
+
+  <span class="t">Mono</span>&lt;<span class="t">Price</span>&gt; price(<span class="k">long</span> id) {
+    <span class="k">return</span> webClient.get()
+      .uri(<span class="s">"/prices/{id}"</span>, id)
+      .retrieve()
+      .bodyToMono(<span class="t">Price</span>.<span class="k">class</span>)
+      .switchIfEmpty(<span class="t">Mono</span>.error(
+        <span class="k">new</span> <span class="t">IllegalStateException</span>(
+          <span class="s">"empty price"</span>)))
+      .timeout(<span class="t">Duration</span>.ofSeconds(<span class="n">2</span>));
+  }
+}
+
 <span class="a">@Slf4j</span>
 <span class="a">@Component</span>
 <span class="k">class</span> <span class="t">ProductFileReader</span> {
@@ -6970,6 +7015,7 @@ withContext(vt) { jdbcRepo.load(id) }</pre>
 <span class="k">class</span> <span class="t">ProductService</span> {
   <span class="k">private</span> <span class="k">final</span> <span class="t">Products</span> products;
   <span class="k">private</span> <span class="k">final</span> <span class="t">InventoryClient</span> client;
+  <span class="k">private</span> <span class="k">final</span> <span class="t">PricingClient</span> pricing;
   <span class="k">private</span> <span class="k">final</span> <span class="t">ProductFileReader</span> files;
 
   <span class="t">Mono</span>&lt;<span class="t">ProductView</span>&gt; load(<span class="k">long</span> id) {
@@ -6979,11 +7025,13 @@ withContext(vt) { jdbcRepo.load(id) }</pre>
           <span class="t">HttpStatus</span>.<span class="t">NOT_FOUND</span>)))
       .flatMap(p -&gt; <span class="t">Mono</span>.zip(
           client.stock(p.id()),
+          pricing.price(p.id()),
           files.description(p.id()))
         .map(data -&gt; <span class="k">new</span> <span class="t">ProductView</span>(
           p.id(), p.name(),
           data.getT1().available(),
-          data.getT2())));
+          data.getT2().amount(),
+          data.getT3())));
   }
 }
 
@@ -7008,14 +7056,14 @@ withContext(vt) { jdbcRepo.load(id) }</pre>
       .contextWrite(ctx -&gt; ctx.put(
         <span class="s">"productId"</span>, <span class="t">Long</span>.toString(id)));
   }
-}</pre><p>ProductService собирает ProductView из трёх источников. InventoryClient отвечает за HTTP-запрос, пустой ответ и timeout; ProductFileReader — за чтение файла. Files.readString блокирует поток, поэтому вызов отложен через fromCallable и выполняется на boundedElastic. После получения Product сервис через Mono.zip подписывается на независимые HTTP- и файловый источники; он ждёт оба результата. Если файла нет, <code><span class="t">ProductFileReader</span>.description()</code> подставляет «Описание отсутствует» через <code>onErrorReturn(<span class="t">NoSuchFileException</span>.<span class="k">class</span>, ...)</code>. Другие ошибки чтения остаются ошибкой всей цепочки. Здесь нет изменения БД и распределённой транзакции. load() не вызывает subscribe/block; HTTP-ошибки остаются сигналом цепочки и обрабатываются контрактом API. Timeout не доказывает, что удалённая операция прекращена, хотя здесь это read-сценарий.</p>
-      <p><b>Ретрай только HTTP-вызова:</b> <code><span class="t">Retry</span>.backoff(<span class="n">2</span>, <span class="n">200</span> мс)</code> — до двух повторов после первой попытки, с растущей задержкой и jitter. Повторяем сетевые ошибки, таймауты и HTTP 5xx; HTTP 4xx и пустой ответ — без повтора. <code>timeout</code> стоит перед <code>retryWhen</code>: 2 секунды на каждую попытку, а не на всю операцию. После исчерпания повторов передаём исходную ошибку. Запрос к БД и чтение файла повторно не запускаются.</p><p><b>MDC для запроса:</b> контроллер кладёт <code>productId</code> в Reactor Context через <code>contextWrite</code> в конце цепочки. <code><span class="t">Mono</span>.defer</code> откладывает стартовый лог до подписки, когда контекст уже доступен. <code><span class="t">MdcConfig</span></code> при запуске регистрирует перенос только ключа <code>productId</code> а настройка <code><span class="p">spring.reactor.context-propagation</span>: auto</code> включает автоматическую передачу контекста (Spring Boot 3.2+). Reactor восстанавливает MDC в callback-ах, в том числе после перехода на <code>boundedElastic</code>, и возвращает прежнее состояние потока после них. Это защищает от смешивания productId разных запросов. Лог ошибки записывается один раз на границе запроса; <code><span class="a">@Slf4j</span></code> создаёт logger через Lombok.</p><p>Для этого нужна зависимость <code>io.micrometer:context-propagation</code>; в Spring Boot её версию задаёт BOM. В YAML включаем передачу контекста и добавляем MDC-ключ в шаблон консольного лога:</p><pre><span class="p">spring</span>:
+}</pre><p>ProductService собирает ProductView из четырёх источников. InventoryClient получает остаток, PricingClient — цену; оба проверяют пустой ответ и ограничивают запрос таймаутом; ProductFileReader — за чтение файла. Files.readString блокирует поток, поэтому вызов отложен через fromCallable и выполняется на boundedElastic. После получения Product сервис через Mono.zip подписывается на три независимых источника: остаток, цену и файл. HTTP-запросы могут выполняться одновременно: цена не ждёт результата stock. ProductView собирается после получения всех трёх значений; дополнительный subscribeOn для неблокирующего WebClient не нужен. Если файла нет, <code><span class="t">ProductFileReader</span>.description()</code> подставляет «Описание отсутствует» через <code>onErrorReturn(<span class="t">NoSuchFileException</span>.<span class="k">class</span>, ...)</code>. Другие ошибки чтения остаются ошибкой всей цепочки. Здесь нет изменения БД и распределённой транзакции. load() не вызывает subscribe/block; HTTP-ошибки остаются сигналом цепочки и обрабатываются контрактом API. Timeout не доказывает, что удалённая операция прекращена, хотя здесь это read-сценарий.</p>
+      <p><b>Ретрай только stock:</b> <code><span class="t">Retry</span>.backoff(<span class="n">2</span>, <span class="n">200</span> мс)</code> — до двух повторов после первой попытки, с растущей задержкой и jitter. Повторяем сетевые ошибки, таймауты и HTTP 5xx; HTTP 4xx и пустой ответ — без повтора. <code>timeout</code> стоит перед <code>retryWhen</code>: 2 секунды на каждую попытку, а не на всю операцию. После исчерпания повторов передаём исходную ошибку. Запрос цены, запрос к БД и чтение файла повторно не запускаются. У PricingClient в этом примере только таймаут, без ретрая.</p><p><b>MDC для запроса:</b> контроллер кладёт <code>productId</code> в Reactor Context через <code>contextWrite</code> в конце цепочки. <code><span class="t">Mono</span>.defer</code> откладывает стартовый лог до подписки, когда контекст уже доступен. <code><span class="t">MdcConfig</span></code> при запуске регистрирует перенос только ключа <code>productId</code>, а настройка <code><span class="p">spring.reactor.context-propagation</span>: auto</code> включает автоматическую передачу контекста (Spring Boot 3.2+). Reactor восстанавливает MDC в callback-ах, в том числе после перехода на <code>boundedElastic</code>, и возвращает прежнее состояние потока после них. Это защищает от смешивания productId разных запросов. Лог ошибки записывается один раз на границе запроса; <code><span class="a">@Slf4j</span></code> создаёт logger через Lombok.</p><p>Для этого нужна зависимость <code>io.micrometer:context-propagation</code>; в Spring Boot её версию задаёт BOM. В YAML включаем передачу контекста и добавляем MDC-ключ в шаблон консольного лога:</p><pre><span class="p">spring</span>:
   <span class="p">reactor</span>:
     <span class="p">context-propagation</span>: auto
 
 <span class="p">logging</span>:
   <span class="p">pattern</span>:
-    <span class="p">level</span>: <span class="s">"%5p [productId=%X{productId}]"</span></pre><p>Пул R2DBC, предел HTTP-соединений и общий deadline настраиваются отдельно.</p><p class="follow"><b>Mono.zip всегда сделает два шага параллельно?</b> Он подписывается на составные источники, но реальная одновременность зависит от них. Пустой источник или ошибка могут рано завершить zip и отменить остальные; нельзя полагаться на их обязательный побочный эффект.</p>
+    <span class="p">level</span>: <span class="s">"%5p [productId=%X{productId}]"</span></pre><p>Пул R2DBC, предел HTTP-соединений и общий deadline настраиваются отдельно.</p><p class="follow"><b>Mono.zip всегда выполнит все источники параллельно?</b> Он подписывается на составные источники, но реальная одновременность зависит от них. Пустой источник или ошибка могут рано завершить zip и отменить остальные; нельзя полагаться на их обязательный побочный эффект.</p>
     </div></div></article>
 <article id="q156" class="responsive-code" hidden><div class="crumbs">JPA и Hibernate</div><h2 tabindex="-1">156. Требования к Entity. Почему final-класс мешает Hibernate</h2><div class="answer" hidden><div class="short"><p><b>Entity — класс с идентичностью и ORM-маппингом:</b> @Entity, @Id и доступный провайдеру конструктор без аргументов, обычно protected. Для переносимой JPA-модели класс и persistent-члены не делают final.</p><p>Hibernate часто использует прокси-подкласс для ленивой связи: final мешает такому проксированию. Это не означает, что любой final-класс невозможно сохранить никаким способом, но такое решение ограничивает ORM-механизмы.</p><p>Record удобен для DTO, а не для обычной Entity. equals, toString и Lombok не должны случайно обходить связи.</p></div>
     <div class="more">
