@@ -8909,82 +8909,103 @@ builder.stream(<span class="s">"payments"</span>, <span class="t">Consumed</span
     <div class="more">
 <div class="table-wrap"><table><tr><th>Критерий</th><th>Модульный монолит</th><th>Микросервисы</th></tr><tr><td>Релиз</td><td>Приложение развёртывается целиком</td><td>Сервисы могут выпускаться независимо</td></tr><tr><td>Взаимодействие</td><td>Вызов метода в процессе</td><td>Сеть: задержки, таймауты, неопределённый результат</td></tr><tr><td>Данные</td><td>Возможны транзакции одной БД</td><td>У каждого владельца свои данные; межсервисные операции требуют протокола</td></tr><tr><td>Масштабирование</td><td>Реплика всего приложения</td><td>Отдельное масштабирование нагруженной части</td></tr></table></div><p><b>Пример границы:</b> уведомления принимают запрос на отправку и сами управляют шаблонами, провайдерами и повторами. Платёжный сервис не меняет их таблицы и не выпускается вместе с ними при смене SMS-провайдера.</p><ul><li><b>Хороший признак:</b> большинство изменений сценария остаётся внутри одного владельца.</li><li><b>Плохой признак:</b> каждый релиз требует одновременно менять пять сервисов, общую БД и цепочку синхронных вызовов. Это распределённый монолит.</li><li><b>Начать проще:</b> выделить модули и их API в одном процессе; запретить обход границ через чужие таблицы и внутренние классы.</li></ul><p class="follow"><b>Микросервисы автоматически изолируют отказы?</b> Нет. Синхронные зависимости, общая БД или общий исчерпанный пул могут передать отказ дальше. Изоляцию обеспечивают границы ресурсов, таймауты и допустимая деградация.</p>
     </div></div></article>
-<article id="q242" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">242. DDD: bounded context, агрегат, доменные события</h2><div class="answer" hidden><div class="short"><ul><li><b>Bounded context</b> — граница одной модели и языка: «клиент» для KYC и кредитования может означать разные наборы правил.</li><li><b>Агрегат</b> — объекты с общими инвариантами, которые изменяют через корень и сохраняют согласованно.</li><li><b>Доменное событие</b> — факт вроде OrderSubmitted, на который могут реагировать другие части системы.</li></ul><p>Контекст не обязан быть отдельным сервисом. Событие внутри приложения не обязано быть сообщением Kafka; для надёжной внешней публикации нужен отдельный механизм, например outbox.</p></div>
+<article id="q242" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">242. DDD: bounded context, агрегат, доменные события</h2><div class="answer" hidden><div class="short"><p><b>DDD — Domain-Driven Design, проектирование вокруг предметной области.</b> Структуру системы и поведение объектов строят на бизнес-понятиях и правилах: заказ, резерв, оплата, отмена.</p><p>Разработчики вместе с экспертами бизнеса уточняют модель и используют <b>единый язык</b> в обсуждениях, коде и тестах. Например, <code>order.cancel()</code>, внутри которого проверяются правила отмены.</p><p><b>Bounded context</b> задаёт границу модели; <b>агрегат</b> защищает правила согласованности; <b>доменное событие</b> фиксирует значимый бизнес-факт.</p></div>
     <div class="more">
-<p><b>Пример агрегата:</b> нельзя отправить пустой заказ или менять его позиции после отправки. Корень Order проверяет эти правила; наружу отдаётся неизменяемый снимок списка.</p><pre class="wide"><span class="k">class</span> <span class="t">Order</span> {
-    <span class="k">private</span> <span class="k">final</span> <span class="t">List</span>&lt;<span class="t">String</span>&gt; items = <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;();
-    <span class="k">private</span> <span class="k">boolean</span> submitted;
+<p><b>Два уровня DDD:</b></p>
+<div class="table-wrap"><table><tr><th>Уровень</th><th>Что решаем</th><th>Пример</th></tr><tr><td>Стратегический</td><td>Где границы моделей и как они взаимодействуют</td><td>Продажи, склад и доставка</td></tr><tr><td>Тактический</td><td>Как выразить бизнес-правила внутри модели</td><td>Заказ, позиции, стоимость, подтверждение</td></tr></table></div>
+<p><b>Bounded context — граница, внутри которой понятия имеют определённый смысл.</b> В продажах товар содержит цену и условия продажи; на складе — остатки, ячейку и правила резервирования. Каждому контексту нужна своя подходящая модель.</p>
+<div class="table-wrap"><table><tr><th>Понятие</th><th>Смысл</th></tr><tr><td>Entity</td><td>Объект с идентичностью: заказ остаётся тем же заказом после изменения статуса</td></tr><tr><td>Value Object</td><td>Значение без самостоятельной идентичности: деньги, адрес, период</td></tr><tr><td>Aggregate</td><td>Группа объектов, чьи правила согласованности защищает корневой объект. Например, Order и его позиции изменяются через Order</td></tr><tr><td>Repository</td><td>Получение и сохранение агрегатов</td></tr><tr><td>Domain Event</td><td>Значимый бизнес-факт: OrderPaid, StockReserved</td></tr></table></div>
+<p><b>Пример:</b> правило «отгружать можно только оплаченный заказ» находится в самом заказе:</p>
+<pre class="wide"><span class="a">@RequiredArgsConstructor</span>
+<span class="k">class</span> <span class="t">Order</span> {
+    <span class="k">private</span> <span class="k">final</span> <span class="t">UUID</span> id;
+    <span class="k">private</span> <span class="t">Status</span> status = <span class="t">Status</span>.<span class="t">NEW</span>;
 
-    <span class="k">void</span> add(<span class="t">String</span> item) {
-        <span class="k">if</span> (submitted) <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>();
-        items.add(<span class="t">Objects</span>.requireNonNull(item));
-    }
-
-    <span class="k">void</span> submit() {
-        <span class="k">if</span> (submitted || items.isEmpty()) <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>();
-        submitted = <span class="k">true</span>;
-    }
-
-    <span class="t">List</span>&lt;<span class="t">String</span>&gt; items() { <span class="k">return</span> <span class="t">List</span>.copyOf(items); }
-}</pre>
-<pre class="narrow"><span class="k">class</span> <span class="t">Order</span> {
-  <span class="k">private</span> <span class="k">final</span> <span class="t">List</span>&lt;<span class="t">String</span>&gt; items =
-    <span class="k">new</span> <span class="t">ArrayList</span>&lt;&gt;();
-  <span class="k">private</span> <span class="k">boolean</span> submitted;
-
-  <span class="k">void</span> add(<span class="t">String</span> item) {
-    <span class="k">if</span> (submitted) {
-      <span class="k">throw</span> <span class="k">new</span>
-        <span class="t">IllegalStateException</span>();
-    }
-    items.add(
-      <span class="t">Objects</span>.requireNonNull(item));
-  }
-
-  <span class="k">void</span> submit() {
-    <span class="k">if</span> (submitted || items.isEmpty()) {
-      <span class="k">throw</span> <span class="k">new</span>
-        <span class="t">IllegalStateException</span>();
-    }
-    submitted = <span class="k">true</span>;
-  }
-
-  <span class="t">List</span>&lt;<span class="t">String</span>&gt; items() {
-    <span class="k">return</span> <span class="t">List</span>.copyOf(items);
-  }
-}</pre><p>Это пример бизнес-правил в памяти. При конкурентном сохранении нужны ещё транзакция и контроль версии: два экземпляра одного заказа иначе могут перезаписать изменения друг друга.</p><div class="table-wrap"><table><tr><th>Понятие</th><th>Пример</th></tr><tr><td>Entity</td><td>Заказ узнаётся по id, даже если позиции изменились</td></tr><tr><td>Value object</td><td>Money определяется суммой и валютой</td></tr><tr><td>Anti-corruption layer</td><td>Адаптер переводит статусы легаси в свою модель</td></tr><tr><td>Граница агрегата</td><td>То, что должно удовлетворять инварианту в момент COMMIT</td></tr></table></div><p class="follow"><b>Каждая транзакция обязана менять ровно один агрегат?</b> Это полезный ориентир для небольших независимых границ, а не запрет платформы. Если атомарное изменение нескольких агрегатов постоянно необходимо, стоит проверить модель и реальные бизнес-инварианты.</p>
-    </div></div></article>
-<article id="q243" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">243. Гексагональная архитектура (порты и адаптеры)</h2><div class="answer" hidden><div class="short"><p><b>Бизнес-логика отделена от способов входа и хранения данных.</b> Входящий порт описывает сценарий приложения, исходящий — нужную ему возможность: сохранить заказ, проверить лимит.</p><p><b>Адаптеры связывают порты с REST, Kafka, JPA или HTTP.</b> Зависимости кода направлены к приложению и его контрактам; домен не обращается к контроллеру или конкретному JPA-репозиторию.</p><p>Так сценарий можно проверить без Spring и настоящей БД. Дополнительные модели и интерфейсы нужны там, где защищают полезную границу.</p></div>
-    <div class="more">
-<figure class="concept" aria-labelledby="arch-ports-caption"><svg viewBox="0 0 320 280" role="img" aria-labelledby="arch-ports-title arch-ports-desc" xmlns="http://www.w3.org/2000/svg"><title id="arch-ports-title">Зависимости в портах и адаптерах</title><desc id="arch-ports-desc">Стрелки показывают зависимости кода: адаптеры знают порты приложения, домен не знает REST, JPA и Kafka.</desc><defs><marker id="arch-ports-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 62 V100" marker-end="url(#arch-ports-arrow)"/><path class="concept-edge" d="M160 218 V178" marker-end="url(#arch-ports-arrow)"/><rect class="concept-node plain" x="16" y="12" width="288" height="50" rx="9"/><text x="160.0" y="42.0" text-anchor="middle">REST / Kafka адаптеры</text><rect class="concept-node accent" x="16" y="104" width="288" height="70" rx="9"/><text x="160.0" y="134.0" text-anchor="middle">Приложение и домен</text><text x="160.0" y="154.0" text-anchor="middle">Use case + порты</text><rect class="concept-node plain" x="16" y="218" width="288" height="50" rx="9"/><text x="160.0" y="248.0" text-anchor="middle">JPA / HTTP адаптеры</text></svg><figcaption id="arch-ports-caption">Стрелки показывают зависимости кода: адаптеры знают порты приложения, домен не знает REST, JPA и Kafka.</figcaption></figure><pre class="wide"><span class="k">interface</span> <span class="t">LimitCheck</span> {
-    <span class="k">boolean</span> allowed(<span class="k">long</span> accountId);
-}
-
-<span class="a">@RequiredArgsConstructor</span>
-<span class="k">class</span> <span class="t">PaymentService</span> {
-    <span class="k">private</span> <span class="k">final</span> <span class="t">LimitCheck</span> limits;
-
-    <span class="k">void</span> pay(<span class="k">long</span> accountId) {
-        <span class="k">if</span> (!limits.allowed(accountId)) <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>();
-        <span class="c">// Далее выполняется сценарий платежа.</span>
-    }
-}</pre>
-<pre class="narrow"><span class="k">interface</span> <span class="t">LimitCheck</span> {
-    <span class="k">boolean</span> allowed(<span class="k">long</span> accountId);
-}
-
-<span class="a">@RequiredArgsConstructor</span>
-<span class="k">class</span> <span class="t">PaymentService</span> {
-    <span class="k">private</span> <span class="k">final</span> <span class="t">LimitCheck</span> limits;
-
-    <span class="k">void</span> pay(<span class="k">long</span> accountId) {
-        <span class="k">if</span> (!limits.allowed(accountId)) {
-            <span class="k">throw</span> <span class="k">new</span>
-                <span class="t">IllegalStateException</span>();
+    <span class="k">void</span> pay() {
+        <span class="k">if</span> (status != <span class="t">Status</span>.<span class="t">NEW</span>) {
+            <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>(<span class="s">"Only new orders can be paid"</span>);
         }
-        <span class="c">// Далее — сценарий платежа.</span>
+        status = <span class="t">Status</span>.<span class="t">PAID</span>;
     }
-}</pre><p>Входящий порт здесь — метод pay, исходящий — LimitCheck. HTTP-адаптер реализует LimitCheck через удалённый вызов, тест передаёт простую реализацию. Проверка лимита сама по себе не резервирует его: при требовании атомарного расходования нужен другой контракт.</p><p class="follow"><b>Направление вызовов тоже всегда внутрь?</b> Нет. Сценарий вызывает исходящий порт, а выполняется код инфраструктурного адаптера. Внутрь направлена зависимость от интерфейса, а не каждый runtime-вызов.</p>
+
+    <span class="k">void</span> ship() {
+        <span class="k">if</span> (status != <span class="t">Status</span>.<span class="t">PAID</span>) {
+            <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>(<span class="s">"Only paid orders can be shipped"</span>);
+        }
+        status = <span class="t">Status</span>.<span class="t">SHIPPED</span>;
+    }
+}
+
+<span class="k">enum</span> <span class="t">Status</span> { <span class="t">NEW</span>, <span class="t">PAID</span>, <span class="t">SHIPPED</span> }</pre>
+<pre class="narrow"><span class="a">@RequiredArgsConstructor</span>
+<span class="k">class</span> <span class="t">Order</span> {
+  <span class="k">private</span> <span class="k">final</span> <span class="t">UUID</span> id;
+  <span class="k">private</span> <span class="t">Status</span> status = <span class="t">Status</span>.<span class="t">NEW</span>;
+
+  <span class="k">void</span> pay() {
+    <span class="k">if</span> (status != <span class="t">Status</span>.<span class="t">NEW</span>) {
+      <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>(
+        <span class="s">"Only new orders can be paid"</span>);
+    }
+    status = <span class="t">Status</span>.<span class="t">PAID</span>;
+  }
+
+  <span class="k">void</span> ship() {
+    <span class="k">if</span> (status != <span class="t">Status</span>.<span class="t">PAID</span>) {
+      <span class="k">throw</span> <span class="k">new</span> <span class="t">IllegalStateException</span>(
+        <span class="s">"Only paid orders "</span>
+          + <span class="s">"can be shipped"</span>);
+    }
+    status = <span class="t">Status</span>.<span class="t">SHIPPED</span>;
+  }
+}
+
+<span class="k">enum</span> <span class="t">Status</span> { <span class="t">NEW</span>, <span class="t">PAID</span>, <span class="t">SHIPPED</span> }</pre>
+<p><b>Application service организует сценарий:</b> загрузить заказ, вызвать <code>ship()</code>, сохранить. <b>Доменный объект проверяет бизнес-правило.</b> При конкурентных изменениях согласованность дополнительно обеспечивают транзакция и, например, optimistic locking.</p>
+<p><b>Доменное событие</b> может обрабатываться внутри приложения. Если факт нужно надёжно передать в другой сервис, отдельно решают его публикацию после сохранения бизнес-изменений, например через transactional outbox. Сам объект OrderPaid ещё не гарантирует доставку сообщения.</p>
+<ul><li><b>Bounded context не обязан быть микросервисом</b> — он может быть модулем монолита.</li><li><b>Агрегат не равен всему графу JPA-связей</b> — его границу выбирают по правилам согласованности.</li><li>Для простого CRUD богатая доменная модель может оказаться лишней. DDD особенно полезен, когда сложность сосредоточена в бизнес-правилах.</li></ul>
+<p class="follow"><b>В чём разница между application service и domain service?</b> Application service координирует сценарий и инфраструктуру. Domain service выражает бизнес-правило, которое неестественно помещать в одну сущность или value object, например расчёт тарифа по нескольким доменным условиям.</p>
+    </div></div></article>
+<article id="q243" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">243. Гексагональная архитектура (порты и адаптеры)</h2><div class="answer" hidden><div class="short"><p><b>Гексагональная архитектура, или Ports and Adapters, отделяет бизнес-логику от способов взаимодействия с внешним миром.</b> HTTP, БД, Kafka и внешние API подключаются через адаптеры. Бизнес-код работает с интерфейсами — <b>портами</b>.</p><p>Главное правило: <b>зависимости направлены к бизнес-логике.</b> Она не должна зависеть от RestController, JpaRepository или WebClient.</p><p>Так сценарий приложения можно проверить без Spring и настоящей БД, подставив тестовые реализации портов.</p></div>
+    <div class="more">
+<figure class="concept" aria-labelledby="arch-ports-caption"><svg viewBox="0 0 320 280" role="img" aria-labelledby="arch-ports-title arch-ports-desc" xmlns="http://www.w3.org/2000/svg"><title id="arch-ports-title">Зависимости в портах и адаптерах</title><desc id="arch-ports-desc">Стрелки показывают зависимости кода: адаптеры знают порты приложения, домен не знает REST, JPA и Kafka.</desc><defs><marker id="arch-ports-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 62 V100" marker-end="url(#arch-ports-arrow)"/><path class="concept-edge" d="M160 218 V178" marker-end="url(#arch-ports-arrow)"/><rect class="concept-node plain" x="16" y="12" width="288" height="50" rx="9"/><text x="160.0" y="42.0" text-anchor="middle">REST / Kafka адаптеры</text><rect class="concept-node accent" x="16" y="104" width="288" height="70" rx="9"/><text x="160.0" y="134.0" text-anchor="middle">ShipOrder / Order</text><text x="160.0" y="154.0" text-anchor="middle">Выходной порт Orders</text><rect class="concept-node plain" x="16" y="218" width="288" height="50" rx="9"/><text x="160.0" y="248.0" text-anchor="middle">JpaOrdersAdapter</text></svg><figcaption id="arch-ports-caption">Стрелки показывают зависимости кода: адаптеры знают порты приложения, домен не знает REST, JPA и Kafka.</figcaption></figure>
+<p>REST-контроллер или Kafka listener вызывает сценарий <code><span class="t">ShipOrder</span></code>. Сценарий использует порт <code><span class="t">Orders</span></code>, а <code><span class="t">JpaOrdersAdapter</span></code> реализует этот интерфейс через JPA. Интерфейс определён внутри приложения; адаптер зависит от него.</p>
+<div class="table-wrap"><table><tr><th>Часть</th><th>Ответственность</th><th>Пример</th></tr><tr><td>Домен</td><td>Бизнес-правила</td><td>Заказ можно отгрузить только после оплаты</td></tr><tr><td>Входной порт</td><td>Доступный сценарий приложения</td><td>Отгрузить заказ</td></tr><tr><td>Входной адаптер</td><td>Преобразовать внешний запрос в вызов сценария</td><td>REST-контроллер, Kafka listener</td></tr><tr><td>Выходной порт</td><td>Описать необходимую внешнюю операцию</td><td>Загрузить и сохранить заказ</td></tr><tr><td>Выходной адаптер</td><td>Реализовать эту операцию конкретной технологией</td><td>JPA-репозиторий, HTTP-клиент</td></tr></table></div>
+<p><b>Пример:</b> сценарий отгрузки использует Order из предыдущего вопроса про DDD:</p>
+<pre class="wide"><span class="k">interface</span> <span class="t">Orders</span> {
+    <span class="t">Order</span> get(<span class="t">UUID</span> id);
+    <span class="k">void</span> save(<span class="t">Order</span> order);
+}
+
+<span class="a">@RequiredArgsConstructor</span>
+<span class="k">class</span> <span class="t">ShipOrder</span> {
+    <span class="k">private</span> <span class="k">final</span> <span class="t">Orders</span> orders;
+
+    <span class="k">void</span> execute(<span class="t">UUID</span> id) {
+        <span class="t">Order</span> order = orders.get(id);
+        order.ship();
+        orders.save(order);
+    }
+}</pre>
+<pre class="narrow"><span class="k">interface</span> <span class="t">Orders</span> {
+  <span class="t">Order</span> get(<span class="t">UUID</span> id);
+  <span class="k">void</span> save(<span class="t">Order</span> order);
+}
+
+<span class="a">@RequiredArgsConstructor</span>
+<span class="k">class</span> <span class="t">ShipOrder</span> {
+  <span class="k">private</span> <span class="k">final</span> <span class="t">Orders</span> orders;
+
+  <span class="k">void</span> execute(<span class="t">UUID</span> id) {
+    <span class="t">Order</span> order = orders.get(id);
+    order.ship();
+    orders.save(order);
+  }
+}</pre>
+<p><b>ShipOrder не знает, где хранится заказ.</b> В приложении ему передают JpaOrdersAdapter, а в тесте — реализацию в памяти. Spring-конфигурация связывает интерфейс с адаптером. Входной порт здесь — метод execute, выходной — интерфейс Orders; отдельный интерфейс для ShipOrder не обязателен.</p>
+<p><b>Транзакцию задают на границе сценария,</b> чтобы загрузка и сохранение выполнялись согласованно. При конкурентном изменении заказа нужен ещё контроль версии или другой подходящий механизм. Сама архитектурная граница не обеспечивает транзакционность и защиту от гонок.</p>
+<ul><li><b>Интерфейс для каждого класса не требуется.</b> Порты нужны на значимых границах взаимодействия.</li><li><b>Заменить БД не всегда легко:</b> SQL, транзакции и особенности модели хранения всё равно могут потребовать изменений.</li><li><b>DDD и гексагональная архитектура дополняют друг друга:</b> DDD помогает построить бизнес-модель, гексагональная архитектура — отделить её от инфраструктуры.</li></ul>
+<p class="follow"><b>Направление вызовов тоже всегда внутрь?</b> Нет. Сценарий вызывает выходной порт, а выполняется код инфраструктурного адаптера. Внутрь направлена зависимость кода от интерфейса, а не каждый runtime-вызов.</p>
     </div></div></article>
 <article id="q244" class="responsive-code" hidden><div class="crumbs">Архитектура и микросервисы</div><h2 tabindex="-1">244. Синхронное или асинхронное взаимодействие сервисов</h2><div class="answer" hidden><div class="short"><p><b>Синхронный вызов</b> подходит, когда результат другого сервиса нужен для текущего решения. Вызывающий ждёт ответ и зависит от задержки и доступности этой зависимости.</p><p><b>Асинхронное сообщение</b> позволяет принять работу сейчас, а выполнить позже. Нужны идентификатор операции, хранение статуса, повторы и обработка дублей.</p><p>Часто комбинируют: платёж сохраняется синхронно, уведомления и аналитика получают событие. Сам REST не гарантирует сильную согласованность, а брокер — отсутствие потерь.</p></div>
     <div class="more">
