@@ -762,7 +762,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
 <a href="#q280" data-k="d46bbc17f9" data-ci="10"><span class="num">280</span><span class="q">Спроектируйте ленту новостей и поиск Facebook</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q281" data-k="7c86e1e733" data-ci="10"><span class="num">281</span><span class="q">Спроектируйте Mint.com — сервис учёта личных финансов</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q282" data-k="afc13b50fb" data-ci="10"><span class="num">282</span><span class="q">Спроектируйте систему, которая масштабируется до миллионов пользователей</span><i class="st ico none"></i><span class="sr st-t"></span></a>
-<a href="#q283" data-k="638d8d1d9c" data-ci="10"><span class="num">283</span><span class="q">Спроектируйте систему бронирования авиабилетов</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q283" data-k="638d8d1d9c" data-ci="10"><span class="num">283</span><span class="q">Спроектируйте систему бронирования номера в отеле</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Kubernetes и эксплуатация</span><span class="count">14</span><span class="mini" role="img"></span></summary>
 <a href="#q284" data-k="be1dcbd33a" data-ci="11"><span class="num">284</span><span class="q">Docker-образ для Java-сервиса</span><i class="st ico none"></i><span class="sr st-t"></span></a>
@@ -11844,25 +11844,25 @@ outbox
 <p><b>Компромиссы.</b> Очередь добавляет задержку и требования к восстановлению, шардирование — сложность миграций и транзакций, отдельные хранилища — синхронизацию представлений. Выбирается минимальный набор изменений, который проверенно закрывает текущую нагрузку и требования доступности.</p>
 <p class="follow"><b>На каком количестве пользователей нужно добавлять кеш, реплики и шардинг?</b> Универсального порога нет. Решение определяется рабочим набором, стоимостью операций, пиковым RPS и результатами тестов. Миллионы редко активных пользователей могут нагружать систему меньше, чем небольшой сервис с частыми тяжёлыми запросами.</p>
     </div></div></article>
-<article id="q283" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">283. Спроектируйте систему бронирования авиабилетов <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
-<p><b>Поиск читает кеш и отдельную read-модель; бронирование меняет транзакционный источник истины.</b> Перед оплатой проверяются цена и доступность, места удерживаются на ограниченное время. Кресло в салоне и место по тарифу — разные сущности.</p>
-<figure class="concept" aria-labelledby="sd-flight-scaled-summary-caption">
-<svg id="sd-flight-scaled-summary" viewBox="0 0 328 652" role="img" aria-labelledby="sd-flight-scaled-summary-title sd-flight-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-flight-scaled-summary-title">Бронирование: поиск и оформление масштабируются независимо</title><desc id="sd-flight-scaled-summary-desc">Клиент вызывает API Gateway. Search API читает кеш и поисковый индекс, Booking API сохраняет резервы в основной БД. Outbox передаёт команды и события через очередь работникам саги и уведомлений, а также обновляет индекс. Работники саги сохраняют прогресс в БД и вызывают платёжного провайдера. Стопки обозначают несколько экземпляров, у БД — primary и standby.</desc>
-<defs><marker id="sd-flight-scaled-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 44 V74" marker-end="url(#sd-flight-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M160 130 V158 H74 V184" marker-end="url(#sd-flight-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M160 130 V158 H238 V184" marker-end="url(#sd-flight-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M74 246 V288" marker-end="url(#sd-flight-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M238 246 V276" marker-end="url(#sd-flight-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M238 342 V368 H160 V400" marker-end="url(#sd-flight-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<article id="q283" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">283. Спроектируйте систему бронирования номера в отеле <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
+<p><b>Поиск читает кеш и read-модель отелей; бронирование атомарно удерживает доступность на каждую ночь проживания.</b> Интервал — <code>[заезд, выезд)</code>: ночь даты выезда не продаётся этой брони. Цена и наличие перепроверяются перед резервированием.</p>
+<figure class="concept" aria-labelledby="sd-hotel-scaled-summary-caption">
+<svg id="sd-hotel-scaled-summary" viewBox="0 0 328 652" role="img" aria-labelledby="sd-hotel-scaled-summary-title sd-hotel-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-hotel-scaled-summary-title">Бронирование: поиск и оформление масштабируются независимо</title><desc id="sd-hotel-scaled-summary-desc">Клиент вызывает API Gateway. Search API читает кеш и поисковый индекс, Booking API сохраняет резервы в основной БД. Outbox передаёт команды и события через очередь работникам саги и уведомлений, а также обновляет индекс. Работники саги сохраняют прогресс в БД и вызывают платёжного провайдера. Стопки обозначают несколько экземпляров, у БД — primary и standby.</desc>
+<defs><marker id="sd-hotel-scaled-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M160 44 V74" marker-end="url(#sd-hotel-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M160 130 V158 H74 V184" marker-end="url(#sd-hotel-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M160 130 V158 H238 V184" marker-end="url(#sd-hotel-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M74 246 V288" marker-end="url(#sd-hotel-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M238 246 V276" marker-end="url(#sd-hotel-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M238 342 V368 H160 V400" marker-end="url(#sd-hotel-scaled-summary-arrow)" stroke-dasharray="4 4"/>
 <text class="concept-label" x="258" y="386" text-anchor="middle">outbox</text>
-<path class="concept-edge" d="M88 422 H74 V342" marker-end="url(#sd-flight-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M88 422 H74 V342" marker-end="url(#sd-hotel-scaled-summary-arrow)" stroke-dasharray="4 4"/>
 <text class="concept-label" x="34" y="384" text-anchor="middle">обновить</text>
-<path class="concept-edge" d="M116 446 V470 H74 V490" marker-end="url(#sd-flight-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M204 446 V470 H238 V490" marker-end="url(#sd-flight-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M304 527 H318 V315 H316" marker-end="url(#sd-flight-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M238 552 V592" marker-end="url(#sd-flight-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M116 446 V470 H74 V490" marker-end="url(#sd-hotel-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M204 446 V470 H238 V490" marker-end="url(#sd-hotel-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M304 527 H318 V315 H316" marker-end="url(#sd-hotel-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M238 552 V592" marker-end="url(#sd-hotel-scaled-summary-arrow)"/>
 <rect fill="var(--bg)" stroke="none" x="88" y="8" width="144" height="36" rx="8"/>
 <rect class="concept-node plain" x="88" y="8" width="144" height="36" rx="8"/>
 <text x="160" y="31" text-anchor="middle">Клиент</text>
@@ -11891,8 +11891,8 @@ outbox
 <text x="238" y="234.5" text-anchor="middle">резервы</text>
 <rect fill="var(--bg)" stroke="none" x="8" y="288" width="144" height="54" rx="8"/>
 <rect class="concept-node plain" x="8" y="288" width="144" height="54" rx="8"/>
-<text x="80" y="311.5" text-anchor="middle">Кеш + индекс</text>
-<text x="80" y="328.5" text-anchor="middle">поиска</text>
+<text x="80" y="311.5" text-anchor="middle">Кеш + поиск</text>
+<text x="80" y="328.5" text-anchor="middle">отелей</text>
 <rect fill="var(--bg)" stroke="none" x="184" y="276" width="132" height="54" rx="8"/>
 <rect class="concept-node plain" x="184" y="276" width="132" height="54" rx="8"/>
 <rect fill="var(--bg)" stroke="none" x="178" y="282" width="132" height="54" rx="8"/>
@@ -11919,34 +11919,35 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="172" y="502" width="132" height="50" rx="8"/>
 <rect class="concept-node accent" x="172" y="502" width="132" height="50" rx="8"/>
 <text x="238" y="523.5" text-anchor="middle">Работники саги</text>
-<text x="238" y="540.5" text-anchor="middle">оплата / билет</text>
+<text x="238" y="540.5" text-anchor="middle">оплата / бронь</text>
 <rect fill="var(--bg)" stroke="none" x="172" y="592" width="140" height="48" rx="8"/>
 <rect class="concept-node plain" x="172" y="592" width="140" height="48" rx="8"/>
 <text x="242" y="612.5" text-anchor="middle">Платёжный</text>
 <text x="242" y="629.5" text-anchor="middle">провайдер</text>
 </svg>
-<figcaption id="sd-flight-scaled-summary-caption">Поиск и Booking API масштабируются отдельно. БД — источник истины по местам, резервам и состоянию процесса; standby не становится независимым центром записи. Outbox доставляет команды и события в отдельные очереди или топики. Пунктир — фоновая доставка, стопки — несколько экземпляров. Выписка выполняется работниками саги; ответы вызовов опущены.</figcaption></figure>
-<p><b>Оформление — сохраняемая сага:</b> резерв → платёж → выписка → подтверждение. Условные переходы защищают от гонок, стабильные ключи — от повторов. Неизвестный исход платежа выясняется по статусу; окончательный сбой выписки после списания требует возврата.</p>
+<figcaption id="sd-hotel-scaled-summary-caption">Поиск и Booking API масштабируются отдельно. БД — источник истины по номеро-ночам, резервам и состоянию процесса; standby не становится независимым центром записи. Outbox доставляет команды и события в отдельные очереди или топики. Пунктир — фоновая доставка, стопки — несколько экземпляров. Оплата и подтверждение выполняются работниками саги; ответы вызовов опущены.</figcaption></figure>
+<p><b>Резерв имеет срок, оплата — идемпотентный процесс.</b> Подтверждение платежа и истечение резерва конкурируют через условные переходы состояния. Доступность проверяется на весь период: свободный номер в первую ночь не гарантирует возможность проживания до выезда.</p>
     </div>
     <div class="more">
 <h4>Шаг 1 — Требования и ограничения</h4>
-<p>Нужно уточнить владельца инвентаря: сайт авиакомпании или агентство, которое бронирует через партнёров. <b>Для основного решения выбран собственный инвентарь авиакомпании</b>, прямые рейсы и маршруты со стыковкой. Основные сценарии: поиск, проверка тарифа, удержание мест, ввод пассажиров, оплата, выписка, просмотр статуса и отмена по правилам тарифа. Регистрация на рейс, программа лояльности и динамическое ценообразование вне разбора; тарифы поступают готовыми.</p>
-<p><b>Инварианты:</b> активные резервы и продажи не превышают разрешённую ёмкость; кресло на конкретном вылете не назначается двум пассажирам; повтор запроса не создаёт второй платёж или комплект билетов. Overbooking в примере отключён. Если бизнес его допускает, лимит продажи задаётся явно. Подтверждение брони выдаётся только после успешного списания и выписки всех нужных билетов.</p>
-<p><b>Допущения:</b> 50 млн поисков и 100 тыс. оформлений в сутки, пик в 5 раз выше среднего. Цель поиска — p95 до 1 секунды на стороне сервиса; допустимо отставание наличия до 30 секунд. Это ориентиры для примера, а не отраслевые нормативы. Перед удержанием и оплатой данные проверяются заново. Резерв действует 15 минут; срок обработки начатого платежа контролируется отдельно.</p>
-<div class="table-wrap"><table><tr><th>Величина</th><th>Оценка и следствие</th></tr>
-<tr><td>Поиск</td><td>50 млн / 86 400 ≈ 580 RPS; пик ≈ 2 900 RPS. Один запрос проверяет много вариантов маршрута.</td></tr>
-<tr><td>Оформления</td><td>100 тыс. / 86 400 ≈ 1,2 в секунду; пик ≈ 6. Каждый процесс создаёт несколько обращений к БД и провайдеру.</td></tr>
-<tr><td>Look-to-book</td><td>500 поисков на одно оформление. Поиск и запись имеют разные требования и масштабируются независимо.</td></tr>
-<tr><td>История броней</td><td>При условных 5 КБ на бронь — около 0,5 ГБ в сутки, 183 ГБ в год без индексов, журналов и реплик. Вложения и история шагов оцениваются отдельно.</td></tr></table></div>
-<p><b>Цена компромисса:</b> поиск остаётся доступным со слегка устаревшими данными, но выбранный тариф иногда уже недоступен. При потере надёжного центра записи новая бронь отклоняется или ждёт восстановления, вместо продажи на основании кеша.</p>
+<p>Основные сценарии: найти отель по городу, датам, гостям и фильтрам; выбрать категорию номера и тариф; временно удержать номер на весь срок; оплатить; получить подтверждение; посмотреть, изменить или отменить бронь. <b>Основной вариант — платформа сети отелей, управляющая своим инвентарём.</b> Отличие агрегатора с внешней PMS — системой управления отелем — разобрано отдельно. Распределение уборки и бухгалтерия отеля вне задачи.</p>
+<p><b>Нужно согласовать:</b> продажу категории или конкретного номера, возможность переселения между номерами, количество номеров в заказе, предоплату или оплату в отеле, правила отмены, допустимость overbooking. В примере продаётся категория, номера взаимозаменяемы и заранее жёстко не назначены; overbooking запрещён, требуется полная предоплата. Если обещан конкретный номер или его непрерывная доступность, добавляется проверка физического размещения.</p>
+<p><b>Инвариант:</b> для каждой даты активные резервы и подтверждённые брони не превышают доступную ёмкость категории. Подтверждение охватывает все ночи; частичная бронь не считается успехом. Повтор запроса не создаёт вторую бронь или списание. Показ поиска может отставать, но кеш не принимает решение о продаже последнего номера.</p>
+<p><b>Допущения:</b> 50 млн поисков и 100 тыс. броней в сутки, среднее проживание — 3 ночи, пик в 5 раз выше среднего, резерв на оплату — 15 минут. Цель поиска — p95 до 1 секунды на стороне сервиса; допустимое отставание выдачи — до 30 секунд. Все числа нужны для оценки, а не являются нормативами.</p>
+<div class="table-wrap"><table><tr><th>Показатель</th><th>Оценка и следствие</th></tr>
+<tr><td>Поиск</td><td>≈ 580 RPS в среднем, ≈ 2 900 на пике. Нужны выборка отелей и проверка диапазона дат.</td></tr>
+<tr><td>Бронирование</td><td>≈ 1,2 в секунду, ≈ 6 на пике. Для одного номера на 3 ночи меняются 3 строки доступности, не считая записи самой брони и процесса оплаты.</td></tr>
+<tr><td>Календарь доступности</td><td>10 тыс. отелей × 5 категорий × 365 дат ≈ 18,3 млн строк на год. Тарифы, ограничения и исторические данные считаются отдельно.</td></tr>
+<tr><td>История</td><td>При условных 5 КБ на бронь — около 183 ГБ в год без индексов, журналов и реплик. Этот объём сам по себе не требует шардирования.</td></tr></table></div>
+<p><b>Компромисс:</b> устаревший поиск дешевле и доступнее, но иногда выбранный вариант уже нельзя забронировать. При недоступном центре записи оформление отклоняется или ожидает восстановления — не подтверждается по кешу.</p>
 <h4>Шаг 2 — Общая архитектура</h4>
-<figure class="concept" aria-labelledby="sd-flight-base-caption">
-<svg id="sd-flight-base" viewBox="0 0 320 286" role="img" aria-labelledby="sd-flight-base-title sd-flight-base-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-flight-base-title">Бронирование: базовая архитектура</title><desc id="sd-flight-base-desc">Клиент вызывает одно приложение с модулями поиска, бронирования и фонового оформления. Приложение использует PostgreSQL и вызывает платёжного провайдера. Состояние саги хранится в БД.</desc>
-<defs><marker id="sd-flight-base-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 46 V88" marker-end="url(#sd-flight-base-arrow)"/>
-<path class="concept-edge" d="M118 156 V186 H78 V216" marker-end="url(#sd-flight-base-arrow)"/>
-<path class="concept-edge" d="M202 156 V186 H246 V216" marker-end="url(#sd-flight-base-arrow)"/>
+<figure class="concept" aria-labelledby="sd-hotel-base-caption">
+<svg id="sd-hotel-base" viewBox="0 0 320 286" role="img" aria-labelledby="sd-hotel-base-title sd-hotel-base-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-hotel-base-title">Бронирование: базовая архитектура</title><desc id="sd-hotel-base-desc">Клиент вызывает одно приложение с модулями поиска, бронирования и фонового оформления. Приложение использует PostgreSQL и вызывает платёжного провайдера. Состояние саги хранится в БД.</desc>
+<defs><marker id="sd-hotel-base-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M160 46 V88" marker-end="url(#sd-hotel-base-arrow)"/>
+<path class="concept-edge" d="M118 156 V186 H78 V216" marker-end="url(#sd-hotel-base-arrow)"/>
+<path class="concept-edge" d="M202 156 V186 H246 V216" marker-end="url(#sd-hotel-base-arrow)"/>
 <rect fill="var(--bg)" stroke="none" x="88" y="8" width="144" height="38" rx="8"/>
 <rect class="concept-node plain" x="88" y="8" width="144" height="38" rx="8"/>
 <text x="160" y="32" text-anchor="middle">Клиент</text>
@@ -11957,73 +11958,79 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="8" y="216" width="140" height="54" rx="8"/>
 <rect class="concept-node plain" x="8" y="216" width="140" height="54" rx="8"/>
 <text x="78" y="239.5" text-anchor="middle">PostgreSQL</text>
-<text x="78" y="256.5" text-anchor="middle">места / резервы</text>
+<text x="78" y="256.5" text-anchor="middle">ночи / резервы</text>
 <rect fill="var(--bg)" stroke="none" x="172" y="216" width="140" height="54" rx="8"/>
 <rect class="concept-node plain" x="172" y="216" width="140" height="54" rx="8"/>
 <text x="242" y="239.5" text-anchor="middle">Платёжный</text>
 <text x="242" y="256.5" text-anchor="middle">провайдер</text>
 </svg>
-<figcaption id="sd-flight-base-caption">Сначала достаточно модульного приложения и одной БД. Фоновый обработчик продолжает оформление по сохранённому состоянию. Внешний платёж выполняется между короткими транзакциями БД.</figcaption></figure>
-<p><b>Начальный вариант:</b> модульное приложение с поиском, расчётом предложения, резервированием и обработчиком оформления. PostgreSQL хранит расписание, ёмкость рейсов, резервы, пассажиров, снимок цены, платёжные попытки, билеты и состояние процесса. Поиск сначала работает по индексированным таблицам. Долгий платёж не удерживает транзакцию БД: обработчик фиксирует намерение, вызывает провайдера и отдельной транзакцией сохраняет результат.</p>
-<p><b>Путь пользователя:</b> поиск маршрута → актуальное предложение → резерв всех сегментов → начало оформления → оплата и выписка в фоне → готовая бронь. Пока оформление продолжается, API возвращает идентификатор и статус, а клиент опрашивает его. Номер брони/PNR идентифицирует запись бронирования; наличие PNR само по себе не доказывает, что билет уже выписан.</p>
+<figcaption id="sd-hotel-base-caption">Сначала достаточно модульного приложения и одной БД. Фоновый обработчик продолжает оформление по сохранённому состоянию. Внешний платёж выполняется между короткими транзакциями БД.</figcaption></figure>
+<p><b>Начальный вариант — модульное приложение и PostgreSQL.</b> В приложении находятся поиск, тарифы, бронирование и фоновый обработчик оплаты. БД хранит отели, категории, календарь доступности, тарифы, гостей, брони, платёжные попытки и outbox. Поиск сначала работает по индексированным таблицам; отдельные сервисы и поисковый движок добавляются по измеренной необходимости.</p>
+<p><b>Путь запроса:</b> поиск → актуальное предложение → резерв всех ночей → начало оплаты → подтверждение → уведомление. Внешний платёж выполняется между короткими транзакциями, а прогресс сохраняется в БД. Пока оформление не завершено, клиент получает статус процесса и опрашивает API.</p>
 <h4>Шаг 3 — Детали ключевых компонентов</h4>
-<p><b>API.</b> Владелец определяется из аутентификации; ID брони не даёт права читать чужие паспортные данные. Создание и платёж требуют <code><span class="t">Idempotency</span>-<span class="t">Key</span></code>; ключ связывается с пользователем, типом операции и хешем запроса. Повтор с другим содержимым отклоняется, одновременные повторы сериализуются уникальным ограничением.</p>
-<pre><span class="t">GET</span> /flights?from=…&amp;to=…&amp;date=…
+<p><b>API.</b> Создание, оплата и отмена защищаются ключом идемпотентности. Ключ связывается с пользователем, операцией и хешем тела запроса; уникальное ограничение сериализует одновременные повторы. Чтение и изменение брони требуют проверки владельца, а не только знания её ID.</p>
+<pre><span class="t">GET</span> /hotels?city=…&amp;checkIn=…&amp;checkOut=…
 <span class="t">POST</span> /offers/reprice
 <span class="t">POST</span> /bookings
 <span class="t">POST</span> /bookings/{id}/checkout
 <span class="t">GET</span> /bookings/{id}
 <span class="t">POST</span> /bookings/{id}/cancel</pre>
-<p><code>reprice</code> возвращает сохранённое на сервере предложение: сегменты, пассажиры, валюту, сумму в минимальных единицах, налоги, условия и срок. Клиент передаёт <code>offer_id</code>, а не доверенную цену. <b>Предложение не равно резерву:</b> цена и наличие гарантируются только принятой политикой авиакомпании и успешным удержанием. Изменение до создания резерва требует нового согласия пользователя. В принятой брони цена и правила сохраняются снимком.</p>
-<p><b>Модель инвентаря.</b> <code>flight_instance</code> — конкретный вылет с датой, а не повторяющийся номер рейса. Время хранится однозначно с нужной зоной для отображения; маршруты учитывают длительность и минимальное время пересадки. Нельзя строить стыковки сравнением местных часов разных аэропортов.</p>
-<div class="table-wrap"><table><tr><th>Сущность</th><th>Назначение и ограничение</th></tr>
-<tr><td>flight_inventory</td><td>Общая доступная ёмкость по вылету и салону. Это предел, общий для тарифных классов одного салона.</td></tr>
-<tr><td>fare_allotment</td><td>Если требуется — отдельная квота тарифа. Независимые счётчики тарифов не должны позволять превысить общую ёмкость.</td></tr>
-<tr><td>booking / booking_segment</td><td>Владелец, пассажиры, сегменты, количество, цена, статус и время истечения резерва; версия для условных переходов.</td></tr>
-<tr><td>seat_assignment</td><td>Назначение конкретного кресла. Уникальность по вылету и номеру кресла; покупка тарифа не обязательно требует выбора кресла.</td></tr>
-<tr><td>payment_attempt / ticket / outbox</td><td>Стабильные ID операций, статусы и внешние номера, билет на пассажира с полётными купонами, надёжная доставка команд и событий.</td></tr></table></div>
-<p><b>Как не продать последнее место дважды.</b> Бронь, уменьшение доступности всех её сегментов и outbox сохраняются одной короткой транзакцией. Количество пассажиров валидируется как положительное. Для каждого сегмента выполняется условный UPDATE:</p>
-<pre><span class="k">UPDATE</span> flight_inventory
+<p><b>Даты и цена.</b> Заезд и выезд задаются календарными датами отеля; должно выполняться <code>checkIn &lt; checkOut</code>. Например, 10–13 ноября — ночи 10, 11 и 12 ноября. Срок платежа — отдельный момент времени, а не дата проживания. Часы бесплатной отмены интерпретируются в зоне отеля и сохраняются вместе с правилами.</p>
+<p>Актуальное предложение хранится на сервере: отель, категория, состав гостей, даты, количество номеров, цены по ночам, налоги, валюта, питание, условия отмены и срок действия. Клиент передаёт <code>offer_id</code>, а не доверенную сумму. <b>Цена за ночь может различаться:</b> итог считается по всем датам и сборам, а не как первая цена × количество ночей. Предложение не резервирует наличие; цена и условия фиксируются снимком при успешном удержании по принятой политике.</p>
+<div class="table-wrap"><table><tr><th>Сущность</th><th>Назначение</th></tr>
+<tr><td>hotel / room_type / rate_plan</td><td>Отель и его зона, категория и вместимость, тариф с правилами питания, оплаты и отмены.</td></tr>
+<tr><td>room_inventory</td><td>Ключ: отель, категория, дата. Доступный остаток на ночь; отсутствие строки означает отсутствие открытой продажи.</td></tr>
+<tr><td>booking / booking_night</td><td>Владелец, гости, даты, количество номеров, статус, срок резерва и версия; по ночам — зарезервированное количество и снимок цены.</td></tr>
+<tr><td>payment_attempt / outbox</td><td>Стабильные ID платёжных шагов и их результаты; команды и события, зафиксированные вместе с изменением брони.</td></tr>
+<tr><td>room / room_assignment</td><td>Физические номера и размещение на интервал. Нужны при назначении конкретного номера; категория и номер — разные сущности.</td></tr></table></div>
+<p><b>Остаток общий для тарифов одной категории.</b> «С завтраком» и «без завтрака» могут продавать один и тот же номер. Независимый остаток для каждого тарифа позволил бы продать его дважды. Квоты тарифа, минимальная длительность проживания и ограничения заезда проверяются дополнительно к общей доступности. Такое разделение инвентаря, цен и ограничений используется и в <a href="https://developers.booking.com/connectivity/docs/ari">модели обмена данными Booking.com</a>.</p>
+<p><b>Атомарный резерв на весь период.</b> В одной транзакции создаётся идемпотентная бронь, блокируются строки календаря в порядке даты, проверяются все ночи и уменьшается остаток. Количество номеров и длительность должны быть положительными и ограниченными.</p>
+<pre><span class="k">SELECT</span> stay_date, available
+<span class="k">FROM</span> room_inventory
+<span class="k">WHERE</span> hotel_id = :hotel
+  <span class="k">AND</span> room_type_id = :type
+  <span class="k">AND</span> stay_date &gt;= :check_in
+  <span class="k">AND</span> stay_date &lt; :check_out
+<span class="k">ORDER</span> <span class="k">BY</span> stay_date
+<span class="k">FOR</span> <span class="k">UPDATE</span>;</pre>
+<p>Должно вернуться ровно столько строк, сколько ночей в проживании, и на каждой должно быть не меньше запрошенного количества номеров. После проверки выполняется UPDATE в той же транзакции:</p>
+<pre><span class="k">UPDATE</span> room_inventory
 <span class="k">SET</span> available = available - :qty
-<span class="k">WHERE</span> flight_instance_id = :flight
-  <span class="k">AND</span> cabin = :cabin
-  <span class="k">AND</span> available &gt;= :qty
-<span class="k">RETURNING</span> available;</pre>
-<p>Одна возвращённая строка означает успешное удержание, ноль — отказ и откат всей транзакции. При наличии тарифной квоты она проверяется и уменьшается в той же транзакции. Строки сегментов блокируются в едином порядке, чтобы снизить риск дедлоков; возникший дедлок требует повтора всей транзакции. Отдельные SELECT и безусловный UPDATE оставляют гонку. <a href="https://www.postgresql.org/docs/16/transaction-iso.html">В PostgreSQL Read Committed</a> после ожидания конкурентного UPDATE условие проверяется на обновлённой строке.</p>
-<p><b>Истечение резерва против начала оплаты.</b> И таймер, и checkout конкурируют за одну строку брони. Checkout атомарно переводит ещё действующий <code><span class="t">HELD</span></code> в <code><span class="t">PROCESSING</span></code>, сохраняя команду оформления в outbox. Таймер переводит только истёкший <code><span class="t">HELD</span></code> в <code><span class="t">EXPIRED</span></code> и возвращает ёмкость в той же транзакции. Проверка срока выполняется после получения блокировки по актуальному времени БД. Успешен только один переход; повторное освобождение не увеличивает остаток.</p>
-<p><b>PROCESSING нельзя освобождать обычным TTL.</b> Платёж мог завершиться, пока ответ потерялся. Для зависшего процесса отдельный обработчик восстановления проверяет платёж и выписку. Все переходы, включая отмену пользователем, следуют общей машине состояний; отмена во время оплаты сохраняет намерение отменить и запускает согласование, а не мгновенно возвращает место в продажу.</p>
-<p><b>Сага оплаты и выписки.</b> В этом примере принят порядок <b>авторизация → списание → выписка</b>. Он требует возврата, если списание прошло, а билет окончательно не выписался. Иной порядок выбирается по контрактам платёжной и билетной систем; универсальной атомарной транзакции между ними нет.</p>
-<ol>
-<li>Зафиксировать <code><span class="t">PROCESSING</span></code>, стабильные ID шагов и команду на выполнение. Работник восстанавливает прогресс из БД, а не из памяти.</li>
-<li>Авторизовать платёж и затем выполнить capture. Ключи различаются по шагам и попыткам, например <code>booking:attempt:authorize</code> и <code>booking:attempt:capture</code>, но не меняются при сетевом повторе одного шага.</li>
-<li>Зафиксировать списание и выписать билеты. Для собственной выписки запись билетов защищается уникальностью по брони и пассажиру; подтверждение и событие сохраняются одной транзакцией. Для внешней — нужны её протокол идемпотентности и проверка результата.</li>
-<li>Перевести бронь в <code><span class="t">CONFIRMED</span></code> только при наличии полного результата. Через outbox обновить поиск и отправить уведомление; сбой письма не отменяет билет.</li>
-</ol>
-<div class="table-wrap"><table><tr><th>Сбой</th><th>Восстановление</th></tr>
-<tr><td>Авторизация отклонена</td><td>Завершить отмену и вернуть резерв один раз. Если деньги только авторизованы, выполнить void при необходимости.</td></tr>
-<tr><td>Таймаут capture или выписки</td><td>Сохранить неизвестный исход и запросить статус по стабильному ID. Не создавать новую операцию с новым ключом и не освобождать места вслепую.</td></tr>
-<tr><td>Временный сбой после списания</td><td>Повторить выписку в допустимый срок. Пользователь видит «оформление», а не ложное подтверждение.</td></tr>
-<tr><td>Окончательный отказ выписки</td><td>Проверить и отменить уже выписанные части, запустить возврат, освободить соответствующий инвентарь по согласованному переходу. До завершения компенсаций — REFUND_PENDING или ручной разбор.</td></tr>
-<tr><td>Работник упал после внешнего успеха</td><td>Новый работник читает сохранённый шаг и выясняет исход у провайдера. Lease распределяет работу, а условные записи и идемпотентные операции защищают от старого работника.</td></tr></table></div>
-<p><b>Стыковки и внешняя система бронирования.</b> Если сегменты находятся в одной БД, резервы фиксируются вместе. При разделении по шардам или партнёрам используются отдельные удержания и компенсации; частичный маршрут не объявляется готовым. Для агентства источником истины остаётся инвентарь партнёра: локальный UPDATE не резервирует его места. Нужны адаптер, проверка актуального предложения, создание внешней брони, её срок и отдельное подтверждение выписки. Такое разделение поиска, проверки цены, бронирования и билета видно в <a href="https://amadeus4dev.github.io/developer-guides/faq/">документации Amadeus</a>. Возможность удержания цены, идемпотентность и порядок расчётов определяются конкретным контрактом.</p>
+<span class="k">WHERE</span> hotel_id = :hotel
+  <span class="k">AND</span> room_type_id = :type
+  <span class="k">AND</span> stay_date &gt;= :check_in
+  <span class="k">AND</span> stay_date &lt; :check_out
+  <span class="k">AND</span> available &gt;= :qty;</pre>
+<p>Число обновлённых строк также должно совпасть с числом ночей. Любое расхождение — откат <b>всей</b> транзакции. Затем сохраняются <code>booking_night</code>, статус <code><span class="t">HELD</span></code>, срок и событие outbox. Изменение ёмкости из-за ремонта и другие продажи обязаны соблюдать тот же инвариант. Сетевые вызовы внутри этой транзакции не выполняются; одинаковый порядок блокировок снижает риск дедлоков, но не отменяет обработку ошибок и повтор транзакции.</p>
+<p><b>Категория не гарантирует конкретный номер.</b> Если одна ночь свободна в номере 101, а другая только в 102, счётчики по датам ещё не доказывают возможность жить в одном номере без переселения при фиксированных назначениях. Для такой гарантии нужно подобрать один физический номер на весь интервал и атомарно запретить пересечения его активных назначений. В PostgreSQL это можно выразить диапазоном дат <code>[check_in, check_out)</code> и <a href="https://www.postgresql.org/docs/17/rangetypes.html">exclusion constraint по номеру и пересечению диапазонов</a>; для сочетания обычного ID с диапазоном используется подходящая поддержка, например <code>btree_gist</code>. Отменённые назначения освобождаются транзакционно.</p>
+<p><b>Резерв против таймера.</b> Checkout и обработчик истечения блокируют одну строку брони. После получения блокировки проверяются текущий статус и актуальное время БД. Checkout переводит действующий <code><span class="t">HELD</span></code> в <code><span class="t">PROCESSING</span></code> и сохраняет команду оплаты. Таймер переводит только истёкший <code><span class="t">HELD</span></code> в <code><span class="t">EXPIRED</span></code> и возвращает все его номеро-ночи одной транзакцией. Только победивший переход освобождает остаток; повторное событие не увеличивает его второй раз.</p>
+<p><b>PROCESSING имеет отдельное восстановление.</b> Его нельзя просто удалить по TTL: деньги могли уже списаться. Зависший процесс сначала выясняет исход платежа, затем подтверждает бронь или запускает компенсацию. Отмена пользователем во время оплаты сохраняет намерение отменить и проходит через тот же процесс согласования.</p>
+<p><b>Оплата и подтверждение.</b> Для выбранной полной предоплаты обработчик сохраняет попытку, авторизует сумму, выполняет capture и подтверждает бронь короткой транзакцией БД. Ключ стабилен для каждого шага, например <code>booking:attempt:capture</code>, но различается между шагами. Повтор после потери ответа использует прежний ключ или запрос статуса. Успешное списание переводит уже удержанную ёмкость в подтверждённую бронь — второй раз уменьшать остаток нельзя.</p>
+<div class="table-wrap"><table><tr><th>Ситуация</th><th>Действие</th></tr>
+<tr><td>Платёж отклонён</td><td>После установления окончательного исхода отменить бронь и вернуть все ночи. Незавершённую авторизацию при необходимости снять через void.</td></tr>
+<tr><td>Таймаут после capture</td><td>Сохранить неизвестный исход, запросить статус. Не освобождать номер и не создавать новое списание с другим ключом.</td></tr>
+<tr><td>Списание прошло, БД недоступна</td><td>Повторить фиксацию подтверждения после восстановления. Резерв остаётся в PROCESSING; сверка находит расхождение.</td></tr>
+<tr><td>Оформление окончательно отменено после списания</td><td>Зафиксировать REFUND_PENDING и команду возврата; освобождение дат выполнить ровно один раз по принятому переходу. Завершение возврата проверить отдельно.</td></tr>
+<tr><td>Бронь отменяется после подтверждения</td><td>Применить сохранённые правила тарифа: бесплатная отмена, штраф или отсутствие возврата. Статус брони и статус возврата учитываются раздельно.</td></tr></table></div>
+<p><b>Изменение дат — новая проверка доступности.</b> Нельзя сначала освободить старую бронь, а затем обнаружить, что новый период занят. Для своего инвентаря разница старых и новых номеро-ночей, новая цена и переход фиксируются согласованно; пересекающиеся даты не списываются дважды. Если требуется доплата, изменение становится отдельным процессом с резервом и компенсациями.</p>
 <h4>Шаг 4 — Масштабирование и узкие места</h4>
-<figure class="concept" aria-labelledby="sd-flight-scaled-caption">
-<svg id="sd-flight-scaled" viewBox="0 0 328 652" role="img" aria-labelledby="sd-flight-scaled-title sd-flight-scaled-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-flight-scaled-title">Бронирование: поиск и оформление масштабируются независимо</title><desc id="sd-flight-scaled-desc">Клиент вызывает API Gateway. Search API читает кеш и поисковый индекс, Booking API сохраняет резервы в основной БД. Outbox передаёт команды и события через очередь работникам саги и уведомлений, а также обновляет индекс. Работники саги сохраняют прогресс в БД и вызывают платёжного провайдера. Стопки обозначают несколько экземпляров, у БД — primary и standby.</desc>
-<defs><marker id="sd-flight-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 44 V74" marker-end="url(#sd-flight-scaled-arrow)"/>
-<path class="concept-edge" d="M160 130 V158 H74 V184" marker-end="url(#sd-flight-scaled-arrow)"/>
-<path class="concept-edge" d="M160 130 V158 H238 V184" marker-end="url(#sd-flight-scaled-arrow)"/>
-<path class="concept-edge" d="M74 246 V288" marker-end="url(#sd-flight-scaled-arrow)"/>
-<path class="concept-edge" d="M238 246 V276" marker-end="url(#sd-flight-scaled-arrow)"/>
-<path class="concept-edge" d="M238 342 V368 H160 V400" marker-end="url(#sd-flight-scaled-arrow)" stroke-dasharray="4 4"/>
+<figure class="concept" aria-labelledby="sd-hotel-scaled-caption">
+<svg id="sd-hotel-scaled" viewBox="0 0 328 652" role="img" aria-labelledby="sd-hotel-scaled-title sd-hotel-scaled-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-hotel-scaled-title">Бронирование: поиск и оформление масштабируются независимо</title><desc id="sd-hotel-scaled-desc">Клиент вызывает API Gateway. Search API читает кеш и поисковый индекс, Booking API сохраняет резервы в основной БД. Outbox передаёт команды и события через очередь работникам саги и уведомлений, а также обновляет индекс. Работники саги сохраняют прогресс в БД и вызывают платёжного провайдера. Стопки обозначают несколько экземпляров, у БД — primary и standby.</desc>
+<defs><marker id="sd-hotel-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M160 44 V74" marker-end="url(#sd-hotel-scaled-arrow)"/>
+<path class="concept-edge" d="M160 130 V158 H74 V184" marker-end="url(#sd-hotel-scaled-arrow)"/>
+<path class="concept-edge" d="M160 130 V158 H238 V184" marker-end="url(#sd-hotel-scaled-arrow)"/>
+<path class="concept-edge" d="M74 246 V288" marker-end="url(#sd-hotel-scaled-arrow)"/>
+<path class="concept-edge" d="M238 246 V276" marker-end="url(#sd-hotel-scaled-arrow)"/>
+<path class="concept-edge" d="M238 342 V368 H160 V400" marker-end="url(#sd-hotel-scaled-arrow)" stroke-dasharray="4 4"/>
 <text class="concept-label" x="258" y="386" text-anchor="middle">outbox</text>
-<path class="concept-edge" d="M88 422 H74 V342" marker-end="url(#sd-flight-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M88 422 H74 V342" marker-end="url(#sd-hotel-scaled-arrow)" stroke-dasharray="4 4"/>
 <text class="concept-label" x="34" y="384" text-anchor="middle">обновить</text>
-<path class="concept-edge" d="M116 446 V470 H74 V490" marker-end="url(#sd-flight-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M204 446 V470 H238 V490" marker-end="url(#sd-flight-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M304 527 H318 V315 H316" marker-end="url(#sd-flight-scaled-arrow)"/>
-<path class="concept-edge" d="M238 552 V592" marker-end="url(#sd-flight-scaled-arrow)"/>
+<path class="concept-edge" d="M116 446 V470 H74 V490" marker-end="url(#sd-hotel-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M204 446 V470 H238 V490" marker-end="url(#sd-hotel-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M304 527 H318 V315 H316" marker-end="url(#sd-hotel-scaled-arrow)"/>
+<path class="concept-edge" d="M238 552 V592" marker-end="url(#sd-hotel-scaled-arrow)"/>
 <rect fill="var(--bg)" stroke="none" x="88" y="8" width="144" height="36" rx="8"/>
 <rect class="concept-node plain" x="88" y="8" width="144" height="36" rx="8"/>
 <text x="160" y="31" text-anchor="middle">Клиент</text>
@@ -12052,8 +12059,8 @@ outbox
 <text x="238" y="234.5" text-anchor="middle">резервы</text>
 <rect fill="var(--bg)" stroke="none" x="8" y="288" width="144" height="54" rx="8"/>
 <rect class="concept-node plain" x="8" y="288" width="144" height="54" rx="8"/>
-<text x="80" y="311.5" text-anchor="middle">Кеш + индекс</text>
-<text x="80" y="328.5" text-anchor="middle">поиска</text>
+<text x="80" y="311.5" text-anchor="middle">Кеш + поиск</text>
+<text x="80" y="328.5" text-anchor="middle">отелей</text>
 <rect fill="var(--bg)" stroke="none" x="184" y="276" width="132" height="54" rx="8"/>
 <rect class="concept-node plain" x="184" y="276" width="132" height="54" rx="8"/>
 <rect fill="var(--bg)" stroke="none" x="178" y="282" width="132" height="54" rx="8"/>
@@ -12080,21 +12087,22 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="172" y="502" width="132" height="50" rx="8"/>
 <rect class="concept-node accent" x="172" y="502" width="132" height="50" rx="8"/>
 <text x="238" y="523.5" text-anchor="middle">Работники саги</text>
-<text x="238" y="540.5" text-anchor="middle">оплата / билет</text>
+<text x="238" y="540.5" text-anchor="middle">оплата / бронь</text>
 <rect fill="var(--bg)" stroke="none" x="172" y="592" width="140" height="48" rx="8"/>
 <rect class="concept-node plain" x="172" y="592" width="140" height="48" rx="8"/>
 <text x="242" y="612.5" text-anchor="middle">Платёжный</text>
 <text x="242" y="629.5" text-anchor="middle">провайдер</text>
 </svg>
-<figcaption id="sd-flight-scaled-caption">Поиск и Booking API масштабируются отдельно. БД — источник истины по местам, резервам и состоянию процесса; standby не становится независимым центром записи. Outbox доставляет команды и события в отдельные очереди или топики. Пунктир — фоновая доставка, стопки — несколько экземпляров. Выписка выполняется работниками саги; ответы вызовов опущены.</figcaption></figure>
-<p><b>Отделить поиск.</b> Search API читает денормализованный индекс маршрутов и тарифов; популярные результаты кешируются по направлению, датам, пассажирам и условиям поиска. Изменения из БД поступают через outbox/CDC и индексатор. Версия события защищает от старой перезаписи, полная пересборка восстанавливает индекс. Ограничение сложности маршрута и предрасчёт стыковок сокращают число вариантов. Отдельный поисковый движок вводится только при необходимости; индексированные таблицы read-модели тоже могут быть достаточны.</p>
-<p><b>Отделить оформление.</b> Booking API создаёт резервы и команды, работники исполняют саги. Надёжная очередь допускает повторную доставку: подтверждение обработки даётся после фиксации прогресса, а каждый побочный эффект имеет собственную защиту от дубля. Резерв не ждёт в очереди бесконтрольно: отслеживаются возраст команды и оставшееся время. Уведомления имеют отдельную очередь и ресурсы.</p>
-<p><b>Защитить горячий рейс.</b> Даже при небольшом общем числе броней распродажа создаёт конкуренцию за одну строку инвентаря. Нужны короткие транзакции, ограниченные очереди, rate limit и ограничения активных резервов на пользователя. При необходимости вводится очередь допуска к оформлению. Добавление работников и шардов само по себе не ускоряет конкурентное изменение одного остатка.</p>
-<p><b>Не шардировать раньше необходимости.</b> Оценённые 6 оформлений в секунду не требуют распределённой БД. Сначала измеряются время удержания блокировок, I/O и рост истории. Если запись действительно исчерпана, инвентарь можно распределять по вылету, но стыковки станут межшардовыми процессами. Реплики помогают поиску и аналитике, а решение о доступности и переходы резерва выполняются на надёжном центре записи.</p>
-<p><b>Сбои и эксплуатация.</b> На платёжный провайдер и партнёров задаются deadline, ограниченные ретраи с backoff/jitter, квоты и circuit breaker. Для входящих уведомлений проверяются подлинность, ID события и допустимый переход: старый callback не перезаписывает более новый статус. Фоновая сверка сопоставляет бронь, платёж, возврат и билет; несогласованные процессы попадают в восстановление или ручной разбор. Резервные копии и проверяемое восстановление дополняют репликацию.</p>
-<p><b>Метрики:</b> p95/p99 поиска, отставание индекса, конфликты удержаний, ожидание блокировок, возраст очереди, число и возраст PROCESSING/REFUND_PENDING, доля списаний без завершённой выписки, повторных операций и ошибок сверки. Паспортные данные ограничиваются по доступу и не попадают в логи; платёжный сервис хранит токены провайдера вместо карточных реквизитов.</p>
-<p><b>Итоговый компромисс:</b> устаревшая поисковая выдача ускоряет чтение, но требует перепроверки. Строгий резерв ограничивает параллелизм горячего рейса. Сага делает процесс восстанавливаемым, но добавляет промежуточные состояния, компенсации и сверку.</p>
-<p class="follow"><b>Достаточно Redis-lock и таймера на 15 минут, чтобы не продать место дважды?</b> Нет. Lock может истечь, а таймер сработать одновременно с оплатой. Ограничение ёмкости и переходы резерва должны проверяться атомарно источником истины; платёж с неизвестным исходом сначала согласуется с провайдером.</p>
+<figcaption id="sd-hotel-scaled-caption">Поиск и Booking API масштабируются отдельно. БД — источник истины по номеро-ночам, резервам и состоянию процесса; standby не становится независимым центром записи. Outbox доставляет команды и события в отдельные очереди или топики. Пунктир — фоновая доставка, стопки — несколько экземпляров. Оплата и подтверждение выполняются работниками саги; ответы вызовов опущены.</figcaption></figure>
+<p><b>Отделить поиск.</b> Search API фильтрует отели по географии, вместимости и удобствам, затем проверяет доступность и ограничения на весь период в read-модели. Одного наличия на дату заезда недостаточно: для одной категории должны подходить все ночи. Результаты кешируются с учётом дат, состава гостей, количества номеров и условий тарифа. Объём комбинаций дат велик, поэтому сначала кешируются популярные запросы, а не все возможные интервалы.</p>
+<p><b>Обновлять read-модель через outbox/CDC.</b> Индексатор учитывает версии изменений, повторы и отмены, контролирует отставание и поддерживает пересборку. Финальный резерв всегда проверяется основной БД. Фото и статические описания можно отдавать через объектное хранилище и CDN; эти компоненты не участвуют в принятии решения о наличии.</p>
+<p><b>Масштабировать оплату и уведомления независимо.</b> Booking API выполняет короткие транзакции, работники продолжают процессы из очереди. Повторная доставка допустима только с идемпотентными переходами и побочными эффектами. Очереди ограничены по размеру и возрасту, а уведомления отделены от оплаты: недоступность почты не отменяет подтверждённое проживание.</p>
+<p><b>Горячий отель на популярные даты.</b> Конкуренция сосредоточится на одних строках календаря. Нужны короткие транзакции, ограничения длительности пребывания и количества номеров в запросе, rate limit и лимит активных резервов пользователя. Добавление работников не устраняет ожидание одной блокировки; при ажиотаже помогает ограничение допуска к оформлению.</p>
+<p><b>Шардирование — только после измерений.</b> При исчерпании одного узла естественный ключ — отель: календарь одного отеля и большинство его операций остаются вместе. Поиск по городу объединяет данные read-модели. Брони нескольких отелей в одном заказе потребуют отдельных резервов и компенсаций. Реплики разгружают чтение, но не принимают независимые решения о продаже последнего номера.</p>
+<p><b>Внешние отели и PMS.</b> Если платформа — агрегатор, локальный остаток может отставать от продаж на стойке и в других каналах. Строгая гарантия возможна при согласованной выделенной квоте или подтверждении в авторитетной системе отеля. Нужны адаптеры, версии обновлений, внешние ID броней, проверка статуса после таймаута, квоты вызовов и сверка. Обычная транзакция локальной БД не блокирует номер в чужой PMS.</p>
+<p><b>Отказы и наблюдаемость.</b> Состояние платежа сверяется с провайдером; callbacks проверяются по подлинности и ID, устаревшие события не откатывают статус. Контролируются p95/p99 поиска, отставание read-модели, время блокировок, отказы резервов, возраст PROCESSING/REFUND_PENDING, очередь и расхождения остатков. Метрики группируются по ограниченному набору признаков; ID броней остаются логам и трейсам. Репликацию дополняют backup и проверяемое восстановление.</p>
+<p><b>Цена решения:</b> быстрый поиск допускает устаревшие результаты, строгий резерв сериализует изменения популярных дат, а надёжная оплата добавляет промежуточные состояния и сверку. Разделение сервисов оправдано разной нагрузкой и отказами, а не самим наличием поиска и записи.</p>
+<p class="follow"><b>Почему нельзя взять минимальный остаток по датам и затем создать бронь?</b> Между чтением и записью другой запрос может занять те же ночи. Проверка и удержание всего периода должны выполняться атомарно. Кроме того, минимум по найденным строкам не обнаруживает отсутствующую дату, а при фиксированных физических номерах не гарантирует непрерывного размещения в одном номере.</p>
     </div></div></article>
 <article id="q284" hidden><div class="crumbs">Kubernetes и эксплуатация</div><h2 tabindex="-1">284. Docker-образ для Java-сервиса</h2><div class="answer" hidden><div class="short"><ul><li><b>Multi-stage</b>: собрать в образе с JDK, в итоговый взять только JRE и приложение.</li><li><b>Слои</b> от редко меняющихся к частым: зависимости отдельно от своего кода — правка кода выкачивает только тонкий слой (Spring Boot раскладывает jar на слои сам).</li><li><b>Не от root</b>, фиксированные теги базовых образов.</li><li>ENTRYPOINT в <b>exec-форме</b>, чтобы java получала SIGTERM.</li></ul>
 <p>Без Dockerfile — <b>Buildpacks</b> или Jib.</p></div>
