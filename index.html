@@ -10101,115 +10101,209 @@ outbox
 <p><b>Посты сохраняются в основной БД, лента и поиск используют отдельные представления для чтения.</b> События публикаций через outbox поступают в журнал: одна группа работников обновляет кандидатов ленты, другая — поисковый индекс.</p>
 <figure class="concept" aria-labelledby="sd-facebook-scaled-summary-caption">
 <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
-<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-summary" viewBox="0 0 320 506" role="img" aria-labelledby="sd-facebook-scaled-summary-title sd-facebook-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-facebook-scaled-summary-title">Публикация: запись, рассылка и индексирование</title><desc id="sd-facebook-scaled-summary-desc">Write Service сохраняет пост и outbox. Журнал независимо обрабатывают fanout и индексаторы. Fanout получает подписчиков из графа связей и обновляет ID кандидатов; индексатор обновляет поисковые шарды.</desc>
+<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-summary" viewBox="0 0 320 610" role="img" aria-labelledby="sd-facebook-scaled-summary-title sd-facebook-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-facebook-scaled-summary-title">Доступ клиента к системе</title><desc id="sd-facebook-scaled-summary-desc">Клиент обращается к DNS за адресом, к CDN за статикой, к балансировщику за API. Веб-слой маршрутизирует запросы в отдельные группы API. CDN читает объектное хранилище, а не передаёт API-запросы балансировщику.</desc>
 <defs><marker id="sd-facebook-scaled-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M140 92 H174" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M245 118 V146 H160 V172" marker-end="url(#sd-facebook-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M98 220 V246 H74 V266" marker-end="url(#sd-facebook-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M222 220 V246 H239 V266" marker-end="url(#sd-facebook-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M74 340 V380" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M140 311 H160 V480 H144" marker-end="url(#sd-facebook-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M239 340 V378 M239 406 V442" marker-end="url(#sd-facebook-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<text x="160" y="22" text-anchor="middle">Публикация и обновление</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="54" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="54" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="60" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="60" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="66" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="66" width="132" height="52" rx="9"/>
-<text x="74" y="96" text-anchor="middle">Write Service</text>
-<rect class="concept-node plain" x="178" y="66" width="134" height="52" rx="9"/>
-<text x="245" y="87.5" text-anchor="middle">БД постов</text>
-<text x="245" y="104.5" text-anchor="middle">+ outbox</text>
+<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-facebook-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M110 56 V90 H245 V108" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M65 56 V180 H154 V204" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M154 268 V310" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M312 134 H318 V572 H316" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M100 374 V402 H51 V424" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M154 374 V424" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M220 374 V402 H263 V424" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
+<rect class="concept-node accent" x="8" y="8" width="132" height="48" rx="9"/>
+<text x="74" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
+<text x="245" y="36" text-anchor="middle">DNS</text>
+<rect class="concept-node plain" x="178" y="112" width="134" height="44" rx="9"/>
+<text x="245" y="138" text-anchor="middle">CDN</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="208" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="208" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="214" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="214" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="220" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="220" width="228" height="48" rx="9"/>
+<text x="154" y="248" text-anchor="middle">Балансировщик</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="314" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="314" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="320" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="320" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="326" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="326" width="228" height="48" rx="9"/>
+<text x="154" y="354" text-anchor="middle">Веб-слой / proxy</text>
+<rect class="concept-node plain" x="178" y="544" width="134" height="56" rx="9"/>
+<text x="245" y="567.5" text-anchor="middle">Медиа / статика</text>
+<text x="245" y="584.5" text-anchor="middle">Объекты</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="428" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="428" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="434" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="434" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="440" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="440" width="86" height="52" rx="9"/>
+<text x="51" y="470" text-anchor="middle">Read API</text>
+<rect fill="var(--bg)" stroke="none" x="126" y="428" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="126" y="428" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="120" y="434" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="120" y="434" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="114" y="440" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="114" y="440" width="86" height="52" rx="9"/>
+<text x="157" y="470" text-anchor="middle">Write API</text>
+<rect fill="var(--bg)" stroke="none" x="232" y="428" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="232" y="428" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="226" y="434" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="226" y="434" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="220" y="440" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="220" y="440" width="86" height="52" rx="9"/>
+<text x="263" y="470" text-anchor="middle">Search API</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-summary-publish" viewBox="0 0 320 724" role="img" aria-labelledby="sd-facebook-scaled-summary-publish-title sd-facebook-scaled-summary-publish-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-facebook-scaled-summary-publish-title">Публикация: Fanout, поиск, медиа и уведомления</title><desc id="sd-facebook-scaled-summary-publish-desc">Write API сохраняет пост и outbox в SQL. Событие независимо обрабатывают Fanout и Search Service. Fanout получает подписчиков из User Graph, обновляет ID ленты и создаёт уведомления. Медиа хранятся в объектном хранилище.</desc>
+<defs><marker id="sd-facebook-scaled-summary-publish-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M140 90 H174" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)"/>
+<path class="concept-edge" d="M245 116 V144 H160 V172" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M98 220 V246 H74 V266" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M222 220 V246 H239 V266" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M74 340 V390" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)"/>
+<path class="concept-edge" d="M239 340 V390" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 311 H154 V556 H144" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 311 H162 V502 H239 V514" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M8 311 H2 V680 H36" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)"/>
+<path class="concept-edge" d="M140 90 H162 V134 H318 V680 H284" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Обработка публикации</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Write API</text>
+<rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
+<text x="245" y="85.5" text-anchor="middle">SQL: посты</text>
+<text x="245" y="102.5" text-anchor="middle">+ outbox</text>
 <rect class="concept-node plain" x="40" y="176" width="240" height="44" rx="9"/>
-<text x="160" y="202" text-anchor="middle">Журнал событий</text>
+<text x="160" y="202" text-anchor="middle">События публикаций</text>
 <rect fill="var(--bg)" stroke="none" x="20" y="270" width="132" height="58" rx="9"/>
 <rect class="concept-node accent" x="20" y="270" width="132" height="58" rx="9"/>
 <rect fill="var(--bg)" stroke="none" x="14" y="276" width="132" height="58" rx="9"/>
 <rect class="concept-node accent" x="14" y="276" width="132" height="58" rx="9"/>
 <rect fill="var(--bg)" stroke="none" x="8" y="282" width="132" height="58" rx="9"/>
 <rect class="concept-node accent" x="8" y="282" width="132" height="58" rx="9"/>
-<text x="74" y="306.5" text-anchor="middle">Fanout</text>
-<text x="74" y="323.5" text-anchor="middle">Рассылка ID</text>
+<text x="74" y="315" text-anchor="middle">Fanout Service</text>
 <rect fill="var(--bg)" stroke="none" x="190" y="270" width="122" height="58" rx="9"/>
 <rect class="concept-node accent" x="190" y="270" width="122" height="58" rx="9"/>
 <rect fill="var(--bg)" stroke="none" x="184" y="276" width="122" height="58" rx="9"/>
 <rect class="concept-node accent" x="184" y="276" width="122" height="58" rx="9"/>
 <rect fill="var(--bg)" stroke="none" x="178" y="282" width="122" height="58" rx="9"/>
 <rect class="concept-node accent" x="178" y="282" width="122" height="58" rx="9"/>
-<text x="239" y="315" text-anchor="middle">Индексаторы</text>
-<rect class="concept-node plain" x="8" y="384" width="132" height="44" rx="9"/>
-<text x="74" y="410" text-anchor="middle">Граф связей</text>
-<rect class="concept-node plain" x="8" y="458" width="132" height="44" rx="9"/>
-<text x="74" y="484" text-anchor="middle">Кеш ID ленты</text>
-<rect class="concept-node plain" x="190" y="446" width="122" height="44" rx="9"/>
-<rect class="concept-node plain" x="184" y="452" width="122" height="44" rx="9"/>
-<rect class="concept-node plain" x="178" y="458" width="122" height="44" rx="9"/>
-<text x="239" y="484" text-anchor="middle">Индекс поиска</text>
-<text class="concept-label" x="240" y="397" text-anchor="middle">обновление</text>
+<text x="239" y="315" text-anchor="middle">Search Service</text>
+<rect class="concept-node plain" x="20" y="394" width="132" height="52" rx="9"/>
+<rect class="concept-node plain" x="14" y="400" width="132" height="52" rx="9"/>
+<rect class="concept-node plain" x="8" y="406" width="132" height="52" rx="9"/>
+<text x="74" y="427.5" text-anchor="middle">User Graph</text>
+<text x="74" y="444.5" text-anchor="middle">Подписчики</text>
+<rect class="concept-node plain" x="190" y="394" width="122" height="52" rx="9"/>
+<rect class="concept-node plain" x="184" y="400" width="122" height="52" rx="9"/>
+<rect class="concept-node plain" x="178" y="406" width="122" height="52" rx="9"/>
+<text x="239" y="427.5" text-anchor="middle">Поисковый</text>
+<text x="239" y="444.5" text-anchor="middle">индекс</text>
+<rect class="concept-node plain" x="20" y="518" width="132" height="52" rx="9"/>
+<rect class="concept-node plain" x="14" y="524" width="132" height="52" rx="9"/>
+<rect class="concept-node plain" x="8" y="530" width="132" height="52" rx="9"/>
+<text x="74" y="560" text-anchor="middle">Кеш ID ленты</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="518" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="518" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="524" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="524" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="530" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="530" width="122" height="52" rx="9"/>
+<text x="239" y="551.5" text-anchor="middle">Notification</text>
+<text x="239" y="568.5" text-anchor="middle">Service</text>
+<rect class="concept-node plain" x="40" y="654" width="240" height="52" rx="9"/>
+<text x="160" y="675.5" text-anchor="middle">Объектное хранилище</text>
+<text x="160" y="692.5" text-anchor="middle">Медиа и статика</text>
 </svg>
-<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-summary-read" viewBox="0 0 320 620" role="img" aria-labelledby="sd-facebook-scaled-summary-read-title sd-facebook-scaled-summary-read-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-facebook-scaled-summary-read-title">Чтение: лента и поиск до готового ответа</title><desc id="sd-facebook-scaled-summary-read-desc">Feed Service берёт ID кандидатов и читает граф подписок для подмешивания популярных авторов. Search Service разбирает запрос, опрашивает поисковые шарды и объединяет кандидатов. Затем оба пути пакетно загружают посты и авторов, проверяют актуальные права, ранжируют и возвращают страницу.</desc>
+<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-summary-read" viewBox="0 0 320 658" role="img" aria-labelledby="sd-facebook-scaled-summary-read-title sd-facebook-scaled-summary-read-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-facebook-scaled-summary-read-title">Чтение: Read API, Timeline и Search Service</title><desc id="sd-facebook-scaled-summary-read-desc">Read API вызывает Timeline Service для общей ленты и читает SQL для ленты автора. Timeline запрашивает ID в кеше, посты у Post Info и авторов у User Info. Search API вызывает Search Service и индекс, затем получает актуальные посты и профили. Чтения завершаются проверкой прав и ранжированием.</desc>
 <defs><marker id="sd-facebook-scaled-summary-read-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M74 118 V164" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M239 118 V152" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M74 224 V272" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M239 224 V272" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M74 332 V358 H112 V374" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M245 332 V358 H214 V374" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M154 448 V494" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M160 550 V576" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<text x="160" y="22" text-anchor="middle">Чтение ленты и поиск</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="54" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="54" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="60" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="60" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="66" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="66" width="132" height="52" rx="9"/>
-<text x="74" y="96" text-anchor="middle">Feed Service</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="54" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="190" y="54" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="60" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="184" y="60" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="66" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="178" y="66" width="122" height="52" rx="9"/>
-<text x="239" y="96" text-anchor="middle">Search Service</text>
-<rect class="concept-node plain" x="8" y="168" width="132" height="56" rx="9"/>
-<text x="74" y="191.5" text-anchor="middle">Кеш ID</text>
-<text x="74" y="208.5" text-anchor="middle">кандидатов</text>
-<rect class="concept-node plain" x="190" y="156" width="122" height="56" rx="9"/>
-<rect class="concept-node plain" x="184" y="162" width="122" height="56" rx="9"/>
-<rect class="concept-node plain" x="178" y="168" width="122" height="56" rx="9"/>
-<text x="239" y="191.5" text-anchor="middle">Поисковые</text>
-<text x="239" y="208.5" text-anchor="middle">шарды</text>
-<rect class="concept-node plain" x="8" y="276" width="132" height="56" rx="9"/>
-<text x="74" y="299.5" text-anchor="middle">Граф связей</text>
-<text x="74" y="316.5" text-anchor="middle">Подписки</text>
-<rect class="concept-node plain" x="178" y="276" width="134" height="56" rx="9"/>
-<text x="245" y="299.5" text-anchor="middle">Объединение</text>
-<text x="245" y="316.5" text-anchor="middle">top-K</text>
-<rect fill="var(--bg)" stroke="none" x="52" y="378" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="52" y="378" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="384" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="46" y="384" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="390" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="40" y="390" width="228" height="58" rx="9"/>
-<text x="154" y="414.5" text-anchor="middle">Post Info / User Info</text>
-<text x="154" y="431.5" text-anchor="middle">Пакетная загрузка</text>
-<rect class="concept-node plain" x="40" y="498" width="240" height="52" rx="9"/>
-<text x="160" y="519.5" text-anchor="middle">Актуальные права</text>
-<text x="160" y="536.5" text-anchor="middle">→ ранжирование</text>
-<rect class="concept-node plain" x="40" y="580" width="240" height="36" rx="9"/>
-<text x="160" y="602" text-anchor="middle">Страница + курсор</text>
+<path class="concept-edge" d="M74 116 V174" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
+<path class="concept-edge" d="M239 116 V174" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
+<path class="concept-edge" d="M74 248 V298" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
+<path class="concept-edge" d="M239 248 V298" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
+<path class="concept-edge" d="M74 248 V278 H154 V404 H74 V422" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
+<path class="concept-edge" d="M140 219 H162 V414 H239 V422" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
+<path class="concept-edge" d="M178 219 H170 V392 H110 V422" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
+<path class="concept-edge" d="M300 219 H318 V464 H316" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
+<path class="concept-edge" d="M74 490 V530 H112 V552" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
+<path class="concept-edge" d="M239 490 V530 H214 V552" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
+<path class="concept-edge" d="M8 90 H2 V597 H36" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Лента автора, общая лента и поиск</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Read API</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="52" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="52" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="58" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="58" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="64" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
+<text x="239" y="94" text-anchor="middle">Search API</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="178" width="132" height="58" rx="9"/>
+<rect class="concept-node accent" x="20" y="178" width="132" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="184" width="132" height="58" rx="9"/>
+<rect class="concept-node accent" x="14" y="184" width="132" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="190" width="132" height="58" rx="9"/>
+<rect class="concept-node accent" x="8" y="190" width="132" height="58" rx="9"/>
+<text x="74" y="214.5" text-anchor="middle">Timeline</text>
+<text x="74" y="231.5" text-anchor="middle">Service</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="178" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="190" y="178" width="122" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="184" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="184" y="184" width="122" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="190" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
+<text x="239" y="223" text-anchor="middle">Search Service</text>
+<rect class="concept-node plain" x="20" y="302" width="132" height="52" rx="9"/>
+<rect class="concept-node plain" x="14" y="308" width="132" height="52" rx="9"/>
+<rect class="concept-node plain" x="8" y="314" width="132" height="52" rx="9"/>
+<text x="74" y="344" text-anchor="middle">Кеш ID ленты</text>
+<rect class="concept-node plain" x="190" y="302" width="122" height="52" rx="9"/>
+<rect class="concept-node plain" x="184" y="308" width="122" height="52" rx="9"/>
+<rect class="concept-node plain" x="178" y="314" width="122" height="52" rx="9"/>
+<text x="239" y="335.5" text-anchor="middle">Поисковый</text>
+<text x="239" y="352.5" text-anchor="middle">индекс</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="426" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="426" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="432" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="432" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="438" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="438" width="132" height="52" rx="9"/>
+<text x="74" y="468" text-anchor="middle">Post Info</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="426" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="426" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="432" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="432" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="438" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="438" width="122" height="52" rx="9"/>
+<text x="239" y="468" text-anchor="middle">User Info</text>
+<rect class="concept-node plain" x="52" y="556" width="228" height="58" rx="9"/>
+<rect class="concept-node plain" x="46" y="562" width="228" height="58" rx="9"/>
+<rect class="concept-node plain" x="40" y="568" width="228" height="58" rx="9"/>
+<text x="154" y="592.5" text-anchor="middle">SQL: посты и профили</text>
+<text x="154" y="609.5" text-anchor="middle">Реплики чтения</text>
+<text class="concept-label" x="160" y="653" text-anchor="middle">После загрузки: права → ранжирование → ответ</text>
 </svg>
 </div>
-<figcaption id="sd-facebook-scaled-summary-caption">За балансировщиком работают отдельные группы Write, Feed и Search Service. Слева — запись и асинхронные обновления, справа — полный путь чтения до ответа. Граф связей и индекс в двух потоках обозначают одни и те же логические компоненты. Post Info и User Info пакетно читают посты и профили из БД/кешей; это логические роли, их необязательно развёртывать отдельными сервисами. Стопки — несколько экземпляров, пунктир — асинхронные обновления.</figcaption></figure>
+<figcaption id="sd-facebook-scaled-summary-caption">Три части одной архитектуры: доступ клиента, обработка публикации и чтение. DNS разрешает имена; клиент получает файлы у CDN, API вызывает напрямую через балансировщик и веб-слой. CDN читает объектное хранилище. Read API вызывает Timeline и читает ленту автора из SQL; Timeline и Search Service загружают посты/профили пакетно. Fanout и индексирование получают события независимо; Notification Service отправляет выбранные уведомления через отдельную очередь. Повторённые роли — те же компоненты. Пунктир — DNS, события и фоновые обновления; стопки — несколько экземпляров.</figcaption></figure>
 <p><b>Лента строится гибридно:</b> ID постов обычных авторов заранее попадают в ленты активных подписчиков, посты популярных авторов подмешиваются при чтении. Поиск получает кандидатов из инвертированного индекса. Перед выдачей оба сценария проверяют актуальную видимость, затем ранжируют результаты.</p>
     </div>
     <div class="more">
 <p><b>Шаг 1 — Требования и ограничения</b></p>
-<p>Нужно согласовать четыре сценария: <b>опубликовать пост, открыть персональную ленту, посмотреть ленту автора, найти посты по словам</b>. Для примера лента содержит записи друзей и подписок, поиск — только доступные пользователю посты. Удаление, изменение текста и настроек видимости входят в задачу. Чаты, реклама, поиск людей и групп, рекомендательная ML-платформа и обработка видео остаются за рамками. Это учебный вариант архитектуры, а не описание текущей реализации Facebook.</p>
+<p>Нужно согласовать четыре сценария: <b>опубликовать пост, открыть персональную ленту, посмотреть ленту автора, найти посты по словам</b>. Для примера лента содержит записи друзей и подписок, поиск — только доступные пользователю посты. Удаление, изменение текста и настроек видимости входят в задачу. Простые вложения и уведомления о публикации входят как дополнительные сценарии. Чаты, реклама, поиск людей и групп, рекомендательная ML-платформа и перекодирование видео остаются за рамками. Это учебный вариант архитектуры, а не описание текущей реализации Facebook.</p>
 <p><b>Допущения:</b> 100 млн активных пользователей в сутки, 50 млн новых постов, 1 млрд запросов страниц ленты и 100 млн поисковых запросов в сутки. Пик в 5 раз выше среднего. Цели p99 на стороне сервиса: лента до 300 мс, поиск до 500 мс. Появление чужих новых постов и обновление индекса могут отставать на несколько секунд; автор видит успешную публикацию сразу. Устаревший индекс не должен давать доступ к скрытому или удалённому посту.</p>
 <div class="table-wrap"><table><tr><th>Показатель</th><th>Среднее → пик</th></tr>
 <tr><td>Создание постов</td><td>≈ 580 → 2 900 запросов/с</td></tr>
@@ -10220,26 +10314,112 @@ outbox
 <p>Последняя оценка показывает <b>усиление записи при рассылке</b>. Средние 200 получателей скрывают перекос: у одного автора десятки друзей, у другого миллионы подписчиков. Число активных получателей, срок хранения и глубину ленты нужно уточнять отдельно.</p>
 <p><b>Шаг 2 — Общая архитектура</b></p>
 <figure class="concept" aria-labelledby="sd-facebook-base-caption">
-<svg id="sd-facebook-base" viewBox="0 0 320 300" role="img" aria-labelledby="sd-facebook-base-title sd-facebook-base-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-facebook-base-title">Facebook: базовая архитектура</title><desc id="sd-facebook-base-desc">Одно приложение принимает публикации, строит ленту из постов друзей и выполняет полнотекстовый поиск в PostgreSQL. БД хранит посты, связи пользователей и правила видимости.</desc>
+<div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
+<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-base" viewBox="0 0 320 338" role="img" aria-labelledby="sd-facebook-base-title sd-facebook-base-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-facebook-base-title">Базовый веб-слой и API</title><desc id="sd-facebook-base-desc">Клиент вызывает веб-слой. Веб-слой направляет чтение в Read API, публикацию в Write API, поиск в Search API. Базовая схема показывает логические роли до добавления DNS, CDN и балансировщика на схеме масштабирования.</desc>
 <defs><marker id="sd-facebook-base-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 52 V106" marker-end="url(#sd-facebook-base-arrow)"/>
-<path class="concept-edge" d="M160 174 V228" marker-end="url(#sd-facebook-base-arrow)"/>
-<rect class="concept-node plain" x="64" y="8" width="192" height="44" rx="9"/>
-<text x="160" y="34" text-anchor="middle">Клиент</text>
-<rect class="concept-node accent" x="32" y="110" width="256" height="64" rx="9"/>
-<text x="160" y="137.5" text-anchor="middle">Одно приложение</text>
-<text x="160" y="154.5" text-anchor="middle">Публикация / лента / поиск</text>
-<rect class="concept-node plain" x="32" y="232" width="256" height="58" rx="9"/>
-<text x="160" y="256.5" text-anchor="middle">PostgreSQL</text>
-<text x="160" y="273.5" text-anchor="middle">Посты, связи, текстовый индекс</text>
-</svg><figcaption id="sd-facebook-base-caption">Исходная схема: одно приложение и одна БД. Лента собирается при чтении, поиск использует полнотекстовый индекс БД. Распределение кандидатов ленты и отдельный поисковый кластер появляются после выявления ограничений.</figcaption></figure>
-<p>Начать можно с <b>одного приложения и PostgreSQL</b>. Публикация сохраняет пост; лента выбирает последние доступные посты друзей и подписок; поиск использует полнотекстовый индекс. Для небольшого объёма это позволяет обойтись без очередей и нескольких сервисов.</p>
-<p>При росте станут дороги объединение постов множества авторов на каждом чтении, полнотекстовый поиск на основной БД и рассылка поста миллионам получателей. Поэтому в шаге 4 запись, лента и поиск получают независимые группы экземпляров, а представления для чтения обновляются асинхронно.</p>
+<path class="concept-edge" d="M160 56 V108" marker-end="url(#sd-facebook-base-arrow)"/>
+<path class="concept-edge" d="M100 164 V226 H51 V260" marker-end="url(#sd-facebook-base-arrow)"/>
+<path class="concept-edge" d="M154 164 V260" marker-end="url(#sd-facebook-base-arrow)"/>
+<path class="concept-edge" d="M220 164 V226 H263 V260" marker-end="url(#sd-facebook-base-arrow)"/>
+<rect class="concept-node accent" x="40" y="8" width="240" height="48" rx="9"/>
+<text x="160" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node accent" x="40" y="112" width="240" height="52" rx="9"/>
+<text x="160" y="142" text-anchor="middle">Веб-слой / proxy</text>
+<rect class="concept-node accent" x="8" y="264" width="86" height="52" rx="9"/>
+<text x="51" y="294" text-anchor="middle">Read API</text>
+<rect class="concept-node accent" x="114" y="264" width="86" height="52" rx="9"/>
+<text x="157" y="294" text-anchor="middle">Write API</text>
+<rect class="concept-node accent" x="220" y="264" width="86" height="52" rx="9"/>
+<text x="263" y="294" text-anchor="middle">Search API</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-base-publish" viewBox="0 0 320 724" role="img" aria-labelledby="sd-facebook-base-publish-title sd-facebook-base-publish-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-facebook-base-publish-title">Публикация: Fanout, поиск, медиа и уведомления</title><desc id="sd-facebook-base-publish-desc">Write API сохраняет пост и outbox в SQL. Событие независимо обрабатывают Fanout и Search Service. Fanout получает подписчиков из User Graph, обновляет ID ленты и создаёт уведомления. Медиа хранятся в объектном хранилище.</desc>
+<defs><marker id="sd-facebook-base-publish-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M140 90 H174" marker-end="url(#sd-facebook-base-publish-arrow)"/>
+<path class="concept-edge" d="M245 116 V144 H160 V172" marker-end="url(#sd-facebook-base-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M98 220 V246 H74 V278" marker-end="url(#sd-facebook-base-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M222 220 V246 H239 V278" marker-end="url(#sd-facebook-base-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M74 340 V402" marker-end="url(#sd-facebook-base-publish-arrow)"/>
+<path class="concept-edge" d="M239 340 V402" marker-end="url(#sd-facebook-base-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 311 H154 V556 H144" marker-end="url(#sd-facebook-base-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 311 H162 V502 H239 V526" marker-end="url(#sd-facebook-base-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M8 311 H2 V680 H36" marker-end="url(#sd-facebook-base-publish-arrow)"/>
+<path class="concept-edge" d="M140 90 H162 V134 H318 V680 H284" marker-end="url(#sd-facebook-base-publish-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Обработка публикации</text>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Write API</text>
+<rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
+<text x="245" y="85.5" text-anchor="middle">SQL: посты</text>
+<text x="245" y="102.5" text-anchor="middle">+ outbox</text>
+<rect class="concept-node plain" x="40" y="176" width="240" height="44" rx="9"/>
+<text x="160" y="202" text-anchor="middle">События публикаций</text>
+<rect class="concept-node accent" x="8" y="282" width="132" height="58" rx="9"/>
+<text x="74" y="315" text-anchor="middle">Fanout Service</text>
+<rect class="concept-node accent" x="178" y="282" width="122" height="58" rx="9"/>
+<text x="239" y="315" text-anchor="middle">Search Service</text>
+<rect class="concept-node plain" x="8" y="406" width="132" height="52" rx="9"/>
+<text x="74" y="427.5" text-anchor="middle">User Graph</text>
+<text x="74" y="444.5" text-anchor="middle">Подписчики</text>
+<rect class="concept-node plain" x="178" y="406" width="122" height="52" rx="9"/>
+<text x="239" y="427.5" text-anchor="middle">Поисковый</text>
+<text x="239" y="444.5" text-anchor="middle">индекс</text>
+<rect class="concept-node plain" x="8" y="530" width="132" height="52" rx="9"/>
+<text x="74" y="560" text-anchor="middle">Кеш ID ленты</text>
+<rect class="concept-node accent" x="178" y="530" width="122" height="52" rx="9"/>
+<text x="239" y="551.5" text-anchor="middle">Notification</text>
+<text x="239" y="568.5" text-anchor="middle">Service</text>
+<rect class="concept-node plain" x="40" y="654" width="240" height="52" rx="9"/>
+<text x="160" y="675.5" text-anchor="middle">Объектное хранилище</text>
+<text x="160" y="692.5" text-anchor="middle">Медиа и статика</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-base-read" viewBox="0 0 320 658" role="img" aria-labelledby="sd-facebook-base-read-title sd-facebook-base-read-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-facebook-base-read-title">Чтение: Read API, Timeline и Search Service</title><desc id="sd-facebook-base-read-desc">Read API вызывает Timeline Service для общей ленты и читает SQL для ленты автора. Timeline запрашивает ID в кеше, посты у Post Info и авторов у User Info. Search API вызывает Search Service и индекс, затем получает актуальные посты и профили. Чтения завершаются проверкой прав и ранжированием.</desc>
+<defs><marker id="sd-facebook-base-read-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M74 116 V186" marker-end="url(#sd-facebook-base-read-arrow)"/>
+<path class="concept-edge" d="M239 116 V186" marker-end="url(#sd-facebook-base-read-arrow)"/>
+<path class="concept-edge" d="M74 248 V310" marker-end="url(#sd-facebook-base-read-arrow)"/>
+<path class="concept-edge" d="M239 248 V310" marker-end="url(#sd-facebook-base-read-arrow)"/>
+<path class="concept-edge" d="M74 248 V278 H154 V404 H74 V434" marker-end="url(#sd-facebook-base-read-arrow)"/>
+<path class="concept-edge" d="M140 219 H162 V414 H239 V434" marker-end="url(#sd-facebook-base-read-arrow)"/>
+<path class="concept-edge" d="M178 219 H170 V392 H110 V434" marker-end="url(#sd-facebook-base-read-arrow)"/>
+<path class="concept-edge" d="M300 219 H318 V464 H316" marker-end="url(#sd-facebook-base-read-arrow)"/>
+<path class="concept-edge" d="M74 490 V530 H112 V564" marker-end="url(#sd-facebook-base-read-arrow)"/>
+<path class="concept-edge" d="M239 490 V530 H214 V564" marker-end="url(#sd-facebook-base-read-arrow)"/>
+<path class="concept-edge" d="M8 90 H2 V597 H36" marker-end="url(#sd-facebook-base-read-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Лента автора, общая лента и поиск</text>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Read API</text>
+<rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
+<text x="239" y="94" text-anchor="middle">Search API</text>
+<rect class="concept-node accent" x="8" y="190" width="132" height="58" rx="9"/>
+<text x="74" y="214.5" text-anchor="middle">Timeline</text>
+<text x="74" y="231.5" text-anchor="middle">Service</text>
+<rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
+<text x="239" y="223" text-anchor="middle">Search Service</text>
+<rect class="concept-node plain" x="8" y="314" width="132" height="52" rx="9"/>
+<text x="74" y="344" text-anchor="middle">Кеш ID ленты</text>
+<rect class="concept-node plain" x="178" y="314" width="122" height="52" rx="9"/>
+<text x="239" y="335.5" text-anchor="middle">Поисковый</text>
+<text x="239" y="352.5" text-anchor="middle">индекс</text>
+<rect class="concept-node accent" x="8" y="438" width="132" height="52" rx="9"/>
+<text x="74" y="468" text-anchor="middle">Post Info</text>
+<rect class="concept-node accent" x="178" y="438" width="122" height="52" rx="9"/>
+<text x="239" y="468" text-anchor="middle">User Info</text>
+<rect class="concept-node plain" x="40" y="568" width="228" height="58" rx="9"/>
+<text x="154" y="592.5" text-anchor="middle">SQL: посты и профили</text>
+<text x="154" y="609.5" text-anchor="middle">Основная БД</text>
+<text class="concept-label" x="160" y="653" text-anchor="middle">После загрузки: права → ранжирование → ответ</text>
+</svg>
+</div>
+<figcaption id="sd-facebook-base-caption">Базовые логические роли: веб-слой, API чтения/записи/поиска, Timeline, Fanout, граф связей, данные постов и авторов. В первой реализации часть ролей может быть модулями одного приложения, а индекс — частью SQL-БД. Повторённые API, индекс и хранилища обозначают те же компоненты. События и outbox отделяют надёжную публикацию от обработки.</figcaption></figure>
+<p><b>Базовая логическая схема</b> разделяет веб-слой, Read/Write/Search API и предметные роли: Timeline, Fanout, граф связей, Post Info, User Info, поиск и уведомления. Часть этих ролей может начинаться модулями одного приложения, а поиск — полнотекстовым индексом PostgreSQL. Стрелки показывают обращения и потоки данных, а не обязательное разнесение каждого блока на отдельный сервер.</p>
+<p>При росте станут дороги объединение постов множества авторов на каждом чтении, полнотекстовый поиск на основной БД и рассылка поста миллионам получателей. Поэтому в шаге 4 веб-слой, API и обработчики получают независимые группы экземпляров, а представления для чтения обновляются асинхронно.</p>
 <p><b>Шаг 3 — Детали ключевых компонентов</b></p>
 <p><b>API.</b> Пользователь определяется из аутентифицированного запроса; переданный клиентом идентификатор не заменяет проверку прав.</p>
 <pre><span class="t">POST</span> /api/v1/posts
-  text, visibility, idempotency_key
+  text, visibility, media_keys
+  idempotency_key
   → <span class="n">201</span> <span class="t">Created</span> + post_id
 
 <span class="t">GET</span> /api/v1/feed?cursor=...
@@ -10253,11 +10433,13 @@ outbox
 <span class="t">DELETE</span> /api/v1/posts/{id}</pre>
 <p><b>Источник истины и производные данные:</b></p>
 <div class="table-wrap"><table><tr><th>Данные</th><th>Назначение</th></tr>
-<tr><td>post: id, author_id, text, created_at, visibility, version, deleted_at</td><td>Содержимое и актуальный статус поста; индекс по author_id, created_at, id</td></tr>
+<tr><td>post: id, author_id, text, media_keys, created_at, visibility, version, deleted_at</td><td>Содержимое и актуальный статус поста; индекс по author_id, created_at, id</td></tr>
 <tr><td>connection: user_id, other_user_id, type, status</td><td>Дружба, подписка и блокировка; для fanout нужен также поиск получателей по автору</td></tr>
 <tr><td>outbox: event_id, post_id, version, type</td><td>Надёжная передача изменений из транзакции публикации в журнал</td></tr>
 <tr><td>feed_candidates: user_id → ограниченный список post_id</td><td>Производный список кандидатов, без копирования текста поста каждому читателю</td></tr>
 <tr><td>Инвертированный индекс: слово → post_id</td><td>Поиск кандидатов; документ также содержит поля для фильтрации и ранжирования</td></tr></table></div>
+<p><b>Входные маршруты и роли API.</b> Клиент отдельно получает адрес у DNS, загружает файлы через CDN и вызывает API напрямую через балансировщик. Веб-слой маршрутизирует создание в Write API, ленту и историю автора — в Read API, поиск — в Search API. Read API вызывает Timeline Service для общей ленты, а Search API — Search Service для обработки запроса. Эти роли имеют разные бюджеты ресурсов и могут масштабироваться независимо.</p>
+<p><b>Медиа и уведомления.</b> Файлы находятся в объектном хранилище, пост содержит их ключи, а не копии байтов для каждого подписчика. Загрузка проходит с проверкой прав, пост связывается только с завершёнными загрузками; незавершённые и бесхозные объекты очищаются. CDN отдаёт разрешённые объекты по политике доступа, приватные вложения нельзя открыть общим публичным кешем. Notification Service получает события выбранных публикаций и отправляет email/push через отдельную очередь. Ошибка уведомления не отменяет сохранённый пост и не блокирует чтение ленты.</p>
 <p><b>Граф связей.</b> Нужны два направления запросов: кого читает пользователь и кто подписан на автора. Граф хранит дружбу, подписки и блокировки; fanout получает из него получателей порциями, чтение ленты — подписки для подмешивания популярных авторов. Начать можно с таблицы связей и прямого/обратного индексов; отдельная графовая БД не обязательна. Изменение дружбы и блокировка влияют на доступ, поэтому кеш списка подписчиков не заменяет проверку актуальных прав.</p>
 <p><b>Post Info и User Info.</b> Эти логические компоненты возвращают содержимое постов и данные авторов пакетами. В первой версии это методы одного приложения, затем — независимо масштабируемые обработчики или сервисы при необходимости. Сначала кандидаты определяются по ID, затем одним пакетным запросом на группу загружаются посты, а по уникальным author_id — профили. Пакет разбивается по шардам; один batch API не означает один физический запрос ко всем данным.</p>
 <p><b>Публикация.</b> Проверить запрос и ключ идемпотентности → в одной транзакции сохранить пост и outbox → после commit вернуть post_id. Публикатор передаёт событие в надёжный журнал. Fanout и индексатор читают его <b>независимо</b>: сбой поиска не останавливает обновление лент. Повторная доставка не должна дублировать post_id; изменения одного поста применяются по версии, старое событие не перезаписывает новое.</p>
@@ -10278,111 +10460,205 @@ outbox
 <p><b>Шаг 4 — Масштабирование и узкие места</b></p>
 <figure class="concept" aria-labelledby="sd-facebook-scaled-caption">
 <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
-<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled" viewBox="0 0 320 506" role="img" aria-labelledby="sd-facebook-scaled-title sd-facebook-scaled-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-facebook-scaled-title">Публикация: запись, рассылка и индексирование</title><desc id="sd-facebook-scaled-desc">Write Service сохраняет пост и outbox. Журнал независимо обрабатывают fanout и индексаторы. Fanout получает подписчиков из графа связей и обновляет ID кандидатов; индексатор обновляет поисковые шарды.</desc>
+<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled" viewBox="0 0 320 610" role="img" aria-labelledby="sd-facebook-scaled-title sd-facebook-scaled-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-facebook-scaled-title">Доступ клиента к системе</title><desc id="sd-facebook-scaled-desc">Клиент обращается к DNS за адресом, к CDN за статикой, к балансировщику за API. Веб-слой маршрутизирует запросы в отдельные группы API. CDN читает объектное хранилище, а не передаёт API-запросы балансировщику.</desc>
 <defs><marker id="sd-facebook-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M140 92 H174" marker-end="url(#sd-facebook-scaled-arrow)"/>
-<path class="concept-edge" d="M245 118 V146 H160 V172" marker-end="url(#sd-facebook-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M98 220 V246 H74 V266" marker-end="url(#sd-facebook-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M222 220 V246 H239 V266" marker-end="url(#sd-facebook-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M74 340 V380" marker-end="url(#sd-facebook-scaled-arrow)"/>
-<path class="concept-edge" d="M140 311 H160 V480 H144" marker-end="url(#sd-facebook-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M239 340 V378 M239 406 V442" marker-end="url(#sd-facebook-scaled-arrow)" stroke-dasharray="4 4"/>
-<text x="160" y="22" text-anchor="middle">Публикация и обновление</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="54" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="54" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="60" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="60" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="66" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="66" width="132" height="52" rx="9"/>
-<text x="74" y="96" text-anchor="middle">Write Service</text>
-<rect class="concept-node plain" x="178" y="66" width="134" height="52" rx="9"/>
-<text x="245" y="87.5" text-anchor="middle">БД постов</text>
-<text x="245" y="104.5" text-anchor="middle">+ outbox</text>
+<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-facebook-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M110 56 V90 H245 V108" marker-end="url(#sd-facebook-scaled-arrow)"/>
+<path class="concept-edge" d="M65 56 V180 H154 V204" marker-end="url(#sd-facebook-scaled-arrow)"/>
+<path class="concept-edge" d="M154 268 V310" marker-end="url(#sd-facebook-scaled-arrow)"/>
+<path class="concept-edge" d="M312 134 H318 V572 H316" marker-end="url(#sd-facebook-scaled-arrow)"/>
+<path class="concept-edge" d="M100 374 V402 H51 V424" marker-end="url(#sd-facebook-scaled-arrow)"/>
+<path class="concept-edge" d="M154 374 V424" marker-end="url(#sd-facebook-scaled-arrow)"/>
+<path class="concept-edge" d="M220 374 V402 H263 V424" marker-end="url(#sd-facebook-scaled-arrow)"/>
+<rect class="concept-node accent" x="8" y="8" width="132" height="48" rx="9"/>
+<text x="74" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
+<text x="245" y="36" text-anchor="middle">DNS</text>
+<rect class="concept-node plain" x="178" y="112" width="134" height="44" rx="9"/>
+<text x="245" y="138" text-anchor="middle">CDN</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="208" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="208" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="214" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="214" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="220" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="220" width="228" height="48" rx="9"/>
+<text x="154" y="248" text-anchor="middle">Балансировщик</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="314" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="314" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="320" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="320" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="326" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="326" width="228" height="48" rx="9"/>
+<text x="154" y="354" text-anchor="middle">Веб-слой / proxy</text>
+<rect class="concept-node plain" x="178" y="544" width="134" height="56" rx="9"/>
+<text x="245" y="567.5" text-anchor="middle">Медиа / статика</text>
+<text x="245" y="584.5" text-anchor="middle">Объекты</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="428" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="428" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="434" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="434" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="440" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="440" width="86" height="52" rx="9"/>
+<text x="51" y="470" text-anchor="middle">Read API</text>
+<rect fill="var(--bg)" stroke="none" x="126" y="428" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="126" y="428" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="120" y="434" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="120" y="434" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="114" y="440" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="114" y="440" width="86" height="52" rx="9"/>
+<text x="157" y="470" text-anchor="middle">Write API</text>
+<rect fill="var(--bg)" stroke="none" x="232" y="428" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="232" y="428" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="226" y="434" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="226" y="434" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="220" y="440" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="220" y="440" width="86" height="52" rx="9"/>
+<text x="263" y="470" text-anchor="middle">Search API</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-publish" viewBox="0 0 320 724" role="img" aria-labelledby="sd-facebook-scaled-publish-title sd-facebook-scaled-publish-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-facebook-scaled-publish-title">Публикация: Fanout, поиск, медиа и уведомления</title><desc id="sd-facebook-scaled-publish-desc">Write API сохраняет пост и outbox в SQL. Событие независимо обрабатывают Fanout и Search Service. Fanout получает подписчиков из User Graph, обновляет ID ленты и создаёт уведомления. Медиа хранятся в объектном хранилище.</desc>
+<defs><marker id="sd-facebook-scaled-publish-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M140 90 H174" marker-end="url(#sd-facebook-scaled-publish-arrow)"/>
+<path class="concept-edge" d="M245 116 V144 H160 V172" marker-end="url(#sd-facebook-scaled-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M98 220 V246 H74 V266" marker-end="url(#sd-facebook-scaled-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M222 220 V246 H239 V266" marker-end="url(#sd-facebook-scaled-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M74 340 V390" marker-end="url(#sd-facebook-scaled-publish-arrow)"/>
+<path class="concept-edge" d="M239 340 V390" marker-end="url(#sd-facebook-scaled-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 311 H154 V556 H144" marker-end="url(#sd-facebook-scaled-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 311 H162 V502 H239 V514" marker-end="url(#sd-facebook-scaled-publish-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M8 311 H2 V680 H36" marker-end="url(#sd-facebook-scaled-publish-arrow)"/>
+<path class="concept-edge" d="M140 90 H162 V134 H318 V680 H284" marker-end="url(#sd-facebook-scaled-publish-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Обработка публикации</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Write API</text>
+<rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
+<text x="245" y="85.5" text-anchor="middle">SQL: посты</text>
+<text x="245" y="102.5" text-anchor="middle">+ outbox</text>
 <rect class="concept-node plain" x="40" y="176" width="240" height="44" rx="9"/>
-<text x="160" y="202" text-anchor="middle">Журнал событий</text>
+<text x="160" y="202" text-anchor="middle">События публикаций</text>
 <rect fill="var(--bg)" stroke="none" x="20" y="270" width="132" height="58" rx="9"/>
 <rect class="concept-node accent" x="20" y="270" width="132" height="58" rx="9"/>
 <rect fill="var(--bg)" stroke="none" x="14" y="276" width="132" height="58" rx="9"/>
 <rect class="concept-node accent" x="14" y="276" width="132" height="58" rx="9"/>
 <rect fill="var(--bg)" stroke="none" x="8" y="282" width="132" height="58" rx="9"/>
 <rect class="concept-node accent" x="8" y="282" width="132" height="58" rx="9"/>
-<text x="74" y="306.5" text-anchor="middle">Fanout</text>
-<text x="74" y="323.5" text-anchor="middle">Рассылка ID</text>
+<text x="74" y="315" text-anchor="middle">Fanout Service</text>
 <rect fill="var(--bg)" stroke="none" x="190" y="270" width="122" height="58" rx="9"/>
 <rect class="concept-node accent" x="190" y="270" width="122" height="58" rx="9"/>
 <rect fill="var(--bg)" stroke="none" x="184" y="276" width="122" height="58" rx="9"/>
 <rect class="concept-node accent" x="184" y="276" width="122" height="58" rx="9"/>
 <rect fill="var(--bg)" stroke="none" x="178" y="282" width="122" height="58" rx="9"/>
 <rect class="concept-node accent" x="178" y="282" width="122" height="58" rx="9"/>
-<text x="239" y="315" text-anchor="middle">Индексаторы</text>
-<rect class="concept-node plain" x="8" y="384" width="132" height="44" rx="9"/>
-<text x="74" y="410" text-anchor="middle">Граф связей</text>
-<rect class="concept-node plain" x="8" y="458" width="132" height="44" rx="9"/>
-<text x="74" y="484" text-anchor="middle">Кеш ID ленты</text>
-<rect class="concept-node plain" x="190" y="446" width="122" height="44" rx="9"/>
-<rect class="concept-node plain" x="184" y="452" width="122" height="44" rx="9"/>
-<rect class="concept-node plain" x="178" y="458" width="122" height="44" rx="9"/>
-<text x="239" y="484" text-anchor="middle">Индекс поиска</text>
-<text class="concept-label" x="240" y="397" text-anchor="middle">обновление</text>
+<text x="239" y="315" text-anchor="middle">Search Service</text>
+<rect class="concept-node plain" x="20" y="394" width="132" height="52" rx="9"/>
+<rect class="concept-node plain" x="14" y="400" width="132" height="52" rx="9"/>
+<rect class="concept-node plain" x="8" y="406" width="132" height="52" rx="9"/>
+<text x="74" y="427.5" text-anchor="middle">User Graph</text>
+<text x="74" y="444.5" text-anchor="middle">Подписчики</text>
+<rect class="concept-node plain" x="190" y="394" width="122" height="52" rx="9"/>
+<rect class="concept-node plain" x="184" y="400" width="122" height="52" rx="9"/>
+<rect class="concept-node plain" x="178" y="406" width="122" height="52" rx="9"/>
+<text x="239" y="427.5" text-anchor="middle">Поисковый</text>
+<text x="239" y="444.5" text-anchor="middle">индекс</text>
+<rect class="concept-node plain" x="20" y="518" width="132" height="52" rx="9"/>
+<rect class="concept-node plain" x="14" y="524" width="132" height="52" rx="9"/>
+<rect class="concept-node plain" x="8" y="530" width="132" height="52" rx="9"/>
+<text x="74" y="560" text-anchor="middle">Кеш ID ленты</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="518" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="518" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="524" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="524" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="530" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="530" width="122" height="52" rx="9"/>
+<text x="239" y="551.5" text-anchor="middle">Notification</text>
+<text x="239" y="568.5" text-anchor="middle">Service</text>
+<rect class="concept-node plain" x="40" y="654" width="240" height="52" rx="9"/>
+<text x="160" y="675.5" text-anchor="middle">Объектное хранилище</text>
+<text x="160" y="692.5" text-anchor="middle">Медиа и статика</text>
 </svg>
-<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-read" viewBox="0 0 320 620" role="img" aria-labelledby="sd-facebook-scaled-read-title sd-facebook-scaled-read-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-facebook-scaled-read-title">Чтение: лента и поиск до готового ответа</title><desc id="sd-facebook-scaled-read-desc">Feed Service берёт ID кандидатов и читает граф подписок для подмешивания популярных авторов. Search Service разбирает запрос, опрашивает поисковые шарды и объединяет кандидатов. Затем оба пути пакетно загружают посты и авторов, проверяют актуальные права, ранжируют и возвращают страницу.</desc>
+<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-read" viewBox="0 0 320 658" role="img" aria-labelledby="sd-facebook-scaled-read-title sd-facebook-scaled-read-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-facebook-scaled-read-title">Чтение: Read API, Timeline и Search Service</title><desc id="sd-facebook-scaled-read-desc">Read API вызывает Timeline Service для общей ленты и читает SQL для ленты автора. Timeline запрашивает ID в кеше, посты у Post Info и авторов у User Info. Search API вызывает Search Service и индекс, затем получает актуальные посты и профили. Чтения завершаются проверкой прав и ранжированием.</desc>
 <defs><marker id="sd-facebook-scaled-read-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M74 118 V164" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M239 118 V152" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M74 224 V272" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M239 224 V272" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M74 332 V358 H112 V374" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M245 332 V358 H214 V374" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M154 448 V494" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M160 550 V576" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<text x="160" y="22" text-anchor="middle">Чтение ленты и поиск</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="54" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="54" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="60" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="60" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="66" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="66" width="132" height="52" rx="9"/>
-<text x="74" y="96" text-anchor="middle">Feed Service</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="54" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="190" y="54" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="60" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="184" y="60" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="66" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="178" y="66" width="122" height="52" rx="9"/>
-<text x="239" y="96" text-anchor="middle">Search Service</text>
-<rect class="concept-node plain" x="8" y="168" width="132" height="56" rx="9"/>
-<text x="74" y="191.5" text-anchor="middle">Кеш ID</text>
-<text x="74" y="208.5" text-anchor="middle">кандидатов</text>
-<rect class="concept-node plain" x="190" y="156" width="122" height="56" rx="9"/>
-<rect class="concept-node plain" x="184" y="162" width="122" height="56" rx="9"/>
-<rect class="concept-node plain" x="178" y="168" width="122" height="56" rx="9"/>
-<text x="239" y="191.5" text-anchor="middle">Поисковые</text>
-<text x="239" y="208.5" text-anchor="middle">шарды</text>
-<rect class="concept-node plain" x="8" y="276" width="132" height="56" rx="9"/>
-<text x="74" y="299.5" text-anchor="middle">Граф связей</text>
-<text x="74" y="316.5" text-anchor="middle">Подписки</text>
-<rect class="concept-node plain" x="178" y="276" width="134" height="56" rx="9"/>
-<text x="245" y="299.5" text-anchor="middle">Объединение</text>
-<text x="245" y="316.5" text-anchor="middle">top-K</text>
-<rect fill="var(--bg)" stroke="none" x="52" y="378" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="52" y="378" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="384" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="46" y="384" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="390" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="40" y="390" width="228" height="58" rx="9"/>
-<text x="154" y="414.5" text-anchor="middle">Post Info / User Info</text>
-<text x="154" y="431.5" text-anchor="middle">Пакетная загрузка</text>
-<rect class="concept-node plain" x="40" y="498" width="240" height="52" rx="9"/>
-<text x="160" y="519.5" text-anchor="middle">Актуальные права</text>
-<text x="160" y="536.5" text-anchor="middle">→ ранжирование</text>
-<rect class="concept-node plain" x="40" y="580" width="240" height="36" rx="9"/>
-<text x="160" y="602" text-anchor="middle">Страница + курсор</text>
+<path class="concept-edge" d="M74 116 V174" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
+<path class="concept-edge" d="M239 116 V174" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
+<path class="concept-edge" d="M74 248 V298" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
+<path class="concept-edge" d="M239 248 V298" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
+<path class="concept-edge" d="M74 248 V278 H154 V404 H74 V422" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
+<path class="concept-edge" d="M140 219 H162 V414 H239 V422" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
+<path class="concept-edge" d="M178 219 H170 V392 H110 V422" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
+<path class="concept-edge" d="M300 219 H318 V464 H316" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
+<path class="concept-edge" d="M74 490 V530 H112 V552" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
+<path class="concept-edge" d="M239 490 V530 H214 V552" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
+<path class="concept-edge" d="M8 90 H2 V597 H36" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Лента автора, общая лента и поиск</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Read API</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="52" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="52" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="58" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="58" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="64" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
+<text x="239" y="94" text-anchor="middle">Search API</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="178" width="132" height="58" rx="9"/>
+<rect class="concept-node accent" x="20" y="178" width="132" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="184" width="132" height="58" rx="9"/>
+<rect class="concept-node accent" x="14" y="184" width="132" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="190" width="132" height="58" rx="9"/>
+<rect class="concept-node accent" x="8" y="190" width="132" height="58" rx="9"/>
+<text x="74" y="214.5" text-anchor="middle">Timeline</text>
+<text x="74" y="231.5" text-anchor="middle">Service</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="178" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="190" y="178" width="122" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="184" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="184" y="184" width="122" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="190" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
+<text x="239" y="223" text-anchor="middle">Search Service</text>
+<rect class="concept-node plain" x="20" y="302" width="132" height="52" rx="9"/>
+<rect class="concept-node plain" x="14" y="308" width="132" height="52" rx="9"/>
+<rect class="concept-node plain" x="8" y="314" width="132" height="52" rx="9"/>
+<text x="74" y="344" text-anchor="middle">Кеш ID ленты</text>
+<rect class="concept-node plain" x="190" y="302" width="122" height="52" rx="9"/>
+<rect class="concept-node plain" x="184" y="308" width="122" height="52" rx="9"/>
+<rect class="concept-node plain" x="178" y="314" width="122" height="52" rx="9"/>
+<text x="239" y="335.5" text-anchor="middle">Поисковый</text>
+<text x="239" y="352.5" text-anchor="middle">индекс</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="426" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="426" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="432" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="432" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="438" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="438" width="132" height="52" rx="9"/>
+<text x="74" y="468" text-anchor="middle">Post Info</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="426" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="426" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="432" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="432" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="438" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="438" width="122" height="52" rx="9"/>
+<text x="239" y="468" text-anchor="middle">User Info</text>
+<rect class="concept-node plain" x="52" y="556" width="228" height="58" rx="9"/>
+<rect class="concept-node plain" x="46" y="562" width="228" height="58" rx="9"/>
+<rect class="concept-node plain" x="40" y="568" width="228" height="58" rx="9"/>
+<text x="154" y="592.5" text-anchor="middle">SQL: посты и профили</text>
+<text x="154" y="609.5" text-anchor="middle">Реплики чтения</text>
+<text class="concept-label" x="160" y="653" text-anchor="middle">После загрузки: права → ранжирование → ответ</text>
 </svg>
 </div>
-<figcaption id="sd-facebook-scaled-caption">За балансировщиком работают отдельные группы Write, Feed и Search Service. Слева — запись и асинхронные обновления, справа — полный путь чтения до ответа. Граф связей и индекс в двух потоках обозначают одни и те же логические компоненты. Post Info и User Info пакетно читают посты и профили из БД/кешей; это логические роли, их необязательно развёртывать отдельными сервисами. Стопки — несколько экземпляров, пунктир — асинхронные обновления.</figcaption></figure>
-<p><b>Разделение по профилю нагрузки.</b> Write Service отвечает за публикацию и изменения, Feed Service — за кандидатов, ленту автора и ранжирование общей ленты, Search Service — за разбор запроса, обращение к поисковым шардам и объединение результатов. У каждого свои экземпляры, лимиты и пулы. Журнал событий имеет независимых потребителей: fanout-работников и индексаторов. Разделение сервисов позволяет независимо увеличивать ресурсы, но требует контроля задержки производных данных.</p>
+<figcaption id="sd-facebook-scaled-caption">Три части одной архитектуры: доступ клиента, обработка публикации и чтение. DNS разрешает имена; клиент получает файлы у CDN, API вызывает напрямую через балансировщик и веб-слой. CDN читает объектное хранилище. Read API вызывает Timeline и читает ленту автора из SQL; Timeline и Search Service загружают посты/профили пакетно. Fanout и индексирование получают события независимо; Notification Service отправляет выбранные уведомления через отдельную очередь. Повторённые роли — те же компоненты. Пунктир — DNS, события и фоновые обновления; стопки — несколько экземпляров.</figcaption></figure>
+<p><b>Разделение по профилю нагрузки.</b> Write API отвечает за публикацию и изменения, Read API — за ленту автора и вызов Timeline Service, Search API — за вызов Search Service. Timeline Service формирует общую ленту, Search Service разбирает запрос и объединяет ответы поисковых шардов. У каждого свои экземпляры, лимиты и пулы. Журнал событий имеет независимых потребителей: fanout-работников и индексаторов. Разделение сервисов позволяет независимо увеличивать ресурсы, но требует контроля задержки производных данных.</p>
 <p><b>Распределение данных.</b> Посты можно распределять по author_id: публикация и чтение истории автора попадают в один шард. Пакетная загрузка постов разных авторов обращается к нескольким шардам. Кандидаты ленты распределяются по user_id получателя. Поисковые документы — по post_id: запрос обходит нужные поисковые шарды, каждый возвращает своих кандидатов, координатор объединяет top-K. Число шардов и глубину запросов выбирают по измерениям, а не по числу пользователей само по себе.</p>
 <div class="table-wrap"><table><tr><th>Узкое место или сбой</th><th>Решение и цена</th></tr>
 <tr><td>Автор с миллионами подписчиков</td><td>Не рассылать его пост каждому сразу; подмешивать при чтении. Порог зависит от активности читателей и цены fanout</td></tr>
@@ -10402,98 +10678,160 @@ outbox
 <p><b>Подключённые банковские счета синхронизируются в фоне, отчёты читаются из локальных данных.</b> Планировщик, webhook или ручное обновление создают задание. Синхронизатор сохраняет изменения вместе с курсором. Далее операции получают категории, расходы агрегируются по месяцу и валюте, сравниваются с бюджетом; пересечение порога создаёт уведомление через outbox.</p>
 <figure class="concept" aria-labelledby="sd-mint-scaled-summary-caption">
 <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
-<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled-summary" viewBox="0 0 320 598" role="img" aria-labelledby="sd-mint-scaled-summary-title sd-mint-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-mint-scaled-summary-title">Mint.com: приём и синхронизация</title><desc id="sd-mint-scaled-summary-desc">Клиент, планировщик и webhook создают задания через API счетов. Задания и outbox сохраняются в БД, очередь передаёт работу синхронизаторам. Они вызывают банк, нормализуют операции и фиксируют результат с курсором.</desc>
+<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled-summary" viewBox="0 0 320 610" role="img" aria-labelledby="sd-mint-scaled-summary-title sd-mint-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-mint-scaled-summary-title">Доступ клиента к системе</title><desc id="sd-mint-scaled-summary-desc">Клиент обращается к DNS за адресом, к CDN за статикой, к балансировщику за API. Веб-слой маршрутизирует запросы в отдельные группы API. CDN читает объектное хранилище, а не передаёт API-запросы балансировщику.</desc>
 <defs><marker id="sd-mint-scaled-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 92 V126" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M154 190 V240" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M160 302 V344" marker-end="url(#sd-mint-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M160 392 V434" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M154 508 V550" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M40 479 H8 V273 H36" marker-end="url(#sd-mint-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<text x="160" y="22" text-anchor="middle">Приём и синхронизация</text>
-<rect class="concept-node plain" x="40" y="48" width="240" height="44" rx="9"/>
-<text x="160" y="74" text-anchor="middle">Клиент / расписание / webhook</text>
-<rect fill="var(--bg)" stroke="none" x="52" y="130" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="52" y="130" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="136" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="46" y="136" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="142" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="40" y="142" width="228" height="48" rx="9"/>
-<text x="154" y="170" text-anchor="middle">API счетов и обновлений</text>
-<rect class="concept-node plain" x="40" y="244" width="240" height="58" rx="9"/>
-<text x="160" y="268.5" text-anchor="middle">БД: задания и курсоры</text>
-<text x="160" y="285.5" text-anchor="middle">+ outbox</text>
-<rect class="concept-node plain" x="40" y="348" width="240" height="44" rx="9"/>
-<text x="160" y="374" text-anchor="middle">Очередь синхронизации</text>
-<rect fill="var(--bg)" stroke="none" x="52" y="438" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="52" y="438" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="444" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="46" y="444" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="450" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="40" y="450" width="228" height="58" rx="9"/>
-<text x="154" y="483" text-anchor="middle">Загрузка и нормализация</text>
-<rect class="concept-node plain" x="40" y="554" width="240" height="40" rx="9"/>
-<text x="160" y="578" text-anchor="middle">Банки / агрегатор</text>
+<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-mint-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M110 56 V90 H245 V108" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M65 56 V180 H154 V204" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M154 268 V310" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M312 134 H318 V572 H316" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M112 374 V402 H74 V424" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M212 374 V402 H239 V424" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
+<rect class="concept-node accent" x="8" y="8" width="132" height="48" rx="9"/>
+<text x="74" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
+<text x="245" y="36" text-anchor="middle">DNS</text>
+<rect class="concept-node plain" x="178" y="112" width="134" height="44" rx="9"/>
+<text x="245" y="138" text-anchor="middle">CDN</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="208" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="208" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="214" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="214" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="220" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="220" width="228" height="48" rx="9"/>
+<text x="154" y="248" text-anchor="middle">Балансировщик</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="314" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="314" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="320" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="320" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="326" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="326" width="228" height="48" rx="9"/>
+<text x="154" y="354" text-anchor="middle">Веб-слой / proxy</text>
+<rect class="concept-node plain" x="178" y="544" width="134" height="56" rx="9"/>
+<text x="245" y="567.5" text-anchor="middle">Статика UI</text>
+<text x="245" y="584.5" text-anchor="middle">Объекты</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="428" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="428" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="434" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="434" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="440" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="440" width="132" height="52" rx="9"/>
+<text x="74" y="470" text-anchor="middle">Accounts API</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="428" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="428" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="434" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="434" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="440" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="440" width="122" height="52" rx="9"/>
+<text x="239" y="470" text-anchor="middle">Read API</text>
 </svg>
-<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled-summary-product" viewBox="0 0 320 658" role="img" aria-labelledby="sd-mint-scaled-summary-product-title sd-mint-scaled-summary-product-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-mint-scaled-summary-product-title">Mint.com: от операции до бюджета и уведомления</title><desc id="sd-mint-scaled-summary-product-desc">Изменения канонических операций запускают категоризацию, пересчёт расходов и сравнение с бюджетом. Уведомления отправляются через outbox и отдельную очередь. API отчётов читает кеш и сохранённые итоги без вызова банка.</desc>
-<defs><marker id="sd-mint-scaled-summary-product-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 106 V148" marker-end="url(#sd-mint-scaled-summary-product-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M154 212 V254" marker-end="url(#sd-mint-scaled-summary-product-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M154 328 V370" marker-end="url(#sd-mint-scaled-summary-product-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M100 434 V464 H74 V494" marker-end="url(#sd-mint-scaled-summary-product-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M74 550 V588" marker-end="url(#sd-mint-scaled-summary-product-arrow)"/>
-<path class="concept-edge" d="M239 550 V600" marker-end="url(#sd-mint-scaled-summary-product-arrow)"/>
-<path class="concept-edge" d="M312 628 H318 V299 H284" marker-end="url(#sd-mint-scaled-summary-product-arrow)"/>
-<text x="160" y="22" text-anchor="middle">Расходы, бюджет и отчёты</text>
-<rect class="concept-node plain" x="40" y="48" width="240" height="58" rx="9"/>
-<text x="160" y="72.5" text-anchor="middle">Канонические операции</text>
-<text x="160" y="89.5" text-anchor="middle">БД + события изменений</text>
-<rect fill="var(--bg)" stroke="none" x="52" y="152" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="52" y="152" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="158" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="46" y="158" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="164" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="40" y="164" width="228" height="48" rx="9"/>
-<text x="154" y="192" text-anchor="middle">Категоризация</text>
-<rect fill="var(--bg)" stroke="none" x="52" y="258" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="52" y="258" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="264" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="46" y="264" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="270" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="40" y="270" width="228" height="58" rx="9"/>
-<text x="154" y="294.5" text-anchor="middle">Итоги расходов в БД</text>
-<text x="154" y="311.5" text-anchor="middle">Месяц / категория / валюта</text>
-<rect fill="var(--bg)" stroke="none" x="52" y="374" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="52" y="374" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="380" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="46" y="380" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="386" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="40" y="386" width="228" height="48" rx="9"/>
-<text x="154" y="414" text-anchor="middle">Сравнение с бюджетом</text>
-<rect class="concept-node plain" x="8" y="498" width="132" height="52" rx="9"/>
-<text x="74" y="519.5" text-anchor="middle">Outbox</text>
-<text x="74" y="536.5" text-anchor="middle">→ очередь</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="486" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="190" y="486" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="492" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="184" y="492" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="498" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="178" y="498" width="122" height="52" rx="9"/>
-<text x="239" y="528" text-anchor="middle">API отчётов</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="592" width="132" height="48" rx="9"/>
-<rect class="concept-node accent" x="20" y="592" width="132" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="598" width="132" height="48" rx="9"/>
-<rect class="concept-node accent" x="14" y="598" width="132" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="604" width="132" height="48" rx="9"/>
-<rect class="concept-node accent" x="8" y="604" width="132" height="48" rx="9"/>
-<text x="74" y="632" text-anchor="middle">Уведомления</text>
-<rect class="concept-node plain" x="178" y="604" width="134" height="48" rx="9"/>
-<text x="245" y="632" text-anchor="middle">Кеш отчётов</text>
+<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled-summary-extract" viewBox="0 0 320 738" role="img" aria-labelledby="sd-mint-scaled-summary-extract-title sd-mint-scaled-summary-extract-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-mint-scaled-summary-extract-title">Mint: Accounts API, очередь и загрузчик</title><desc id="sd-mint-scaled-summary-extract-desc">Accounts API сохраняет подключения и outbox в SQL, ставит задания в очередь. Загрузчик получает данные банка, вызывает категоризацию и обработку бюджета, сохраняет операции в SQL и историю в закрытом объектном хранилище. Уведомления относятся к завершению синхронизации или превышению бюджета.</desc>
+<defs><marker id="sd-mint-scaled-summary-extract-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M74 116 V186" marker-end="url(#sd-mint-scaled-summary-extract-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 216 H174" marker-end="url(#sd-mint-scaled-summary-extract-arrow)"/>
+<path class="concept-edge" d="M239 178 V120" marker-end="url(#sd-mint-scaled-summary-extract-arrow)"/>
+<path class="concept-edge" d="M140 90 H162 V400 H239 V422" marker-end="url(#sd-mint-scaled-summary-extract-arrow)"/>
+<path class="concept-edge" d="M178 219 H154 V340 H144" marker-end="url(#sd-mint-scaled-summary-extract-arrow)"/>
+<path class="concept-edge" d="M178 219 H154 V400 H74 V422" marker-end="url(#sd-mint-scaled-summary-extract-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 467 H174" marker-end="url(#sd-mint-scaled-summary-extract-arrow)"/>
+<path class="concept-edge" d="M300 219 H318 V467 H316" marker-end="url(#sd-mint-scaled-summary-extract-arrow)"/>
+<path class="concept-edge" d="M300 219 H318 V592 H316" marker-end="url(#sd-mint-scaled-summary-extract-arrow)"/>
+<path class="concept-edge" d="M178 219 H154 V592 H144" marker-end="url(#sd-mint-scaled-summary-extract-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M74 496 V550" marker-end="url(#sd-mint-scaled-summary-extract-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M74 618 V646 H160 V672" marker-end="url(#sd-mint-scaled-summary-extract-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Синхронизация и обработка операций</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Accounts API</text>
+<rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
+<text x="245" y="94" text-anchor="middle">Банки / агрегатор</text>
+<rect class="concept-node plain" x="8" y="190" width="132" height="52" rx="9"/>
+<text x="74" y="220" text-anchor="middle">Очередь sync</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="178" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="190" y="178" width="122" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="184" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="184" y="184" width="122" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="190" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
+<text x="239" y="214.5" text-anchor="middle">Загрузчик</text>
+<text x="239" y="231.5" text-anchor="middle">операций</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="302" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="302" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="308" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="308" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="314" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="314" width="132" height="52" rx="9"/>
+<text x="74" y="335.5" text-anchor="middle">Category</text>
+<text x="74" y="352.5" text-anchor="middle">Service</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="426" width="132" height="58" rx="9"/>
+<rect class="concept-node accent" x="20" y="426" width="132" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="432" width="132" height="58" rx="9"/>
+<rect class="concept-node accent" x="14" y="432" width="132" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="438" width="132" height="58" rx="9"/>
+<rect class="concept-node accent" x="8" y="438" width="132" height="58" rx="9"/>
+<text x="74" y="462.5" text-anchor="middle">Budget Service</text>
+<text x="74" y="479.5" text-anchor="middle">Расходы и лимиты</text>
+<rect class="concept-node plain" x="190" y="426" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="184" y="432" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="178" y="438" width="122" height="58" rx="9"/>
+<text x="239" y="462.5" text-anchor="middle">SQL primary</text>
+<text x="239" y="479.5" text-anchor="middle">Операции, итоги</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="554" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="554" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="560" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="560" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="566" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="566" width="132" height="52" rx="9"/>
+<text x="74" y="587.5" text-anchor="middle">Notification</text>
+<text x="74" y="604.5" text-anchor="middle">Service</text>
+<rect class="concept-node plain" x="178" y="566" width="134" height="52" rx="9"/>
+<text x="245" y="587.5" text-anchor="middle">Закрытый архив</text>
+<text x="245" y="604.5" text-anchor="middle">Объекты</text>
+<rect class="concept-node plain" x="40" y="676" width="240" height="44" rx="9"/>
+<text x="160" y="702" text-anchor="middle">Очередь отправки → email / push</text>
+<text class="concept-label" x="115" y="157" text-anchor="middle">outbox</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled-summary-read" viewBox="0 0 320 512" role="img" aria-labelledby="sd-mint-scaled-summary-read-title sd-mint-scaled-summary-read-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-mint-scaled-summary-read-title">Mint: чтение отчётов и истории</title><desc id="sd-mint-scaled-summary-read-desc">Read API читает кеш, при промахе — реплики SQL. Чтения со строгой свежестью направляются на primary с обходом старого кеша. Архив истории закрыт и доступен через отдельное задание, а не через публичный CDN.</desc>
+<defs><marker id="sd-mint-scaled-summary-read-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M140 90 H174" marker-end="url(#sd-mint-scaled-summary-read-arrow)"/>
+<path class="concept-edge" d="M74 116 V170 H239 V228" marker-end="url(#sd-mint-scaled-summary-read-arrow)"/>
+<path class="concept-edge" d="M74 116 V228" marker-end="url(#sd-mint-scaled-summary-read-arrow)"/>
+<path class="concept-edge" d="M140 273 H174" marker-end="url(#sd-mint-scaled-summary-read-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M8 90 H2 V443 H36" marker-end="url(#sd-mint-scaled-summary-read-arrow)" stroke-dasharray="4 4"/>
+<text x="160" y="22" text-anchor="middle">Чтение отчётов и истории</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Read API</text>
+<rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
+<text x="245" y="94" text-anchor="middle">Кеш отчётов</text>
+<rect class="concept-node plain" x="20" y="232" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="14" y="238" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="8" y="244" width="132" height="58" rx="9"/>
+<text x="74" y="268.5" text-anchor="middle">SQL primary</text>
+<text x="74" y="285.5" text-anchor="middle">и резерв</text>
+<rect class="concept-node plain" x="190" y="232" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="184" y="238" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="178" y="244" width="122" height="58" rx="9"/>
+<text x="239" y="268.5" text-anchor="middle">Реплики</text>
+<text x="239" y="285.5" text-anchor="middle">чтения</text>
+<rect class="concept-node plain" x="40" y="414" width="240" height="58" rx="9"/>
+<text x="160" y="438.5" text-anchor="middle">Закрытый архив истории</text>
+<text x="160" y="455.5" text-anchor="middle">Доступ через фоновое задание</text>
+<text class="concept-label" x="239" y="206" text-anchor="middle">промах</text>
 </svg>
 </div>
-<figcaption id="sd-mint-scaled-summary-caption">Два потока одной системы: слева — получение данных банка, справа — преобразование сохранённых операций в расходы и бюджетные события. Пунктир — надёжные задания, сохранение результатов и события изменений. Категоризация, расчёт итогов и проверка бюджета — логические этапы; их можно выполнять одним обработчиком, разделяя группы по мере роста нагрузки. API отчётов читает кеш, при промахе — итоги в БД. Стопки обозначают несколько экземпляров.</figcaption></figure>
+<figcaption id="sd-mint-scaled-summary-caption">Три части одной системы: входные маршруты, обработка операций и чтение. DNS, CDN и балансировщик — разные обращения клиента. CDN читает только статику интерфейса; банковские ответы и история находятся в закрытом архиве и не являются его origin. Accounts API и загрузчик используют одну основную SQL-БД, Read API — кеш и реплики с учётом свежести. Загрузчик получает категории, запускает расчёт бюджета и уведомляет о завершении синхронизации; Budget Service создаёт события бюджетных предупреждений. Внешние вызовы выполняются вне SQL-транзакции; задания и события фиксируются надёжно через outbox. Пунктир — DNS, задания, события и репликация; стопки — несколько экземпляров.</figcaption></figure>
 <p><b>Повторная загрузка не должна удваивать расходы.</b> Нужны идентификаторы провайдера, обработка исправлений и удалений, восстановление после сбоя. Отчёт показывает время последнего обновления; суммы хранятся точно и считаются отдельно по валютам.</p>
     </div>
     <div class="more">
@@ -10512,28 +10850,80 @@ outbox
 <p>Объём изменений не равен росту таблицы: часть событий исправляет старые операции. <b>Квоты считают по конкретному провайдеру</b>, а не только по общей нагрузке. Если все задания запланированы на полночь, среднее число запросов не отражает реальный пик.</p>
 <p><b>Шаг 2 — Общая архитектура</b></p>
 <figure class="concept" aria-labelledby="sd-mint-base-caption">
-<svg id="sd-mint-base" viewBox="0 0 320 392" role="img" aria-labelledby="sd-mint-base-title sd-mint-base-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-mint-base-title">Mint.com: базовая архитектура</title><desc id="sd-mint-base-desc">Одно приложение принимает подключения счетов и показывает отчёты из PostgreSQL. Фоновая задача получает операции у банковского агрегатора и сохраняет их в БД. Чтение отчётов не ждёт банк.</desc>
+<div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
+<svg style="flex:1 1 280px; min-width:0" id="sd-mint-base" viewBox="0 0 320 338" role="img" aria-labelledby="sd-mint-base-title sd-mint-base-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-mint-base-title">Базовый веб-слой и Accounts API</title><desc id="sd-mint-base-desc">Клиент вызывает веб-слой, который передаёт запрос Accounts API. Accounts API обслуживает подключения и отчёты до выделения отдельного Read API.</desc>
 <defs><marker id="sd-mint-base-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 52 V106" marker-end="url(#sd-mint-base-arrow)"/>
-<path class="concept-edge" d="M80 176 V242" marker-end="url(#sd-mint-base-arrow)"/>
-<path class="concept-edge" d="M245 176 V242" marker-end="url(#sd-mint-base-arrow)"/>
-<rect class="concept-node plain" x="64" y="8" width="192" height="44" rx="9"/>
-<text x="160" y="34" text-anchor="middle">Клиент</text>
-<rect class="concept-node accent" x="24" y="110" width="272" height="66" rx="9"/>
-<text x="160" y="138.5" text-anchor="middle">Одно приложение</text>
-<text x="160" y="155.5" text-anchor="middle">API + фоновая синхронизация</text>
-<rect class="concept-node plain" x="8" y="246" width="140" height="58" rx="9"/>
-<text x="78" y="270.5" text-anchor="middle">PostgreSQL</text>
-<text x="78" y="287.5" text-anchor="middle">Операции, итоги</text>
-<rect class="concept-node plain" x="178" y="246" width="134" height="58" rx="9"/>
-<text x="245" y="270.5" text-anchor="middle">Агрегатор</text>
-<text x="245" y="287.5" text-anchor="middle">банковских API</text>
-<text class="concept-label" x="160" y="353" text-anchor="middle">Отчёт читается из БД, без вызова банка</text>
-</svg><figcaption id="sd-mint-base-caption">Начальная схема: одно приложение, PostgreSQL и фоновая синхронизация. Периодические задания хранятся в БД; после сбоя их можно продолжить. Банки доступны через агрегатор или отдельные адаптеры.</figcaption></figure>
-<p>Начать можно с <b>одного приложения и PostgreSQL</b>: API подключений и отчётов, таблица заданий и фоновый исполнитель. Сетевой запрос к банку выполняется за пределами транзакции БД. Отчёт использует сохранённые операции и показывает <code>last_successful_sync_at</code>, поэтому отказ банка не блокирует чтение.</p>
-<p>Подключение, начальная загрузка истории и последующие обновления имеют разные сроки и стоимость. Их нужно различать уже в модели задания. При росте API, синхронизация и обработка отчётов масштабируются отдельными группами, как показано в шаге 4.</p>
+<path class="concept-edge" d="M160 56 V108" marker-end="url(#sd-mint-base-arrow)"/>
+<path class="concept-edge" d="M160 164 V260" marker-end="url(#sd-mint-base-arrow)"/>
+<rect class="concept-node accent" x="40" y="8" width="240" height="48" rx="9"/>
+<text x="160" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node accent" x="40" y="112" width="240" height="52" rx="9"/>
+<text x="160" y="142" text-anchor="middle">Веб-слой / proxy</text>
+<rect class="concept-node accent" x="40" y="264" width="240" height="52" rx="9"/>
+<text x="160" y="294" text-anchor="middle">Accounts API</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-mint-base-extract" viewBox="0 0 320 738" role="img" aria-labelledby="sd-mint-base-extract-title sd-mint-base-extract-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-mint-base-extract-title">Mint: Accounts API, очередь и загрузчик</title><desc id="sd-mint-base-extract-desc">Accounts API сохраняет подключения и outbox в SQL, ставит задания в очередь. Загрузчик получает данные банка, вызывает категоризацию и обработку бюджета, сохраняет операции в SQL и историю в закрытом объектном хранилище. Уведомления относятся к завершению синхронизации или превышению бюджета.</desc>
+<defs><marker id="sd-mint-base-extract-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M74 116 V186" marker-end="url(#sd-mint-base-extract-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 216 H174" marker-end="url(#sd-mint-base-extract-arrow)"/>
+<path class="concept-edge" d="M239 186 V120" marker-end="url(#sd-mint-base-extract-arrow)"/>
+<path class="concept-edge" d="M140 90 H162 V400 H239 V434" marker-end="url(#sd-mint-base-extract-arrow)"/>
+<path class="concept-edge" d="M178 219 H154 V340 H144" marker-end="url(#sd-mint-base-extract-arrow)"/>
+<path class="concept-edge" d="M178 219 H154 V400 H74 V434" marker-end="url(#sd-mint-base-extract-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 467 H174" marker-end="url(#sd-mint-base-extract-arrow)"/>
+<path class="concept-edge" d="M300 219 H318 V467 H316" marker-end="url(#sd-mint-base-extract-arrow)"/>
+<path class="concept-edge" d="M300 219 H318 V592 H316" marker-end="url(#sd-mint-base-extract-arrow)"/>
+<path class="concept-edge" d="M178 219 H154 V592 H144" marker-end="url(#sd-mint-base-extract-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M74 496 V562" marker-end="url(#sd-mint-base-extract-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M74 618 V646 H160 V672" marker-end="url(#sd-mint-base-extract-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Синхронизация и обработка операций</text>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Accounts API</text>
+<rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
+<text x="245" y="94" text-anchor="middle">Банки / агрегатор</text>
+<rect class="concept-node plain" x="8" y="190" width="132" height="52" rx="9"/>
+<text x="74" y="220" text-anchor="middle">Очередь sync</text>
+<rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
+<text x="239" y="214.5" text-anchor="middle">Загрузчик</text>
+<text x="239" y="231.5" text-anchor="middle">операций</text>
+<rect class="concept-node accent" x="8" y="314" width="132" height="52" rx="9"/>
+<text x="74" y="335.5" text-anchor="middle">Category</text>
+<text x="74" y="352.5" text-anchor="middle">Service</text>
+<rect class="concept-node accent" x="8" y="438" width="132" height="58" rx="9"/>
+<text x="74" y="462.5" text-anchor="middle">Budget Service</text>
+<text x="74" y="479.5" text-anchor="middle">Расходы и лимиты</text>
+<rect class="concept-node plain" x="178" y="438" width="122" height="58" rx="9"/>
+<text x="239" y="462.5" text-anchor="middle">SQL-БД</text>
+<text x="239" y="479.5" text-anchor="middle">Операции, итоги</text>
+<rect class="concept-node accent" x="8" y="566" width="132" height="52" rx="9"/>
+<text x="74" y="587.5" text-anchor="middle">Notification</text>
+<text x="74" y="604.5" text-anchor="middle">Service</text>
+<rect class="concept-node plain" x="178" y="566" width="134" height="52" rx="9"/>
+<text x="245" y="587.5" text-anchor="middle">Закрытый архив</text>
+<text x="245" y="604.5" text-anchor="middle">Объекты</text>
+<rect class="concept-node plain" x="40" y="676" width="240" height="44" rx="9"/>
+<text x="160" y="702" text-anchor="middle">Очередь отправки → email / push</text>
+<text class="concept-label" x="115" y="157" text-anchor="middle">outbox</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-mint-base-read" viewBox="0 0 320 286" role="img" aria-labelledby="sd-mint-base-read-title sd-mint-base-read-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-mint-base-read-title">Базовое чтение отчётов</title><desc id="sd-mint-base-read-desc">Accounts API получает сохранённые операции и итоги из SQL-БД. Чтение отчёта не вызывает банк и не ожидает завершения синхронизации.</desc>
+<defs><marker id="sd-mint-base-read-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M160 116 V194" marker-end="url(#sd-mint-base-read-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Чтение отчётов и истории</text>
+<rect class="concept-node accent" x="40" y="64" width="240" height="52" rx="9"/>
+<text x="160" y="94" text-anchor="middle">Accounts API: чтение отчёта</text>
+<rect class="concept-node plain" x="40" y="198" width="240" height="58" rx="9"/>
+<text x="160" y="231" text-anchor="middle">SQL: операции и итоги</text>
+</svg>
+</div>
+<figcaption id="sd-mint-base-caption">Базовая схема показывает роли, а не обязательные отдельные микросервисы. Accounts API обслуживает подключения и чтение, очередь отделяет загрузку банка, загрузчик обращается к категоризации, бюджету, уведомлениям, SQL и закрытому архиву. Эти роли могут начинаться модулями одного приложения. Вызовы сервисов показывают зависимости; они не означают одну длинную SQL-транзакцию.</figcaption></figure>
+<p><b>Базовая логическая схема</b> разделяет веб-слой, Accounts API, очередь, загрузчик, категоризацию, бюджеты, уведомления и хранилища. Начать можно с модулей одного приложения и PostgreSQL: Accounts API обслуживает подключения и отчёты, таблица заданий и фоновый исполнитель обеспечивают загрузку. Сетевой запрос к банку выполняется за пределами транзакции БД. Отчёт использует сохранённые операции и показывает <code>last_successful_sync_at</code>, поэтому отказ банка не блокирует чтение.</p>
+<p>Подключение, начальная загрузка истории и последующие обновления имеют разные сроки и стоимость. Их нужно различать уже в модели задания. При росте веб-слой, Accounts API, Read API и обработчики масштабируются отдельными группами, как показано в шаге 4.</p>
 <p><b>Шаг 3 — Детали ключевых компонентов</b></p>
+<p><b>Маршруты клиента.</b> DNS возвращает адрес нужного имени. За файлами интерфейса клиент обращается к CDN, за подключениями и отчётами — напрямую к балансировщику, затем веб-слой выбирает Accounts API или Read API. CDN при промахе читает только хранилище статики интерфейса. Банковские пакеты, токены и архив операций ему недоступны; пользователь получает финансовые данные через аутентифицированный API.</p>
+<p><b>Связи обработчиков.</b> Accounts API сохраняет подключение и задание с outbox в SQL, затем задание попадает в очередь. Загрузчик вызывает банк и Category Service, сохраняет нормализованные операции и курсор, после commit запускает Budget Service на пересчёт и проверку лимитов. Budget Service читает план и актуальные расходы из БД. Notification Service получает отдельные события завершения синхронизации и превышения бюджета. Прямоугольники обозначают логические роли; фоновые события между ними не требуют общей транзакции или синхронного ожидания доставки сообщения.</p>
 <p><b>Подключение счёта.</b> Пользователь проходит авторизацию и даёт согласие в интерфейсе банка или агрегатора. Сервер завершает обмен кодом, сохраняет подключение и ссылку на защищённый токен. Один доступ может охватывать несколько счетов, поэтому подключение и банковский счёт — разные сущности. Пример такого процесса — <a href="https://plaid.com/docs/link/">Plaid Link</a>; конкретный протокол зависит от интеграции.</p>
 <pre><span class="t">POST</span> /api/v1/connections
   provider, authorization_code
@@ -10577,99 +10967,161 @@ outbox
 <p><b>Шаг 4 — Масштабирование и узкие места</b></p>
 <figure class="concept" aria-labelledby="sd-mint-scaled-caption">
 <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
-<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled" viewBox="0 0 320 598" role="img" aria-labelledby="sd-mint-scaled-title sd-mint-scaled-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-mint-scaled-title">Mint.com: приём и синхронизация</title><desc id="sd-mint-scaled-desc">Клиент, планировщик и webhook создают задания через API счетов. Задания и outbox сохраняются в БД, очередь передаёт работу синхронизаторам. Они вызывают банк, нормализуют операции и фиксируют результат с курсором.</desc>
+<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled" viewBox="0 0 320 610" role="img" aria-labelledby="sd-mint-scaled-title sd-mint-scaled-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-mint-scaled-title">Доступ клиента к системе</title><desc id="sd-mint-scaled-desc">Клиент обращается к DNS за адресом, к CDN за статикой, к балансировщику за API. Веб-слой маршрутизирует запросы в отдельные группы API. CDN читает объектное хранилище, а не передаёт API-запросы балансировщику.</desc>
 <defs><marker id="sd-mint-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 92 V126" marker-end="url(#sd-mint-scaled-arrow)"/>
-<path class="concept-edge" d="M154 190 V240" marker-end="url(#sd-mint-scaled-arrow)"/>
-<path class="concept-edge" d="M160 302 V344" marker-end="url(#sd-mint-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M160 392 V434" marker-end="url(#sd-mint-scaled-arrow)"/>
-<path class="concept-edge" d="M154 508 V550" marker-end="url(#sd-mint-scaled-arrow)"/>
-<path class="concept-edge" d="M40 479 H8 V273 H36" marker-end="url(#sd-mint-scaled-arrow)" stroke-dasharray="4 4"/>
-<text x="160" y="22" text-anchor="middle">Приём и синхронизация</text>
-<rect class="concept-node plain" x="40" y="48" width="240" height="44" rx="9"/>
-<text x="160" y="74" text-anchor="middle">Клиент / расписание / webhook</text>
-<rect fill="var(--bg)" stroke="none" x="52" y="130" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="52" y="130" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="136" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="46" y="136" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="142" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="40" y="142" width="228" height="48" rx="9"/>
-<text x="154" y="170" text-anchor="middle">API счетов и обновлений</text>
-<rect class="concept-node plain" x="40" y="244" width="240" height="58" rx="9"/>
-<text x="160" y="268.5" text-anchor="middle">БД: задания и курсоры</text>
-<text x="160" y="285.5" text-anchor="middle">+ outbox</text>
-<rect class="concept-node plain" x="40" y="348" width="240" height="44" rx="9"/>
-<text x="160" y="374" text-anchor="middle">Очередь синхронизации</text>
-<rect fill="var(--bg)" stroke="none" x="52" y="438" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="52" y="438" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="444" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="46" y="444" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="450" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="40" y="450" width="228" height="58" rx="9"/>
-<text x="154" y="483" text-anchor="middle">Загрузка и нормализация</text>
-<rect class="concept-node plain" x="40" y="554" width="240" height="40" rx="9"/>
-<text x="160" y="578" text-anchor="middle">Банки / агрегатор</text>
+<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-mint-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M110 56 V90 H245 V108" marker-end="url(#sd-mint-scaled-arrow)"/>
+<path class="concept-edge" d="M65 56 V180 H154 V204" marker-end="url(#sd-mint-scaled-arrow)"/>
+<path class="concept-edge" d="M154 268 V310" marker-end="url(#sd-mint-scaled-arrow)"/>
+<path class="concept-edge" d="M312 134 H318 V572 H316" marker-end="url(#sd-mint-scaled-arrow)"/>
+<path class="concept-edge" d="M112 374 V402 H74 V424" marker-end="url(#sd-mint-scaled-arrow)"/>
+<path class="concept-edge" d="M212 374 V402 H239 V424" marker-end="url(#sd-mint-scaled-arrow)"/>
+<rect class="concept-node accent" x="8" y="8" width="132" height="48" rx="9"/>
+<text x="74" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
+<text x="245" y="36" text-anchor="middle">DNS</text>
+<rect class="concept-node plain" x="178" y="112" width="134" height="44" rx="9"/>
+<text x="245" y="138" text-anchor="middle">CDN</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="208" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="208" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="214" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="214" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="220" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="220" width="228" height="48" rx="9"/>
+<text x="154" y="248" text-anchor="middle">Балансировщик</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="314" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="314" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="320" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="320" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="326" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="326" width="228" height="48" rx="9"/>
+<text x="154" y="354" text-anchor="middle">Веб-слой / proxy</text>
+<rect class="concept-node plain" x="178" y="544" width="134" height="56" rx="9"/>
+<text x="245" y="567.5" text-anchor="middle">Статика UI</text>
+<text x="245" y="584.5" text-anchor="middle">Объекты</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="428" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="428" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="434" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="434" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="440" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="440" width="132" height="52" rx="9"/>
+<text x="74" y="470" text-anchor="middle">Accounts API</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="428" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="428" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="434" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="434" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="440" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="440" width="122" height="52" rx="9"/>
+<text x="239" y="470" text-anchor="middle">Read API</text>
 </svg>
-<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled-product" viewBox="0 0 320 658" role="img" aria-labelledby="sd-mint-scaled-product-title sd-mint-scaled-product-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-mint-scaled-product-title">Mint.com: от операции до бюджета и уведомления</title><desc id="sd-mint-scaled-product-desc">Изменения канонических операций запускают категоризацию, пересчёт расходов и сравнение с бюджетом. Уведомления отправляются через outbox и отдельную очередь. API отчётов читает кеш и сохранённые итоги без вызова банка.</desc>
-<defs><marker id="sd-mint-scaled-product-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 106 V148" marker-end="url(#sd-mint-scaled-product-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M154 212 V254" marker-end="url(#sd-mint-scaled-product-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M154 328 V370" marker-end="url(#sd-mint-scaled-product-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M100 434 V464 H74 V494" marker-end="url(#sd-mint-scaled-product-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M74 550 V588" marker-end="url(#sd-mint-scaled-product-arrow)"/>
-<path class="concept-edge" d="M239 550 V600" marker-end="url(#sd-mint-scaled-product-arrow)"/>
-<path class="concept-edge" d="M312 628 H318 V299 H284" marker-end="url(#sd-mint-scaled-product-arrow)"/>
-<text x="160" y="22" text-anchor="middle">Расходы, бюджет и отчёты</text>
-<rect class="concept-node plain" x="40" y="48" width="240" height="58" rx="9"/>
-<text x="160" y="72.5" text-anchor="middle">Канонические операции</text>
-<text x="160" y="89.5" text-anchor="middle">БД + события изменений</text>
-<rect fill="var(--bg)" stroke="none" x="52" y="152" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="52" y="152" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="158" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="46" y="158" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="164" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="40" y="164" width="228" height="48" rx="9"/>
-<text x="154" y="192" text-anchor="middle">Категоризация</text>
-<rect fill="var(--bg)" stroke="none" x="52" y="258" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="52" y="258" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="264" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="46" y="264" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="270" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="40" y="270" width="228" height="58" rx="9"/>
-<text x="154" y="294.5" text-anchor="middle">Итоги расходов в БД</text>
-<text x="154" y="311.5" text-anchor="middle">Месяц / категория / валюта</text>
-<rect fill="var(--bg)" stroke="none" x="52" y="374" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="52" y="374" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="380" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="46" y="380" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="386" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="40" y="386" width="228" height="48" rx="9"/>
-<text x="154" y="414" text-anchor="middle">Сравнение с бюджетом</text>
-<rect class="concept-node plain" x="8" y="498" width="132" height="52" rx="9"/>
-<text x="74" y="519.5" text-anchor="middle">Outbox</text>
-<text x="74" y="536.5" text-anchor="middle">→ очередь</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="486" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="190" y="486" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="492" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="184" y="492" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="498" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="178" y="498" width="122" height="52" rx="9"/>
-<text x="239" y="528" text-anchor="middle">API отчётов</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="592" width="132" height="48" rx="9"/>
-<rect class="concept-node accent" x="20" y="592" width="132" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="598" width="132" height="48" rx="9"/>
-<rect class="concept-node accent" x="14" y="598" width="132" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="604" width="132" height="48" rx="9"/>
-<rect class="concept-node accent" x="8" y="604" width="132" height="48" rx="9"/>
-<text x="74" y="632" text-anchor="middle">Уведомления</text>
-<rect class="concept-node plain" x="178" y="604" width="134" height="48" rx="9"/>
-<text x="245" y="632" text-anchor="middle">Кеш отчётов</text>
+<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled-extract" viewBox="0 0 320 738" role="img" aria-labelledby="sd-mint-scaled-extract-title sd-mint-scaled-extract-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-mint-scaled-extract-title">Mint: Accounts API, очередь и загрузчик</title><desc id="sd-mint-scaled-extract-desc">Accounts API сохраняет подключения и outbox в SQL, ставит задания в очередь. Загрузчик получает данные банка, вызывает категоризацию и обработку бюджета, сохраняет операции в SQL и историю в закрытом объектном хранилище. Уведомления относятся к завершению синхронизации или превышению бюджета.</desc>
+<defs><marker id="sd-mint-scaled-extract-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M74 116 V186" marker-end="url(#sd-mint-scaled-extract-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 216 H174" marker-end="url(#sd-mint-scaled-extract-arrow)"/>
+<path class="concept-edge" d="M239 178 V120" marker-end="url(#sd-mint-scaled-extract-arrow)"/>
+<path class="concept-edge" d="M140 90 H162 V400 H239 V422" marker-end="url(#sd-mint-scaled-extract-arrow)"/>
+<path class="concept-edge" d="M178 219 H154 V340 H144" marker-end="url(#sd-mint-scaled-extract-arrow)"/>
+<path class="concept-edge" d="M178 219 H154 V400 H74 V422" marker-end="url(#sd-mint-scaled-extract-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 467 H174" marker-end="url(#sd-mint-scaled-extract-arrow)"/>
+<path class="concept-edge" d="M300 219 H318 V467 H316" marker-end="url(#sd-mint-scaled-extract-arrow)"/>
+<path class="concept-edge" d="M300 219 H318 V592 H316" marker-end="url(#sd-mint-scaled-extract-arrow)"/>
+<path class="concept-edge" d="M178 219 H154 V592 H144" marker-end="url(#sd-mint-scaled-extract-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M74 496 V550" marker-end="url(#sd-mint-scaled-extract-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M74 618 V646 H160 V672" marker-end="url(#sd-mint-scaled-extract-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Синхронизация и обработка операций</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Accounts API</text>
+<rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
+<text x="245" y="94" text-anchor="middle">Банки / агрегатор</text>
+<rect class="concept-node plain" x="8" y="190" width="132" height="52" rx="9"/>
+<text x="74" y="220" text-anchor="middle">Очередь sync</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="178" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="190" y="178" width="122" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="184" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="184" y="184" width="122" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="190" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
+<text x="239" y="214.5" text-anchor="middle">Загрузчик</text>
+<text x="239" y="231.5" text-anchor="middle">операций</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="302" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="302" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="308" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="308" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="314" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="314" width="132" height="52" rx="9"/>
+<text x="74" y="335.5" text-anchor="middle">Category</text>
+<text x="74" y="352.5" text-anchor="middle">Service</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="426" width="132" height="58" rx="9"/>
+<rect class="concept-node accent" x="20" y="426" width="132" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="432" width="132" height="58" rx="9"/>
+<rect class="concept-node accent" x="14" y="432" width="132" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="438" width="132" height="58" rx="9"/>
+<rect class="concept-node accent" x="8" y="438" width="132" height="58" rx="9"/>
+<text x="74" y="462.5" text-anchor="middle">Budget Service</text>
+<text x="74" y="479.5" text-anchor="middle">Расходы и лимиты</text>
+<rect class="concept-node plain" x="190" y="426" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="184" y="432" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="178" y="438" width="122" height="58" rx="9"/>
+<text x="239" y="462.5" text-anchor="middle">SQL primary</text>
+<text x="239" y="479.5" text-anchor="middle">Операции, итоги</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="554" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="554" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="560" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="560" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="566" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="566" width="132" height="52" rx="9"/>
+<text x="74" y="587.5" text-anchor="middle">Notification</text>
+<text x="74" y="604.5" text-anchor="middle">Service</text>
+<rect class="concept-node plain" x="178" y="566" width="134" height="52" rx="9"/>
+<text x="245" y="587.5" text-anchor="middle">Закрытый архив</text>
+<text x="245" y="604.5" text-anchor="middle">Объекты</text>
+<rect class="concept-node plain" x="40" y="676" width="240" height="44" rx="9"/>
+<text x="160" y="702" text-anchor="middle">Очередь отправки → email / push</text>
+<text class="concept-label" x="115" y="157" text-anchor="middle">outbox</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled-read" viewBox="0 0 320 512" role="img" aria-labelledby="sd-mint-scaled-read-title sd-mint-scaled-read-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-mint-scaled-read-title">Mint: чтение отчётов и истории</title><desc id="sd-mint-scaled-read-desc">Read API читает кеш, при промахе — реплики SQL. Чтения со строгой свежестью направляются на primary с обходом старого кеша. Архив истории закрыт и доступен через отдельное задание, а не через публичный CDN.</desc>
+<defs><marker id="sd-mint-scaled-read-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M140 90 H174" marker-end="url(#sd-mint-scaled-read-arrow)"/>
+<path class="concept-edge" d="M74 116 V170 H239 V228" marker-end="url(#sd-mint-scaled-read-arrow)"/>
+<path class="concept-edge" d="M74 116 V228" marker-end="url(#sd-mint-scaled-read-arrow)"/>
+<path class="concept-edge" d="M140 273 H174" marker-end="url(#sd-mint-scaled-read-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M8 90 H2 V443 H36" marker-end="url(#sd-mint-scaled-read-arrow)" stroke-dasharray="4 4"/>
+<text x="160" y="22" text-anchor="middle">Чтение отчётов и истории</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Read API</text>
+<rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
+<text x="245" y="94" text-anchor="middle">Кеш отчётов</text>
+<rect class="concept-node plain" x="20" y="232" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="14" y="238" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="8" y="244" width="132" height="58" rx="9"/>
+<text x="74" y="268.5" text-anchor="middle">SQL primary</text>
+<text x="74" y="285.5" text-anchor="middle">и резерв</text>
+<rect class="concept-node plain" x="190" y="232" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="184" y="238" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="178" y="244" width="122" height="58" rx="9"/>
+<text x="239" y="268.5" text-anchor="middle">Реплики</text>
+<text x="239" y="285.5" text-anchor="middle">чтения</text>
+<rect class="concept-node plain" x="40" y="414" width="240" height="58" rx="9"/>
+<text x="160" y="438.5" text-anchor="middle">Закрытый архив истории</text>
+<text x="160" y="455.5" text-anchor="middle">Доступ через фоновое задание</text>
+<text class="concept-label" x="239" y="206" text-anchor="middle">промах</text>
 </svg>
 </div>
-<figcaption id="sd-mint-scaled-caption">Два потока одной системы: слева — получение данных банка, справа — преобразование сохранённых операций в расходы и бюджетные события. Пунктир — надёжные задания, сохранение результатов и события изменений. Категоризация, расчёт итогов и проверка бюджета — логические этапы; их можно выполнять одним обработчиком, разделяя группы по мере роста нагрузки. API отчётов читает кеш, при промахе — итоги в БД. Стопки обозначают несколько экземпляров.</figcaption></figure>
-<p><b>Разделение по нагрузке.</b> API счетов управляет подключениями и обновлениями, Read API обслуживает историю и отчёты, синхронизаторы выполняют внешние вызовы, обработчики итогов пересчитывают затронутые периоды. Очереди отделяют импорт от обработки. Создание задания и outbox фиксируются одной транзакцией; публикация может повториться, поэтому повторно обработать задание должно быть безопасно.</p>
+<figcaption id="sd-mint-scaled-caption">Три части одной системы: входные маршруты, обработка операций и чтение. DNS, CDN и балансировщик — разные обращения клиента. CDN читает только статику интерфейса; банковские ответы и история находятся в закрытом архиве и не являются его origin. Accounts API и загрузчик используют одну основную SQL-БД, Read API — кеш и реплики с учётом свежести. Загрузчик получает категории, запускает расчёт бюджета и уведомляет о завершении синхронизации; Budget Service создаёт события бюджетных предупреждений. Внешние вызовы выполняются вне SQL-транзакции; задания и события фиксируются надёжно через outbox. Пунктир — DNS, задания, события и репликация; стопки — несколько экземпляров.</figcaption></figure>
+<p><b>Разделение по нагрузке.</b> Accounts API управляет подключениями и обновлениями, Read API обслуживает историю и отчёты, загрузчики выполняют банковские вызовы, Category Service определяет категории, Budget Service пересчитывает расходы и проверяет лимиты, Notification Service отправляет выбранные уведомления. Очереди отделяют импорт от обработки. Создание задания и outbox фиксируются одной транзакцией; публикация может повториться, поэтому повторно обработать задание должно быть безопасно.</p>
 <p><b>Планирование и квоты.</b> Задания распределяются по времени с jitter, обновления активных подключений имеют больший приоритет, начальная история получает отдельный бюджет. Webhook используется как сигнал проверить изменения; отправитель проверяется, повторный сигнал не создаёт параллельную синхронизацию. Лимитер учитывает общую квоту провайдера по всем экземплярам. Дополнительные работники не увеличат разрешённую скорость банка.</p>
 <div class="table-wrap"><table><tr><th>Узкое место или сбой</th><th>Решение и компромисс</th></tr>
 <tr><td>Один банк тормозит</td><td>Отдельные пулы и лимиты конкурентности, таймауты, backoff с jitter; остальные банки продолжают работу</td></tr>
