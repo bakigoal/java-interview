@@ -10692,63 +10692,154 @@ outbox
 <article id="q281" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">281. Спроектируйте систему, которая масштабируется до миллионов пользователей <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
 <p><b>Архитектура растёт по результатам измерений:</b> один сервер → отдельные БД и объектное хранилище → балансировщик и несколько экземпляров в независимых зонах → кеш и реплики чтения → автомасштабирование и фоновая обработка. Каждый переход устраняет конкретное ограничение по ресурсам, задержке или доступности.</p>
 <figure class="concept" aria-labelledby="sd-scaling-scaled-summary-caption">
-<svg id="sd-scaling-scaled-summary" viewBox="0 0 320 688" role="img" aria-labelledby="sd-scaling-scaled-summary-title sd-scaling-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-scaling-scaled-summary-title">Масштабирование: итоговая архитектура</title><desc id="sd-scaling-scaled-summary-desc">CDN отдаёт файлы из объектного хранилища, API-запросы идут через балансировщик к экземплярам приложения. Кеш и асинхронные реплики разгружают чтение. Записи идут на primary, синхронный резерв предназначен для переключения при отказе. Очередь отделяет фоновые задания, контроллеры независимо масштабируют API и воркеры.</desc>
+<div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
+<svg style="flex:1 1 280px; min-width:0" id="sd-scaling-scaled-summary" viewBox="0 0 320 610" role="img" aria-labelledby="sd-scaling-scaled-summary-title sd-scaling-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-scaling-scaled-summary-title">Итоговые маршруты клиента</title><desc id="sd-scaling-scaled-summary-desc">Клиент отдельно обращается к DNS, CDN и балансировщику. CDN получает файлы из объектного хранилища. API-запросы клиента идут через балансировщик и веб-слой к группам API, минуя CDN.</desc>
 <defs><marker id="sd-scaling-scaled-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 66 V102" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M100 150 V176 H78 V198" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M220 150 V176 H245 V198" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M245 248 V292" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M178 337 H78 V416" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M239 366 V416" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M78 470 V518" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
-<text class="concept-label" x="115" y="500" text-anchor="middle">промах</text>
-<path class="concept-edge" d="M178 445 H162 V559 H156" marker-end="url(#sd-scaling-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M245 470 V490 M245 514 V530" marker-end="url(#sd-scaling-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<text class="concept-label" x="245" y="507" text-anchor="middle">sync</text>
-<path class="concept-edge" d="M300 337 H318 V608 H78 V630" marker-end="url(#sd-scaling-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M148 656 H174" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
-<rect class="concept-node plain" x="40" y="8" width="240" height="58" rx="9"/>
-<text x="160" y="32.5" text-anchor="middle">Клиент</text>
-<text x="160" y="49.5" text-anchor="middle">DNS</text>
-<rect class="concept-node accent" x="40" y="106" width="240" height="44" rx="9"/>
-<text x="160" y="132" text-anchor="middle">CDN</text>
-<rect class="concept-node plain" x="8" y="202" width="140" height="46" rx="9"/>
-<text x="78" y="220.5" text-anchor="middle">Объектное</text>
-<text x="78" y="237.5" text-anchor="middle">хранилище</text>
-<rect class="concept-node accent" x="178" y="202" width="134" height="46" rx="9"/>
-<text x="245" y="229" text-anchor="middle">Балансировщик</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="296" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="296" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="302" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="302" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="308" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="308" width="122" height="58" rx="9"/>
-<text x="239" y="332.5" text-anchor="middle">API: autoscale</text>
-<text x="239" y="349.5" text-anchor="middle">Зоны A / B</text>
-<rect class="concept-node plain" x="8" y="420" width="140" height="50" rx="9"/>
-<text x="78" y="440.5" text-anchor="middle">Кеш</text>
-<text x="78" y="457.5" text-anchor="middle">В памяти</text>
-<rect class="concept-node plain" x="178" y="420" width="134" height="50" rx="9"/>
-<text x="245" y="440.5" text-anchor="middle">SQL-БД</text>
-<text x="245" y="457.5" text-anchor="middle">Primary</text>
-<rect class="concept-node plain" x="20" y="522" width="132" height="50" rx="9"/>
-<rect class="concept-node plain" x="14" y="528" width="132" height="50" rx="9"/>
-<rect class="concept-node plain" x="8" y="534" width="132" height="50" rx="9"/>
-<text x="74" y="563" text-anchor="middle">Реплики чтения</text>
-<rect class="concept-node plain" x="178" y="534" width="134" height="50" rx="9"/>
-<text x="245" y="554.5" text-anchor="middle">Резерв БД</text>
-<text x="245" y="571.5" text-anchor="middle">Другая зона</text>
-<rect class="concept-node plain" x="8" y="634" width="140" height="44" rx="9"/>
-<text x="78" y="660" text-anchor="middle">Очередь</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="622" width="122" height="44" rx="9"/>
-<rect class="concept-node accent" x="190" y="622" width="122" height="44" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="628" width="122" height="44" rx="9"/>
-<rect class="concept-node accent" x="184" y="628" width="122" height="44" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="634" width="122" height="44" rx="9"/>
-<rect class="concept-node accent" x="178" y="634" width="122" height="44" rx="9"/>
-<text x="239" y="660" text-anchor="middle">Воркеры</text>
-</svg><figcaption id="sd-scaling-scaled-summary-caption">Кеш снимает часть чтений, асинхронные реплики обслуживают промахи с учётом задержки репликации. Записи идут на primary. Синхронный резерв в этой схеме не используется для пользовательских запросов. Стопки обозначают несколько экземпляров. Приложение и воркеры масштабируются независимо. Пунктир — репликация и фоновый поток; результаты сохраняются в БД и объектном хранилище, обратные связи не показаны. Шардирование добавляется только после измерения оставшихся ограничений.</figcaption></figure>
+<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-scaling-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M110 56 V90 H245 V108" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M65 56 V180 H154 V204" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M154 268 V310" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M100 374 V402 H51 V424" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M154 374 V424" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M220 374 V402 H263 V424" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M312 134 H318 V572 H316" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
+<rect class="concept-node accent" x="8" y="8" width="132" height="48" rx="9"/>
+<text x="74" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
+<text x="245" y="36" text-anchor="middle">DNS</text>
+<rect class="concept-node plain" x="178" y="112" width="134" height="44" rx="9"/>
+<text x="245" y="138" text-anchor="middle">CDN</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="208" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="208" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="214" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="214" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="220" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="220" width="228" height="48" rx="9"/>
+<text x="154" y="248" text-anchor="middle">Балансировщик</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="314" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="314" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="320" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="320" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="326" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="326" width="228" height="48" rx="9"/>
+<text x="154" y="354" text-anchor="middle">Веб-слой / proxy</text>
+<rect class="concept-node plain" x="178" y="544" width="134" height="56" rx="9"/>
+<text x="245" y="567.5" text-anchor="middle">Объектное</text>
+<text x="245" y="584.5" text-anchor="middle">хранилище</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="428" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="428" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="434" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="434" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="440" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="440" width="86" height="52" rx="9"/>
+<text x="51" y="470" text-anchor="middle">Async API</text>
+<rect fill="var(--bg)" stroke="none" x="126" y="428" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="126" y="428" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="120" y="434" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="120" y="434" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="114" y="440" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="114" y="440" width="86" height="52" rx="9"/>
+<text x="157" y="470" text-anchor="middle">Write API</text>
+<rect fill="var(--bg)" stroke="none" x="232" y="428" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="232" y="428" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="226" y="434" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="226" y="434" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="220" y="440" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="220" y="440" width="86" height="52" rx="9"/>
+<text x="263" y="470" text-anchor="middle">Read API</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-scaling-scaled-summary-data" viewBox="0 0 320 524" role="img" aria-labelledby="sd-scaling-scaled-summary-data-title sd-scaling-scaled-summary-data-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-scaling-scaled-summary-data-title">Потоки чтения и записи</title><desc id="sd-scaling-scaled-summary-data-desc">Write API пишет в SQL primary и объектное хранилище. Read API читает кеш, при промахе — реплики БД, а файлы получает из объектного хранилища. Между primary и репликами идёт репликация.</desc>
+<defs><marker id="sd-scaling-scaled-summary-data-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M74 116 V298" marker-end="url(#sd-scaling-scaled-summary-data-arrow)"/>
+<path class="concept-edge" d="M239 116 V186" marker-end="url(#sd-scaling-scaled-summary-data-arrow)"/>
+<path class="concept-edge" d="M300 90 H318 V343 H316" marker-end="url(#sd-scaling-scaled-summary-data-arrow)"/>
+<path class="concept-edge" d="M140 343 H174" marker-end="url(#sd-scaling-scaled-summary-data-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M8 90 H2 V478 H36" marker-end="url(#sd-scaling-scaled-summary-data-arrow)"/>
+<path class="concept-edge" d="M300 90 H318 V478 H284" marker-end="url(#sd-scaling-scaled-summary-data-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Потоки чтения и записи</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Write API</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="52" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="52" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="58" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="58" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="64" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
+<text x="239" y="94" text-anchor="middle">Read API</text>
+<rect class="concept-node plain" x="178" y="190" width="134" height="52" rx="9"/>
+<text x="245" y="220" text-anchor="middle">Кеш в памяти</text>
+<rect class="concept-node plain" x="20" y="302" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="14" y="308" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="8" y="314" width="132" height="58" rx="9"/>
+<text x="74" y="338.5" text-anchor="middle">SQL primary</text>
+<text x="74" y="355.5" text-anchor="middle">и резерв</text>
+<rect class="concept-node plain" x="190" y="302" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="184" y="308" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="178" y="314" width="122" height="58" rx="9"/>
+<text x="239" y="338.5" text-anchor="middle">Реплики</text>
+<text x="239" y="355.5" text-anchor="middle">чтения</text>
+<rect class="concept-node plain" x="40" y="450" width="240" height="56" rx="9"/>
+<text x="160" y="482" text-anchor="middle">Объектное хранилище</text>
+<text class="concept-label" x="275" y="278" text-anchor="middle">промах</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-scaling-scaled-summary-jobs" viewBox="0 0 320 720" role="img" aria-labelledby="sd-scaling-scaled-summary-jobs-title sd-scaling-scaled-summary-jobs-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-scaling-scaled-summary-jobs-title">Фоновая обработка и варианты хранения</title><desc id="sd-scaling-scaled-summary-jobs-desc">Async API сохраняет задание и outbox в БД, публикатор передаёт задание в очередь. Воркеры обрабатывают его и сохраняют результаты в SQL-БД или объектном хранилище. Другое хранилище, шардирование и разделение БД по доменам показаны как варианты дальнейшей эволюции.</desc>
+<defs><marker id="sd-scaling-scaled-summary-jobs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M74 116 V186" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)"/>
+<path class="concept-edge" d="M140 216 H174" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M245 242 V298" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)"/>
+<path class="concept-edge" d="M239 372 V434" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)"/>
+<path class="concept-edge" d="M178 343 H78 V422" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)"/>
+<path class="concept-edge" d="M178 343 H162 V574 H144" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M8 467 H2 V650 H74 V658" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M2 650 H245 V658" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)" stroke-dasharray="4 4"/>
+<text x="160" y="22" text-anchor="middle">Фоновые задачи и хранение</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Async API</text>
+<rect class="concept-node plain" x="8" y="190" width="132" height="52" rx="9"/>
+<text x="74" y="211.5" text-anchor="middle">БД заданий</text>
+<text x="74" y="228.5" text-anchor="middle">+ outbox</text>
+<rect class="concept-node plain" x="178" y="190" width="134" height="52" rx="9"/>
+<text x="245" y="220" text-anchor="middle">Очередь</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="302" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="190" y="302" width="122" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="308" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="184" y="308" width="122" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="314" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="178" y="314" width="122" height="58" rx="9"/>
+<text x="239" y="347" text-anchor="middle">Воркеры</text>
+<rect class="concept-node plain" x="20" y="426" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="14" y="432" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="8" y="438" width="132" height="58" rx="9"/>
+<text x="74" y="471" text-anchor="middle">SQL-БД</text>
+<rect class="concept-node plain" x="178" y="438" width="134" height="58" rx="9"/>
+<text x="245" y="462.5" text-anchor="middle">Объектное</text>
+<text x="245" y="479.5" text-anchor="middle">хранилище</text>
+<rect class="concept-node plain" x="8" y="548" width="132" height="52" rx="9"/>
+<text x="74" y="569.5" text-anchor="middle">Другое</text>
+<text x="74" y="586.5" text-anchor="middle">хранилище</text>
+<text class="concept-label" x="160" y="642" text-anchor="middle">Варианты масштабирования SQL</text>
+<rect class="concept-node plain" x="8" y="662" width="132" height="52" rx="9"/>
+<text x="74" y="683.5" text-anchor="middle">Шарды</text>
+<text x="74" y="700.5" text-anchor="middle">по user_id</text>
+<rect class="concept-node plain" x="178" y="662" width="134" height="52" rx="9"/>
+<text x="245" y="683.5" text-anchor="middle">БД по доменам</text>
+<text x="245" y="700.5" text-anchor="middle">Клиенты / товары</text>
+</svg>
+</div>
+<figcaption id="sd-scaling-scaled-summary-caption">Три части одной системы: входные маршруты, Read/Write API и фоновая обработка. Клиент запрашивает адрес у DNS; файлы получает через CDN, API вызывает напрямую через балансировщик и веб-слой. CDN читает объектное хранилище, а не передаёт API-запросы балансировщику. Повторённые API и хранилища обозначают те же компоненты. Другое хранилище, шарды и разделение БД по доменам — варианты по результатам измерений, их не требуется вводить одновременно. Стопки — несколько экземпляров; пунктир — DNS, репликация, outbox и варианты эволюции.</figcaption></figure>
 <p><b>Количество пользователей не задаёт число серверов.</b> Нужны RPS, профиль запросов, размеры данных, пики и допустимая свежесть. После каждого изменения повторяется цикл: нагрузочный тест → поиск узкого места → сравнение вариантов → проверка результата.</p>
     </div>
     <div class="more">
@@ -10764,18 +10855,21 @@ outbox
 <p><b>Шаг 2 — Общая архитектура</b></p>
 <figure class="concept" aria-labelledby="sd-scaling-base-caption">
 <svg id="sd-scaling-base" viewBox="0 0 320 270" role="img" aria-labelledby="sd-scaling-base-title sd-scaling-base-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-scaling-base-title">Масштабирование: исходный сервер</title><desc id="sd-scaling-base-desc">DNS разрешает имя в адрес сервера. Приложение, SQL-БД и локальные файлы находятся на одном узле.</desc>
+<title id="sd-scaling-base-title">Начальная схема: DNS отдельно от HTTP</title><desc id="sd-scaling-base-desc">Клиент запрашивает адрес у DNS, затем сам устанавливает HTTPS-соединение с сервером. DNS не пересылает запросы приложению.</desc>
 <defs><marker id="sd-scaling-base-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 66 V148" marker-end="url(#sd-scaling-base-arrow)"/>
-<rect class="concept-node plain" x="40" y="8" width="240" height="58" rx="9"/>
-<text x="160" y="32.5" text-anchor="middle">Клиент</text>
-<text x="160" y="49.5" text-anchor="middle">DNS</text>
+<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-scaling-base-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M74 56 V108 H160 V148" marker-end="url(#sd-scaling-base-arrow)"/>
+<rect class="concept-node accent" x="8" y="8" width="132" height="48" rx="9"/>
+<text x="74" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
+<text x="245" y="36" text-anchor="middle">DNS</text>
 <rect class="concept-node accent" x="40" y="152" width="240" height="100" rx="9"/>
 <text x="160" y="189" text-anchor="middle">Один сервер</text>
 <text x="160" y="206" text-anchor="middle">API + SQL-БД</text>
 <text x="160" y="223" text-anchor="middle">Локальные файлы</text>
-</svg><figcaption id="sd-scaling-base-caption">Исходная схема: один сервер с приложением, БД и файлами. DNS участвует в разрешении имени, а не пересылает HTTP-запросы. Отказ узла останавливает приложение и БД одновременно.</figcaption></figure>
+</svg><figcaption id="sd-scaling-base-caption">Пунктир от клиента к DNS — разрешение имени. Сплошная стрелка — самостоятельное HTTPS-соединение клиента с сервером. Приложение, БД и файлы пока находятся на одном узле.</figcaption></figure>
 <p>Приложение, реляционная БД и файлы находятся на одном сервере. DNS-запись указывает на его доступный клиентам адрес. Это минимальный вариант для проверки продукта и первого измерения нагрузки; он одинаково применим к виртуальной машине, облачному экземпляру или физическому серверу.</p>
+<p><b>DNS и HTTP — разные взаимодействия.</b> Клиент получает у DNS адрес нужного имени, затем сам открывает HTTPS-соединение. После появления CDN файлы запрашиваются по имени статики у CDN, а API — по имени API у балансировщика. CDN при промахе обращается к объектному хранилищу. В выбранной схеме нет обязательного маршрута «DNS → CDN → балансировщик»: DNS не проксирует HTTP, а CDN не стоит перед API.</p>
 <p><b>Шаг 3 — Детали исходной системы</b></p>
 <p><b>Путь запроса:</b> клиент разрешает имя через DNS → устанавливает HTTPS-соединение → приложение проверяет запрос и права → выполняет SQL-транзакцию → возвращает результат. Файлы читаются с локального диска. API и модель данных определяются предметной областью; добавлять отдельные сервисы только из-за будущего числа пользователей пока не требуется.</p>
 <p><b>Сначала измерить, затем увеличить ресурсы.</b> Нагрузочный тест фиксирует RPS, p95/p99, ошибки и точку насыщения. На сервере проверяются CPU, память, GC, диск и сеть; в БД — планы запросов, блокировки, буферный кеш и число соединений. Индекс или устранение лишних запросов может дать больший эффект, чем новый сервер. Вертикальное увеличение CPU, памяти и диска — простой следующий шаг, пока оно экономически оправдано и хватает возможностей узла.</p>
@@ -10785,13 +10879,16 @@ outbox
 <p><b>Users+ — Разделить приложение, БД и файлы</b></p>
 <figure class="concept" aria-labelledby="sd-scaling-separated-caption">
 <svg id="sd-scaling-separated" viewBox="0 0 320 344" role="img" aria-labelledby="sd-scaling-separated-title sd-scaling-separated-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-scaling-separated-title">Users+: отделение данных</title><desc id="sd-scaling-separated-desc">Приложение обрабатывает запросы на отдельном узле. SQL-БД хранит реляционные данные, объектное хранилище — файлы.</desc>
+<title id="sd-scaling-separated-title">Приложение, БД и файлы</title><desc id="sd-scaling-separated-desc">Клиент получает адрес через DNS и обращается к приложению. Приложение работает с отдельной SQL-БД и объектным хранилищем.</desc>
 <defs><marker id="sd-scaling-separated-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 58 V124" marker-end="url(#sd-scaling-separated-arrow)"/>
+<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-scaling-separated-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M74 56 V90 H160 V124" marker-end="url(#sd-scaling-separated-arrow)"/>
 <path class="concept-edge" d="M100 186 V226 H78 V262" marker-end="url(#sd-scaling-separated-arrow)"/>
 <path class="concept-edge" d="M220 186 V226 H245 V262" marker-end="url(#sd-scaling-separated-arrow)"/>
-<rect class="concept-node plain" x="40" y="8" width="240" height="50" rx="9"/>
-<text x="160" y="37" text-anchor="middle">Клиент / DNS</text>
+<rect class="concept-node accent" x="8" y="8" width="132" height="48" rx="9"/>
+<text x="74" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
+<text x="245" y="36" text-anchor="middle">DNS</text>
 <rect class="concept-node accent" x="40" y="128" width="240" height="58" rx="9"/>
 <text x="160" y="161" text-anchor="middle">Приложение</text>
 <rect class="concept-node plain" x="8" y="266" width="140" height="62" rx="9"/>
@@ -10799,100 +10896,168 @@ outbox
 <rect class="concept-node plain" x="178" y="266" width="134" height="62" rx="9"/>
 <text x="245" y="292.5" text-anchor="middle">Объектное</text>
 <text x="245" y="309.5" text-anchor="middle">хранилище</text>
-</svg><figcaption id="sd-scaling-separated-caption">Приложение, БД и объектное хранилище масштабируются независимо. Показана одна БД; её резервирование добавляется отдельно.</figcaption></figure>
+</svg><figcaption id="sd-scaling-separated-caption">Клиент обращается к DNS за адресом, к приложению — по HTTPS. Приложение читает и записывает данные в отдельных хранилищах. DNS не является промежуточным HTTP-сервером.</figcaption></figure>
 <p><b>Допущение.</b> БД и приложение конкурируют за CPU/память, локальный диск заполняется файлами. Увеличивать общий сервер становится дорого, а ресурсы нужны разным компонентам в разных пропорциях.</p>
 <p><b>Цель.</b> Масштабировать вычисления и хранение независимо.</p>
 <p><b>Изменения.</b> Перенести реляционную БД на отдельный узел, файлы — в объектное хранилище. Приложение сохраняет в БД ключ объекта и метаданные. Доступ к пользовательским файлам выдаётся после проверки прав. БД находится в закрытом сетевом сегменте; её порт доступен только компонентам, которым он нужен. Управляемая или собственная инфраструктура — отдельный эксплуатационный выбор.</p>
 <p><b>Компромиссы.</b> Появляются сетевые задержки и отдельные режимы отказа. Запись объекта и SQL-запись не являются одной ACID-транзакцией: нужны состояние загрузки и очистка неиспользованных объектов. Резервирование БД, обновления и восстановление нужно обеспечить самостоятельно или поручить управляемому сервису; планы запросов и размер пула остаются ответственностью приложения.</p>
 <p><b>Users++ — Добавить горизонтальное масштабирование и несколько зон отказа</b></p>
 <figure class="concept" aria-labelledby="sd-scaling-available-caption">
-<svg id="sd-scaling-available" viewBox="0 0 320 510" role="img" aria-labelledby="sd-scaling-available-title sd-scaling-available-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-scaling-available-title">Users++: несколько зон доступности</title><desc id="sd-scaling-available-desc">CDN отдаёт файлы из объектного хранилища, а API-запросы передаёт балансировщику. Приложение работает в нескольких зонах отказа. Primary БД синхронно реплицируется на резервный узел другой зоны.</desc>
+<svg id="sd-scaling-available" viewBox="0 0 320 610" role="img" aria-labelledby="sd-scaling-available-title sd-scaling-available-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-scaling-available-title">Несколько зон: отдельные маршруты клиента</title><desc id="sd-scaling-available-desc">Клиент отдельно обращается к DNS, CDN и балансировщику. CDN получает файлы из объектного хранилища. API-запросы клиента идут через балансировщик и веб-слой к группам API, минуя CDN.</desc>
 <defs><marker id="sd-scaling-available-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 56 V94" marker-end="url(#sd-scaling-available-arrow)"/>
-<path class="concept-edge" d="M100 142 V166 H78 V190" marker-end="url(#sd-scaling-available-arrow)"/>
-<path class="concept-edge" d="M220 142 V166 H245 V190" marker-end="url(#sd-scaling-available-arrow)"/>
-<path class="concept-edge" d="M245 240 V270 H154 V284" marker-end="url(#sd-scaling-available-arrow)"/>
-<path class="concept-edge" d="M154 358 V398 H78 V440" marker-end="url(#sd-scaling-available-arrow)"/>
-<path class="concept-edge" d="M148 469 H174" marker-end="url(#sd-scaling-available-arrow)" stroke-dasharray="4 4"/>
-<text class="concept-label" x="162" y="430" text-anchor="middle">sync</text>
-<rect class="concept-node plain" x="40" y="8" width="240" height="48" rx="9"/>
-<text x="160" y="36" text-anchor="middle">Клиент / DNS</text>
-<rect class="concept-node accent" x="40" y="98" width="240" height="44" rx="9"/>
-<text x="160" y="124" text-anchor="middle">CDN</text>
-<rect class="concept-node plain" x="8" y="194" width="140" height="46" rx="9"/>
-<text x="78" y="212.5" text-anchor="middle">Объектное</text>
-<text x="78" y="229.5" text-anchor="middle">хранилище</text>
-<rect class="concept-node accent" x="178" y="194" width="134" height="46" rx="9"/>
-<text x="245" y="221" text-anchor="middle">Балансировщик</text>
-<rect fill="var(--bg)" stroke="none" x="52" y="288" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="52" y="288" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="294" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="46" y="294" width="228" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="300" width="228" height="58" rx="9"/>
-<rect class="concept-node accent" x="40" y="300" width="228" height="58" rx="9"/>
-<text x="154" y="324.5" text-anchor="middle">Stateless API</text>
-<text x="154" y="341.5" text-anchor="middle">Зоны A / B</text>
-<rect class="concept-node plain" x="8" y="444" width="140" height="50" rx="9"/>
-<text x="78" y="464.5" text-anchor="middle">БД primary</text>
-<text x="78" y="481.5" text-anchor="middle">Зона A</text>
-<rect class="concept-node plain" x="178" y="444" width="134" height="50" rx="9"/>
-<text x="245" y="464.5" text-anchor="middle">Резерв БД</text>
-<text x="245" y="481.5" text-anchor="middle">Зона B</text>
-</svg><figcaption id="sd-scaling-available-caption">Балансировщик распределяет запросы по экземплярам приложения в разных зонах. CDN разгружает отдачу файлов. Резервная реплика в этой схеме служит для переключения при отказе, а не для чтения.</figcaption></figure>
+<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-scaling-available-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M110 56 V90 H245 V108" marker-end="url(#sd-scaling-available-arrow)"/>
+<path class="concept-edge" d="M65 56 V180 H154 V204" marker-end="url(#sd-scaling-available-arrow)"/>
+<path class="concept-edge" d="M154 268 V310" marker-end="url(#sd-scaling-available-arrow)"/>
+<path class="concept-edge" d="M112 374 V402 H74 V424" marker-end="url(#sd-scaling-available-arrow)"/>
+<path class="concept-edge" d="M212 374 V402 H239 V424" marker-end="url(#sd-scaling-available-arrow)"/>
+<path class="concept-edge" d="M312 134 H318 V572 H316" marker-end="url(#sd-scaling-available-arrow)"/>
+<path class="concept-edge" d="M74 492 V528" marker-end="url(#sd-scaling-available-arrow)"/>
+<path class="concept-edge" d="M239 492 V540" marker-end="url(#sd-scaling-available-arrow)"/>
+<path class="concept-edge" d="M178 466 H160 V518 H110 V528" marker-end="url(#sd-scaling-available-arrow)"/>
+<path class="concept-edge" d="M140 466 H154 V514 H280 V540" marker-end="url(#sd-scaling-available-arrow)"/>
+<rect class="concept-node accent" x="8" y="8" width="132" height="48" rx="9"/>
+<text x="74" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
+<text x="245" y="36" text-anchor="middle">DNS</text>
+<rect class="concept-node plain" x="178" y="112" width="134" height="44" rx="9"/>
+<text x="245" y="138" text-anchor="middle">CDN</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="208" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="208" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="214" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="214" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="220" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="220" width="228" height="48" rx="9"/>
+<text x="154" y="248" text-anchor="middle">Балансировщик</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="314" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="314" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="320" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="320" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="326" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="326" width="228" height="48" rx="9"/>
+<text x="154" y="354" text-anchor="middle">Веб-слой / proxy</text>
+<rect class="concept-node plain" x="178" y="544" width="134" height="56" rx="9"/>
+<text x="245" y="567.5" text-anchor="middle">Объектное</text>
+<text x="245" y="584.5" text-anchor="middle">хранилище</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="428" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="428" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="434" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="434" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="440" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="440" width="132" height="52" rx="9"/>
+<text x="74" y="470" text-anchor="middle">Write API</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="428" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="428" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="434" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="434" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="440" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="440" width="122" height="52" rx="9"/>
+<text x="239" y="470" text-anchor="middle">Read API</text>
+<rect class="concept-node plain" x="20" y="532" width="132" height="56" rx="9"/>
+<rect class="concept-node plain" x="14" y="538" width="132" height="56" rx="9"/>
+<rect class="concept-node plain" x="8" y="544" width="132" height="56" rx="9"/>
+<text x="74" y="567.5" text-anchor="middle">SQL primary</text>
+<text x="74" y="584.5" text-anchor="middle">и резерв</text>
+</svg><figcaption id="sd-scaling-available-caption">Клиент → DNS — запрос адреса, клиент → CDN — файлы, клиент → балансировщик — API. CDN обращается к объектному хранилищу. Балансировщик направляет API-запросы через веб-слой в Read/Write API. SQL primary имеет резерв в другой зоне; каждый слой масштабируется своей группой.</figcaption></figure>
 <p><b>Допущение.</b> Один экземпляр приложения не выдерживает пик или его отказ нарушает требования доступности. Одновременно отдача файлов расходует сетевые ресурсы приложения.</p>
 <p><b>Цель.</b> Распределить API-запросы и переживать отказ отдельного узла или зоны.</p>
-<p><b>Изменения.</b> Балансировщик распределяет HTTP-запросы по экземплярам приложения в независимых зонах отказа. Это площадки с раздельными критичными зависимостями, например питанием и сетью; два процесса на одном хосте такой независимости не дают. Состояние сессии не привязывается к памяти одного экземпляра: используются проверяемый токен или общее хранилище. Файлы и версии JS/CSS выдаются через CDN из объектного хранилища; для API настраивается отдельный маршрут к балансировщику. Хранилище доступно CDN по защищённому механизму. Персональные ответы нельзя кешировать общей политикой без учёта авторизации и ключа кеша.</p>
+<p><b>Изменения.</b> Балансировщик распределяет HTTP-запросы по экземплярам приложения в независимых зонах отказа. Это площадки с раздельными критичными зависимостями, например питанием и сетью; два процесса на одном хосте такой независимости не дают. Состояние сессии не привязывается к памяти одного экземпляра: используются проверяемый токен или общее хранилище. Клиент получает файлы и версии JS/CSS через CDN, а API вызывает напрямую через балансировщик, минуя CDN. При промахе CDN запрашивает файл в объектном хранилище. Балансировщик направляет запросы в веб-слой, который выполняет роль reverse proxy и маршрутизирует их в Read API или Write API. В этой схеме веб-слой и API имеют отдельные группы экземпляров. Хранилище доступно CDN по защищённому механизму. Персональные ответы нельзя кешировать общей политикой без учёта авторизации и ключа кеша.</p>
 <p><b>Отказоустойчивость БД.</b> В этой схеме primary имеет синхронную резервную реплику в другой зоне. После отказа primary предусмотрены выбор нового ведущего, переподключение клиентов и защита от двух одновременно пишущих узлов. <b>Резервирование и масштабирование чтения — разные задачи:</b> резервный узел здесь не используется для пользовательских запросов. Возможность читать с него и протокол переключения зависят от выбранной СУБД и конфигурации.</p>
 <p><b>Компромиссы.</b> Резервные узлы и межзонное взаимодействие увеличивают стоимость, а синхронная репликация может увеличивать задержку commit. Переключение БД не мгновенно: соединения могут оборваться, а результат последнего запроса оказаться неизвестным. Запись с повтором требует идемпотентного ключа. Репликация не заменяет резервные копии: ошибочное удаление данных также может попасть на реплики.</p>
 <p><b>Users+++ — Разгрузить чтение БД</b></p>
 <figure class="concept" aria-labelledby="sd-scaling-read-scale-caption">
-<svg id="sd-scaling-read-scale" viewBox="0 0 320 600" role="img" aria-labelledby="sd-scaling-read-scale-title sd-scaling-read-scale-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-scaling-read-scale-title">Users+++: разгрузка чтения</title><desc id="sd-scaling-read-scale-desc">CDN отдаёт файлы из объектного хранилища, API-запросы идут через балансировщик к экземплярам приложения. Кеш и асинхронные реплики разгружают чтение. Записи идут на primary, синхронный резерв предназначен для переключения при отказе.</desc>
+<div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
+<svg style="flex:1 1 280px; min-width:0" id="sd-scaling-read-scale" viewBox="0 0 320 610" role="img" aria-labelledby="sd-scaling-read-scale-title sd-scaling-read-scale-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-scaling-read-scale-title">Доступ клиента: DNS, CDN и API</title><desc id="sd-scaling-read-scale-desc">Клиент отдельно обращается к DNS, CDN и балансировщику. CDN получает файлы из объектного хранилища. API-запросы клиента идут через балансировщик и веб-слой к группам API, минуя CDN.</desc>
 <defs><marker id="sd-scaling-read-scale-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 66 V102" marker-end="url(#sd-scaling-read-scale-arrow)"/>
-<path class="concept-edge" d="M100 150 V176 H78 V198" marker-end="url(#sd-scaling-read-scale-arrow)"/>
-<path class="concept-edge" d="M220 150 V176 H245 V198" marker-end="url(#sd-scaling-read-scale-arrow)"/>
-<path class="concept-edge" d="M245 248 V292" marker-end="url(#sd-scaling-read-scale-arrow)"/>
-<path class="concept-edge" d="M178 337 H78 V416" marker-end="url(#sd-scaling-read-scale-arrow)"/>
-<path class="concept-edge" d="M239 366 V416" marker-end="url(#sd-scaling-read-scale-arrow)"/>
-<path class="concept-edge" d="M78 470 V518" marker-end="url(#sd-scaling-read-scale-arrow)"/>
-<text class="concept-label" x="115" y="500" text-anchor="middle">промах</text>
-<path class="concept-edge" d="M178 445 H162 V559 H156" marker-end="url(#sd-scaling-read-scale-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M245 470 V490 M245 514 V530" marker-end="url(#sd-scaling-read-scale-arrow)" stroke-dasharray="4 4"/>
-<text class="concept-label" x="245" y="507" text-anchor="middle">sync</text>
-<rect class="concept-node plain" x="40" y="8" width="240" height="58" rx="9"/>
-<text x="160" y="32.5" text-anchor="middle">Клиент</text>
-<text x="160" y="49.5" text-anchor="middle">DNS</text>
-<rect class="concept-node accent" x="40" y="106" width="240" height="44" rx="9"/>
-<text x="160" y="132" text-anchor="middle">CDN</text>
-<rect class="concept-node plain" x="8" y="202" width="140" height="46" rx="9"/>
-<text x="78" y="220.5" text-anchor="middle">Объектное</text>
-<text x="78" y="237.5" text-anchor="middle">хранилище</text>
-<rect class="concept-node accent" x="178" y="202" width="134" height="46" rx="9"/>
-<text x="245" y="229" text-anchor="middle">Балансировщик</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="296" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="296" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="302" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="302" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="308" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="308" width="122" height="58" rx="9"/>
-<text x="239" y="332.5" text-anchor="middle">API-приложение</text>
-<text x="239" y="349.5" text-anchor="middle">Зоны A / B</text>
-<rect class="concept-node plain" x="8" y="420" width="140" height="50" rx="9"/>
-<text x="78" y="440.5" text-anchor="middle">Кеш</text>
-<text x="78" y="457.5" text-anchor="middle">В памяти</text>
-<rect class="concept-node plain" x="178" y="420" width="134" height="50" rx="9"/>
-<text x="245" y="440.5" text-anchor="middle">SQL-БД</text>
-<text x="245" y="457.5" text-anchor="middle">Primary</text>
-<rect class="concept-node plain" x="20" y="522" width="132" height="50" rx="9"/>
-<rect class="concept-node plain" x="14" y="528" width="132" height="50" rx="9"/>
-<rect class="concept-node plain" x="8" y="534" width="132" height="50" rx="9"/>
-<text x="74" y="563" text-anchor="middle">Реплики чтения</text>
-<rect class="concept-node plain" x="178" y="534" width="134" height="50" rx="9"/>
-<text x="245" y="554.5" text-anchor="middle">Резерв БД</text>
-<text x="245" y="571.5" text-anchor="middle">Другая зона</text>
-</svg><figcaption id="sd-scaling-read-scale-caption">Кеш снимает часть чтений, асинхронные реплики обслуживают промахи с учётом задержки репликации. Записи идут на primary. Синхронный резерв в этой схеме не используется для пользовательских запросов. Стопки обозначают несколько экземпляров.</figcaption></figure>
+<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-scaling-read-scale-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M110 56 V90 H245 V108" marker-end="url(#sd-scaling-read-scale-arrow)"/>
+<path class="concept-edge" d="M65 56 V180 H154 V204" marker-end="url(#sd-scaling-read-scale-arrow)"/>
+<path class="concept-edge" d="M154 268 V310" marker-end="url(#sd-scaling-read-scale-arrow)"/>
+<path class="concept-edge" d="M112 374 V402 H74 V424" marker-end="url(#sd-scaling-read-scale-arrow)"/>
+<path class="concept-edge" d="M212 374 V402 H239 V424" marker-end="url(#sd-scaling-read-scale-arrow)"/>
+<path class="concept-edge" d="M312 134 H318 V572 H316" marker-end="url(#sd-scaling-read-scale-arrow)"/>
+<rect class="concept-node accent" x="8" y="8" width="132" height="48" rx="9"/>
+<text x="74" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
+<text x="245" y="36" text-anchor="middle">DNS</text>
+<rect class="concept-node plain" x="178" y="112" width="134" height="44" rx="9"/>
+<text x="245" y="138" text-anchor="middle">CDN</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="208" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="208" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="214" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="214" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="220" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="220" width="228" height="48" rx="9"/>
+<text x="154" y="248" text-anchor="middle">Балансировщик</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="314" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="314" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="320" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="320" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="326" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="326" width="228" height="48" rx="9"/>
+<text x="154" y="354" text-anchor="middle">Веб-слой / proxy</text>
+<rect class="concept-node plain" x="178" y="544" width="134" height="56" rx="9"/>
+<text x="245" y="567.5" text-anchor="middle">Объектное</text>
+<text x="245" y="584.5" text-anchor="middle">хранилище</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="428" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="428" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="434" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="434" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="440" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="440" width="132" height="52" rx="9"/>
+<text x="74" y="470" text-anchor="middle">Write API</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="428" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="428" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="434" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="434" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="440" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="440" width="122" height="52" rx="9"/>
+<text x="239" y="470" text-anchor="middle">Read API</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-scaling-read-scale-data" viewBox="0 0 320 524" role="img" aria-labelledby="sd-scaling-read-scale-data-title sd-scaling-read-scale-data-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-scaling-read-scale-data-title">Потоки чтения и записи</title><desc id="sd-scaling-read-scale-data-desc">Write API пишет в SQL primary и объектное хранилище. Read API читает кеш, при промахе — реплики БД, а файлы получает из объектного хранилища. Между primary и репликами идёт репликация.</desc>
+<defs><marker id="sd-scaling-read-scale-data-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M74 116 V298" marker-end="url(#sd-scaling-read-scale-data-arrow)"/>
+<path class="concept-edge" d="M239 116 V186" marker-end="url(#sd-scaling-read-scale-data-arrow)"/>
+<path class="concept-edge" d="M300 90 H318 V343 H316" marker-end="url(#sd-scaling-read-scale-data-arrow)"/>
+<path class="concept-edge" d="M140 343 H174" marker-end="url(#sd-scaling-read-scale-data-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M8 90 H2 V478 H36" marker-end="url(#sd-scaling-read-scale-data-arrow)"/>
+<path class="concept-edge" d="M300 90 H318 V478 H284" marker-end="url(#sd-scaling-read-scale-data-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Потоки чтения и записи</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Write API</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="52" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="52" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="58" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="58" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="64" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
+<text x="239" y="94" text-anchor="middle">Read API</text>
+<rect class="concept-node plain" x="178" y="190" width="134" height="52" rx="9"/>
+<text x="245" y="220" text-anchor="middle">Кеш в памяти</text>
+<rect class="concept-node plain" x="20" y="302" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="14" y="308" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="8" y="314" width="132" height="58" rx="9"/>
+<text x="74" y="338.5" text-anchor="middle">SQL primary</text>
+<text x="74" y="355.5" text-anchor="middle">и резерв</text>
+<rect class="concept-node plain" x="190" y="302" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="184" y="308" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="178" y="314" width="122" height="58" rx="9"/>
+<text x="239" y="338.5" text-anchor="middle">Реплики</text>
+<text x="239" y="355.5" text-anchor="middle">чтения</text>
+<rect class="concept-node plain" x="40" y="450" width="240" height="56" rx="9"/>
+<text x="160" y="482" text-anchor="middle">Объектное хранилище</text>
+<text class="concept-label" x="275" y="278" text-anchor="middle">промах</text>
+</svg>
+</div>
+<figcaption id="sd-scaling-read-scale-caption">Первая часть — доступ к системе, вторая — продолжение маршрутов Read/Write API; это одни и те же группы экземпляров, а не дополнительные сервисы. Файлы читаются через CDN либо API, CDN загружает их из объектного хранилища. API-запросы клиента идут прямо к балансировщику. Пунктир обозначает DNS-запрос и репликацию. На схеме резерв БД и реплики чтения выполняют разные роли.</figcaption></figure>
 <p><b>Допущение.</b> Профиль 100:1 подтверждён, а чтения перегружают БД даже после настройки запросов и индексов.</p>
 <p><b>Цель.</b> Уменьшить поток SQL-чтений и независимо наращивать оставшуюся пропускную способность.</p>
 <p><b>Изменения.</b> Добавить распределённый кеш в памяти для повторно используемых данных и отдельные реплики чтения БД. Cache-aside: чтение кеша → при промахе запрос к БД → заполнение кеша с TTL. В выбранной схеме реплики чтения обновляются асинхронно, а синхронный резерв служит для переключения при отказе. Их роли и допустимая задержка данных задаются явно.</p>
@@ -10901,124 +11066,261 @@ outbox
 <p>Одновременные загрузки одного ключа объединяются, обращения к БД ограничиваются. При отказе кеша весь поток не должен бесконтрольно переключаться на primary. Несколько реплики чтения не устраняют предел записи и каждая хранит свою копию данных.</p>
 <p><b>Users++++ — Автоматизировать изменение мощности</b></p>
 <figure class="concept" aria-labelledby="sd-scaling-auto-scale-caption">
-<svg id="sd-scaling-auto-scale" viewBox="0 0 320 688" role="img" aria-labelledby="sd-scaling-auto-scale-title sd-scaling-auto-scale-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-scaling-auto-scale-title">Users++++: автоматическое масштабирование</title><desc id="sd-scaling-auto-scale-desc">CDN отдаёт файлы из объектного хранилища, API-запросы идут через балансировщик к экземплярам приложения. Кеш и асинхронные реплики разгружают чтение. Записи идут на primary, синхронный резерв предназначен для переключения при отказе. Контроллер меняет число экземпляров по метрикам.</desc>
+<div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
+<svg style="flex:1 1 280px; min-width:0" id="sd-scaling-auto-scale" viewBox="0 0 320 610" role="img" aria-labelledby="sd-scaling-auto-scale-title sd-scaling-auto-scale-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-scaling-auto-scale-title">Доступ клиента и независимые группы</title><desc id="sd-scaling-auto-scale-desc">Клиент отдельно обращается к DNS, CDN и балансировщику. CDN получает файлы из объектного хранилища. API-запросы клиента идут через балансировщик и веб-слой к группам API, минуя CDN.</desc>
 <defs><marker id="sd-scaling-auto-scale-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 66 V102" marker-end="url(#sd-scaling-auto-scale-arrow)"/>
-<path class="concept-edge" d="M100 150 V176 H78 V198" marker-end="url(#sd-scaling-auto-scale-arrow)"/>
-<path class="concept-edge" d="M220 150 V176 H245 V198" marker-end="url(#sd-scaling-auto-scale-arrow)"/>
-<path class="concept-edge" d="M245 248 V292" marker-end="url(#sd-scaling-auto-scale-arrow)"/>
-<path class="concept-edge" d="M178 337 H78 V416" marker-end="url(#sd-scaling-auto-scale-arrow)"/>
-<path class="concept-edge" d="M239 366 V416" marker-end="url(#sd-scaling-auto-scale-arrow)"/>
-<path class="concept-edge" d="M78 470 V518" marker-end="url(#sd-scaling-auto-scale-arrow)"/>
-<text class="concept-label" x="115" y="500" text-anchor="middle">промах</text>
-<path class="concept-edge" d="M178 445 H162 V559 H156" marker-end="url(#sd-scaling-auto-scale-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M245 470 V490 M245 514 V530" marker-end="url(#sd-scaling-auto-scale-arrow)" stroke-dasharray="4 4"/>
-<text class="concept-label" x="245" y="507" text-anchor="middle">sync</text>
-<path class="concept-edge" d="M8 655 H2 V318 H174" marker-end="url(#sd-scaling-auto-scale-arrow)" stroke-dasharray="4 4"/>
-<rect class="concept-node plain" x="40" y="8" width="240" height="58" rx="9"/>
-<text x="160" y="32.5" text-anchor="middle">Клиент</text>
-<text x="160" y="49.5" text-anchor="middle">DNS</text>
-<rect class="concept-node accent" x="40" y="106" width="240" height="44" rx="9"/>
-<text x="160" y="132" text-anchor="middle">CDN</text>
-<rect class="concept-node plain" x="8" y="202" width="140" height="46" rx="9"/>
-<text x="78" y="220.5" text-anchor="middle">Объектное</text>
-<text x="78" y="237.5" text-anchor="middle">хранилище</text>
-<rect class="concept-node accent" x="178" y="202" width="134" height="46" rx="9"/>
-<text x="245" y="229" text-anchor="middle">Балансировщик</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="296" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="296" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="302" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="302" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="308" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="308" width="122" height="58" rx="9"/>
-<text x="239" y="332.5" text-anchor="middle">API: autoscale</text>
-<text x="239" y="349.5" text-anchor="middle">Зоны A / B</text>
-<rect class="concept-node plain" x="8" y="420" width="140" height="50" rx="9"/>
-<text x="78" y="440.5" text-anchor="middle">Кеш</text>
-<text x="78" y="457.5" text-anchor="middle">В памяти</text>
-<rect class="concept-node plain" x="178" y="420" width="134" height="50" rx="9"/>
-<text x="245" y="440.5" text-anchor="middle">SQL-БД</text>
-<text x="245" y="457.5" text-anchor="middle">Primary</text>
-<rect class="concept-node plain" x="20" y="522" width="132" height="50" rx="9"/>
-<rect class="concept-node plain" x="14" y="528" width="132" height="50" rx="9"/>
-<rect class="concept-node plain" x="8" y="534" width="132" height="50" rx="9"/>
-<text x="74" y="563" text-anchor="middle">Реплики чтения</text>
-<rect class="concept-node plain" x="178" y="534" width="134" height="50" rx="9"/>
-<text x="245" y="554.5" text-anchor="middle">Резерв БД</text>
-<text x="245" y="571.5" text-anchor="middle">Другая зона</text>
-<rect class="concept-node plain" x="8" y="632" width="140" height="46" rx="9"/>
-<text x="78" y="650.5" text-anchor="middle">Мониторинг</text>
-<text x="78" y="667.5" text-anchor="middle">Метрики → рост</text>
-</svg><figcaption id="sd-scaling-auto-scale-caption">Кеш снимает часть чтений, асинхронные реплики обслуживают промахи с учётом задержки репликации. Записи идут на primary. Синхронный резерв в этой схеме не используется для пользовательских запросов. Стопки обозначают несколько экземпляров. Контроллер меняет размер группы по данным мониторинга. Резерв мощности нужен до завершения запуска и прогрева новых экземпляров.</figcaption></figure>
+<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-scaling-auto-scale-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M110 56 V90 H245 V108" marker-end="url(#sd-scaling-auto-scale-arrow)"/>
+<path class="concept-edge" d="M65 56 V180 H154 V204" marker-end="url(#sd-scaling-auto-scale-arrow)"/>
+<path class="concept-edge" d="M154 268 V310" marker-end="url(#sd-scaling-auto-scale-arrow)"/>
+<path class="concept-edge" d="M112 374 V402 H74 V424" marker-end="url(#sd-scaling-auto-scale-arrow)"/>
+<path class="concept-edge" d="M212 374 V402 H239 V424" marker-end="url(#sd-scaling-auto-scale-arrow)"/>
+<path class="concept-edge" d="M312 134 H318 V572 H316" marker-end="url(#sd-scaling-auto-scale-arrow)"/>
+<rect class="concept-node accent" x="8" y="8" width="132" height="48" rx="9"/>
+<text x="74" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
+<text x="245" y="36" text-anchor="middle">DNS</text>
+<rect class="concept-node plain" x="178" y="112" width="134" height="44" rx="9"/>
+<text x="245" y="138" text-anchor="middle">CDN</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="208" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="208" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="214" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="214" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="220" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="220" width="228" height="48" rx="9"/>
+<text x="154" y="248" text-anchor="middle">Балансировщик</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="314" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="314" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="320" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="320" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="326" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="326" width="228" height="48" rx="9"/>
+<text x="154" y="354" text-anchor="middle">Веб-слой / proxy</text>
+<rect class="concept-node plain" x="178" y="544" width="134" height="56" rx="9"/>
+<text x="245" y="567.5" text-anchor="middle">Объектное</text>
+<text x="245" y="584.5" text-anchor="middle">хранилище</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="428" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="428" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="434" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="434" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="440" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="440" width="132" height="52" rx="9"/>
+<text x="74" y="470" text-anchor="middle">Write API</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="428" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="428" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="434" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="434" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="440" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="440" width="122" height="52" rx="9"/>
+<text x="239" y="470" text-anchor="middle">Read API</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-scaling-auto-scale-data" viewBox="0 0 320 524" role="img" aria-labelledby="sd-scaling-auto-scale-data-title sd-scaling-auto-scale-data-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-scaling-auto-scale-data-title">Потоки чтения и записи</title><desc id="sd-scaling-auto-scale-data-desc">Write API пишет в SQL primary и объектное хранилище. Read API читает кеш, при промахе — реплики БД, а файлы получает из объектного хранилища. Между primary и репликами идёт репликация.</desc>
+<defs><marker id="sd-scaling-auto-scale-data-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M74 116 V158 H162 V290 H74 V298" marker-end="url(#sd-scaling-auto-scale-data-arrow)"/>
+<path class="concept-edge" d="M239 116 V186" marker-end="url(#sd-scaling-auto-scale-data-arrow)"/>
+<path class="concept-edge" d="M300 90 H318 V343 H316" marker-end="url(#sd-scaling-auto-scale-data-arrow)"/>
+<path class="concept-edge" d="M140 343 H174" marker-end="url(#sd-scaling-auto-scale-data-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M8 90 H2 V478 H36" marker-end="url(#sd-scaling-auto-scale-data-arrow)"/>
+<path class="concept-edge" d="M300 90 H318 V478 H284" marker-end="url(#sd-scaling-auto-scale-data-arrow)"/>
+<path class="concept-edge" d="M140 216 H154 V34 H74 V48" marker-end="url(#sd-scaling-auto-scale-data-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M154 34 H239 V48" marker-end="url(#sd-scaling-auto-scale-data-arrow)" stroke-dasharray="4 4"/>
+<text x="160" y="22" text-anchor="middle">Потоки чтения и записи</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Write API</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="52" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="52" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="58" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="58" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="64" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
+<text x="239" y="94" text-anchor="middle">Read API</text>
+<rect class="concept-node plain" x="178" y="190" width="134" height="52" rx="9"/>
+<text x="245" y="220" text-anchor="middle">Кеш в памяти</text>
+<rect class="concept-node plain" x="20" y="302" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="14" y="308" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="8" y="314" width="132" height="58" rx="9"/>
+<text x="74" y="338.5" text-anchor="middle">SQL primary</text>
+<text x="74" y="355.5" text-anchor="middle">и резерв</text>
+<rect class="concept-node plain" x="190" y="302" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="184" y="308" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="178" y="314" width="122" height="58" rx="9"/>
+<text x="239" y="338.5" text-anchor="middle">Реплики</text>
+<text x="239" y="355.5" text-anchor="middle">чтения</text>
+<rect class="concept-node plain" x="40" y="450" width="240" height="56" rx="9"/>
+<text x="160" y="482" text-anchor="middle">Объектное хранилище</text>
+<text class="concept-label" x="275" y="278" text-anchor="middle">промах</text>
+<rect class="concept-node plain" x="8" y="190" width="132" height="52" rx="9"/>
+<text x="74" y="211.5" text-anchor="middle">Мониторинг</text>
+<text x="74" y="228.5" text-anchor="middle">Контроллер</text>
+</svg>
+</div>
+<figcaption id="sd-scaling-auto-scale-caption">Маршруты клиента остаются прежними: DNS отдельно, файлы через CDN, API через балансировщик. Веб-слой и группы API масштабируются независимо в разных зонах. Пунктир от контроллера — управляющая связь, а не поток запросов; остальные пунктиры — DNS и репликация. Стопки обозначают несколько экземпляров.</figcaption></figure>
 <p><b>Допущение.</b> Суточные пики предсказуемы или меняются достаточно медленно, чтобы новые экземпляры успели запуститься. Постоянно держать мощность пика дорого.</p>
 <p><b>Цель.</b> Менять число экземпляров в установленных пределах, сохраняя запас на рост и отказ.</p>
-<p><b>Изменения.</b> Контроллер автомасштабирования меняет число экземпляров приложения по метрикам: например, CPU или числу запросов на экземпляр, с целевым значением из нагрузочного теста. Группа охватывает несколько независимых зон; задаются минимальная и максимальная мощность, время запуска и прогрева, правила увеличения и уменьшения группы. Известный пик можно подготовить заранее по расписанию. Это может быть функция облака, платформы контейнеров или собственной системы управления серверами.</p>
-<p>Если один экземпляр при заданном p99 безопасно обслуживает 2 000 API-запросов/с, а после CDN остаётся 12 000 запросов/с, нужно минимум 6 экземпляров по этой оценке. Для выдерживания отказа одного при том же потоке — минимум 7; отказ целой зоны требует большего резерва с учётом размещения. Числа иллюстративные, реальная пропускная способность определяется тестом приложения на выбранных ресурсах.</p>
+<p><b>Изменения.</b> Контроллер автомасштабирования независимо меняет размер групп веб-слоя, API и воркеров по подходящим для них метрикам: например, CPU или числу запросов на экземпляр, с целевым значением из нагрузочного теста. Группа охватывает несколько независимых зон; задаются минимальная и максимальная мощность, время запуска и прогрева, правила увеличения и уменьшения группы. Известный пик можно подготовить заранее по расписанию. Это может быть функция облака, платформы контейнеров или собственной системы управления серверами.</p>
+<p>Если один экземпляр при заданном p99 безопасно обслуживает 2 000 API-запросов/с, а динамический API получает 12 000 запросов/с, нужно минимум 6 экземпляров по этой оценке. Для выдерживания отказа одного при том же потоке — минимум 7; отказ целой зоны требует большего резерва с учётом размещения. Числа иллюстративные, реальная пропускная способность определяется тестом приложения на выбранных ресурсах.</p>
 <p><b>Компромиссы.</b> Автомасштабирование реагирует с задержкой и не исправляет заблокированную БД или медленный внешний сервис. При увеличении группы сумма соединений с БД растёт вместе с числом пулов; этот предел нужно учитывать заранее. Снижение мощности выполняется с завершением принятых запросов. Образы, конфигурация и миграции должны позволять воспроизводимо запускать новый экземпляр.</p>
 <p>Наблюдаемость охватывает весь путь: RPS, p99, ошибки, насыщение экземпляров приложения, очередь запросов, cache hit rate, DB connections, блокировки, IOPS и replication lag. Стоимость инфраструктуры и стоимость на запрос также участвуют в выборе следующего изменения.</p>
 <p><b>Users+++++ — Устранить оставшиеся ограничения и вынести фоновую работу</b></p>
 <figure class="concept" aria-labelledby="sd-scaling-scaled-caption">
-<svg id="sd-scaling-scaled" viewBox="0 0 320 688" role="img" aria-labelledby="sd-scaling-scaled-title sd-scaling-scaled-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-scaling-scaled-title">Масштабирование: итоговая архитектура</title><desc id="sd-scaling-scaled-desc">CDN отдаёт файлы из объектного хранилища, API-запросы идут через балансировщик к экземплярам приложения. Кеш и асинхронные реплики разгружают чтение. Записи идут на primary, синхронный резерв предназначен для переключения при отказе. Очередь отделяет фоновые задания, контроллеры независимо масштабируют API и воркеры.</desc>
+<div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
+<svg style="flex:1 1 280px; min-width:0" id="sd-scaling-scaled" viewBox="0 0 320 610" role="img" aria-labelledby="sd-scaling-scaled-title sd-scaling-scaled-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-scaling-scaled-title">Итоговые маршруты клиента</title><desc id="sd-scaling-scaled-desc">Клиент отдельно обращается к DNS, CDN и балансировщику. CDN получает файлы из объектного хранилища. API-запросы клиента идут через балансировщик и веб-слой к группам API, минуя CDN.</desc>
 <defs><marker id="sd-scaling-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 66 V102" marker-end="url(#sd-scaling-scaled-arrow)"/>
-<path class="concept-edge" d="M100 150 V176 H78 V198" marker-end="url(#sd-scaling-scaled-arrow)"/>
-<path class="concept-edge" d="M220 150 V176 H245 V198" marker-end="url(#sd-scaling-scaled-arrow)"/>
-<path class="concept-edge" d="M245 248 V292" marker-end="url(#sd-scaling-scaled-arrow)"/>
-<path class="concept-edge" d="M178 337 H78 V416" marker-end="url(#sd-scaling-scaled-arrow)"/>
-<path class="concept-edge" d="M239 366 V416" marker-end="url(#sd-scaling-scaled-arrow)"/>
-<path class="concept-edge" d="M78 470 V518" marker-end="url(#sd-scaling-scaled-arrow)"/>
-<text class="concept-label" x="115" y="500" text-anchor="middle">промах</text>
-<path class="concept-edge" d="M178 445 H162 V559 H156" marker-end="url(#sd-scaling-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M245 470 V490 M245 514 V530" marker-end="url(#sd-scaling-scaled-arrow)" stroke-dasharray="4 4"/>
-<text class="concept-label" x="245" y="507" text-anchor="middle">sync</text>
-<path class="concept-edge" d="M300 337 H318 V608 H78 V630" marker-end="url(#sd-scaling-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M148 656 H174" marker-end="url(#sd-scaling-scaled-arrow)"/>
-<rect class="concept-node plain" x="40" y="8" width="240" height="58" rx="9"/>
-<text x="160" y="32.5" text-anchor="middle">Клиент</text>
-<text x="160" y="49.5" text-anchor="middle">DNS</text>
-<rect class="concept-node accent" x="40" y="106" width="240" height="44" rx="9"/>
-<text x="160" y="132" text-anchor="middle">CDN</text>
-<rect class="concept-node plain" x="8" y="202" width="140" height="46" rx="9"/>
-<text x="78" y="220.5" text-anchor="middle">Объектное</text>
-<text x="78" y="237.5" text-anchor="middle">хранилище</text>
-<rect class="concept-node accent" x="178" y="202" width="134" height="46" rx="9"/>
-<text x="245" y="229" text-anchor="middle">Балансировщик</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="296" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="296" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="302" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="302" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="308" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="308" width="122" height="58" rx="9"/>
-<text x="239" y="332.5" text-anchor="middle">API: autoscale</text>
-<text x="239" y="349.5" text-anchor="middle">Зоны A / B</text>
-<rect class="concept-node plain" x="8" y="420" width="140" height="50" rx="9"/>
-<text x="78" y="440.5" text-anchor="middle">Кеш</text>
-<text x="78" y="457.5" text-anchor="middle">В памяти</text>
-<rect class="concept-node plain" x="178" y="420" width="134" height="50" rx="9"/>
-<text x="245" y="440.5" text-anchor="middle">SQL-БД</text>
-<text x="245" y="457.5" text-anchor="middle">Primary</text>
-<rect class="concept-node plain" x="20" y="522" width="132" height="50" rx="9"/>
-<rect class="concept-node plain" x="14" y="528" width="132" height="50" rx="9"/>
-<rect class="concept-node plain" x="8" y="534" width="132" height="50" rx="9"/>
-<text x="74" y="563" text-anchor="middle">Реплики чтения</text>
-<rect class="concept-node plain" x="178" y="534" width="134" height="50" rx="9"/>
-<text x="245" y="554.5" text-anchor="middle">Резерв БД</text>
-<text x="245" y="571.5" text-anchor="middle">Другая зона</text>
-<rect class="concept-node plain" x="8" y="634" width="140" height="44" rx="9"/>
-<text x="78" y="660" text-anchor="middle">Очередь</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="622" width="122" height="44" rx="9"/>
-<rect class="concept-node accent" x="190" y="622" width="122" height="44" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="628" width="122" height="44" rx="9"/>
-<rect class="concept-node accent" x="184" y="628" width="122" height="44" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="634" width="122" height="44" rx="9"/>
-<rect class="concept-node accent" x="178" y="634" width="122" height="44" rx="9"/>
-<text x="239" y="660" text-anchor="middle">Воркеры</text>
-</svg><figcaption id="sd-scaling-scaled-caption">Кеш снимает часть чтений, асинхронные реплики обслуживают промахи с учётом задержки репликации. Записи идут на primary. Синхронный резерв в этой схеме не используется для пользовательских запросов. Стопки обозначают несколько экземпляров. Приложение и воркеры масштабируются независимо. Пунктир — репликация и фоновый поток; результаты сохраняются в БД и объектном хранилище, обратные связи не показаны. Шардирование добавляется только после измерения оставшихся ограничений.</figcaption></figure>
+<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-scaling-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M110 56 V90 H245 V108" marker-end="url(#sd-scaling-scaled-arrow)"/>
+<path class="concept-edge" d="M65 56 V180 H154 V204" marker-end="url(#sd-scaling-scaled-arrow)"/>
+<path class="concept-edge" d="M154 268 V310" marker-end="url(#sd-scaling-scaled-arrow)"/>
+<path class="concept-edge" d="M100 374 V402 H51 V424" marker-end="url(#sd-scaling-scaled-arrow)"/>
+<path class="concept-edge" d="M154 374 V424" marker-end="url(#sd-scaling-scaled-arrow)"/>
+<path class="concept-edge" d="M220 374 V402 H263 V424" marker-end="url(#sd-scaling-scaled-arrow)"/>
+<path class="concept-edge" d="M312 134 H318 V572 H316" marker-end="url(#sd-scaling-scaled-arrow)"/>
+<rect class="concept-node accent" x="8" y="8" width="132" height="48" rx="9"/>
+<text x="74" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
+<text x="245" y="36" text-anchor="middle">DNS</text>
+<rect class="concept-node plain" x="178" y="112" width="134" height="44" rx="9"/>
+<text x="245" y="138" text-anchor="middle">CDN</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="208" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="208" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="214" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="214" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="220" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="220" width="228" height="48" rx="9"/>
+<text x="154" y="248" text-anchor="middle">Балансировщик</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="314" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="314" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="320" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="320" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="326" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="326" width="228" height="48" rx="9"/>
+<text x="154" y="354" text-anchor="middle">Веб-слой / proxy</text>
+<rect class="concept-node plain" x="178" y="544" width="134" height="56" rx="9"/>
+<text x="245" y="567.5" text-anchor="middle">Объектное</text>
+<text x="245" y="584.5" text-anchor="middle">хранилище</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="428" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="428" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="434" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="434" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="440" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="440" width="86" height="52" rx="9"/>
+<text x="51" y="470" text-anchor="middle">Async API</text>
+<rect fill="var(--bg)" stroke="none" x="126" y="428" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="126" y="428" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="120" y="434" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="120" y="434" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="114" y="440" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="114" y="440" width="86" height="52" rx="9"/>
+<text x="157" y="470" text-anchor="middle">Write API</text>
+<rect fill="var(--bg)" stroke="none" x="232" y="428" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="232" y="428" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="226" y="434" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="226" y="434" width="86" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="220" y="440" width="86" height="52" rx="9"/>
+<rect class="concept-node accent" x="220" y="440" width="86" height="52" rx="9"/>
+<text x="263" y="470" text-anchor="middle">Read API</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-scaling-scaled-data" viewBox="0 0 320 524" role="img" aria-labelledby="sd-scaling-scaled-data-title sd-scaling-scaled-data-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-scaling-scaled-data-title">Потоки чтения и записи</title><desc id="sd-scaling-scaled-data-desc">Write API пишет в SQL primary и объектное хранилище. Read API читает кеш, при промахе — реплики БД, а файлы получает из объектного хранилища. Между primary и репликами идёт репликация.</desc>
+<defs><marker id="sd-scaling-scaled-data-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M74 116 V298" marker-end="url(#sd-scaling-scaled-data-arrow)"/>
+<path class="concept-edge" d="M239 116 V186" marker-end="url(#sd-scaling-scaled-data-arrow)"/>
+<path class="concept-edge" d="M300 90 H318 V343 H316" marker-end="url(#sd-scaling-scaled-data-arrow)"/>
+<path class="concept-edge" d="M140 343 H174" marker-end="url(#sd-scaling-scaled-data-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M8 90 H2 V478 H36" marker-end="url(#sd-scaling-scaled-data-arrow)"/>
+<path class="concept-edge" d="M300 90 H318 V478 H284" marker-end="url(#sd-scaling-scaled-data-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Потоки чтения и записи</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Write API</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="52" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="52" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="58" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="58" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="64" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
+<text x="239" y="94" text-anchor="middle">Read API</text>
+<rect class="concept-node plain" x="178" y="190" width="134" height="52" rx="9"/>
+<text x="245" y="220" text-anchor="middle">Кеш в памяти</text>
+<rect class="concept-node plain" x="20" y="302" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="14" y="308" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="8" y="314" width="132" height="58" rx="9"/>
+<text x="74" y="338.5" text-anchor="middle">SQL primary</text>
+<text x="74" y="355.5" text-anchor="middle">и резерв</text>
+<rect class="concept-node plain" x="190" y="302" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="184" y="308" width="122" height="58" rx="9"/>
+<rect class="concept-node plain" x="178" y="314" width="122" height="58" rx="9"/>
+<text x="239" y="338.5" text-anchor="middle">Реплики</text>
+<text x="239" y="355.5" text-anchor="middle">чтения</text>
+<rect class="concept-node plain" x="40" y="450" width="240" height="56" rx="9"/>
+<text x="160" y="482" text-anchor="middle">Объектное хранилище</text>
+<text class="concept-label" x="275" y="278" text-anchor="middle">промах</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-scaling-scaled-jobs" viewBox="0 0 320 720" role="img" aria-labelledby="sd-scaling-scaled-jobs-title sd-scaling-scaled-jobs-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-scaling-scaled-jobs-title">Фоновая обработка и варианты хранения</title><desc id="sd-scaling-scaled-jobs-desc">Async API сохраняет задание и outbox в БД, публикатор передаёт задание в очередь. Воркеры обрабатывают его и сохраняют результаты в SQL-БД или объектном хранилище. Другое хранилище, шардирование и разделение БД по доменам показаны как варианты дальнейшей эволюции.</desc>
+<defs><marker id="sd-scaling-scaled-jobs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M74 116 V186" marker-end="url(#sd-scaling-scaled-jobs-arrow)"/>
+<path class="concept-edge" d="M140 216 H174" marker-end="url(#sd-scaling-scaled-jobs-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M245 242 V298" marker-end="url(#sd-scaling-scaled-jobs-arrow)"/>
+<path class="concept-edge" d="M239 372 V434" marker-end="url(#sd-scaling-scaled-jobs-arrow)"/>
+<path class="concept-edge" d="M178 343 H78 V422" marker-end="url(#sd-scaling-scaled-jobs-arrow)"/>
+<path class="concept-edge" d="M178 343 H162 V574 H144" marker-end="url(#sd-scaling-scaled-jobs-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M8 467 H2 V650 H74 V658" marker-end="url(#sd-scaling-scaled-jobs-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M2 650 H245 V658" marker-end="url(#sd-scaling-scaled-jobs-arrow)" stroke-dasharray="4 4"/>
+<text x="160" y="22" text-anchor="middle">Фоновые задачи и хранение</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
+<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
+<text x="74" y="94" text-anchor="middle">Async API</text>
+<rect class="concept-node plain" x="8" y="190" width="132" height="52" rx="9"/>
+<text x="74" y="211.5" text-anchor="middle">БД заданий</text>
+<text x="74" y="228.5" text-anchor="middle">+ outbox</text>
+<rect class="concept-node plain" x="178" y="190" width="134" height="52" rx="9"/>
+<text x="245" y="220" text-anchor="middle">Очередь</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="302" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="190" y="302" width="122" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="308" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="184" y="308" width="122" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="314" width="122" height="58" rx="9"/>
+<rect class="concept-node accent" x="178" y="314" width="122" height="58" rx="9"/>
+<text x="239" y="347" text-anchor="middle">Воркеры</text>
+<rect class="concept-node plain" x="20" y="426" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="14" y="432" width="132" height="58" rx="9"/>
+<rect class="concept-node plain" x="8" y="438" width="132" height="58" rx="9"/>
+<text x="74" y="471" text-anchor="middle">SQL-БД</text>
+<rect class="concept-node plain" x="178" y="438" width="134" height="58" rx="9"/>
+<text x="245" y="462.5" text-anchor="middle">Объектное</text>
+<text x="245" y="479.5" text-anchor="middle">хранилище</text>
+<rect class="concept-node plain" x="8" y="548" width="132" height="52" rx="9"/>
+<text x="74" y="569.5" text-anchor="middle">Другое</text>
+<text x="74" y="586.5" text-anchor="middle">хранилище</text>
+<text class="concept-label" x="160" y="642" text-anchor="middle">Варианты масштабирования SQL</text>
+<rect class="concept-node plain" x="8" y="662" width="132" height="52" rx="9"/>
+<text x="74" y="683.5" text-anchor="middle">Шарды</text>
+<text x="74" y="700.5" text-anchor="middle">по user_id</text>
+<rect class="concept-node plain" x="178" y="662" width="134" height="52" rx="9"/>
+<text x="245" y="683.5" text-anchor="middle">БД по доменам</text>
+<text x="245" y="700.5" text-anchor="middle">Клиенты / товары</text>
+</svg>
+</div>
+<figcaption id="sd-scaling-scaled-caption">Три части одной системы: входные маршруты, Read/Write API и фоновая обработка. Клиент запрашивает адрес у DNS; файлы получает через CDN, API вызывает напрямую через балансировщик и веб-слой. CDN читает объектное хранилище, а не передаёт API-запросы балансировщику. Повторённые API и хранилища обозначают те же компоненты. Другое хранилище, шарды и разделение БД по доменам — варианты по результатам измерений, их не требуется вводить одновременно. Стопки — несколько экземпляров; пунктир — DNS, репликация, outbox и варианты эволюции.</figcaption></figure>
 <p><b>Допущение.</b> Даже после предыдущих мер отдельные записи, обслуживание большой истории или длительные вычисления выходят за бюджет задержки и ресурсов.</p>
 <p><b>Цель.</b> Отделить интерактивный путь от тяжёлой работы, затем распределить данные, если один узел действительно исчерпан.</p>
-<p><b>Изменения.</b> Долгие задачи, например создание превью загруженного файла, поступают в надёжную очередь. Задание в БД и outbox фиксируются одной транзакцией, публикатор передаёт его в очередь, воркер читает объект из хранилища, вычисляет результат и сохраняет итог. Клиент получает 202 с идентификатором и проверяет статус. API и воркеры имеют разные группы масштабирования.</p>
+<p><b>Изменения.</b> Долгие задачи, например создание превью загруженного файла, поступают в надёжную очередь. Задание в БД и outbox фиксируются одной транзакцией, публикатор передаёт его в очередь, воркер читает объект из хранилища, вычисляет результат и сохраняет итог. Для долгой операции веб-слой направляет запрос в Async API. Клиент получает 202 с идентификатором и проверяет статус. Async API, обычные Read/Write API и воркеры имеют разные группы масштабирования.</p>
 <p><b>Семантика очереди.</b> Для примера выбрана доставка как минимум один раз: сообщение может прийти повторно. Если порядок не гарантирован, обработчик также должен учитывать перестановки. Воркер использует стабильный job_id и идемпотентную фиксацию результата. Подтверждение обработки даётся после надёжной фиксации; при падении задание должно вернуться в обработку. Механизм зависит от брокера — подтверждения, срок аренды или таймаут видимости, — но сам по себе не заменяет защиту от дублей. Систематически ошибочные задания разбираются отдельно; возраст очереди важнее одной её длины.</p>
 <p>Перед шардированием нужно проверить индексы, блокировки, пакетные операции, объём горячих данных и возможность увеличить ресурсы БД. Затем выбирается ключ по основным запросам, например user_id для независимых данных пользователей. Добавляются маршрутизация, перенос шардов и обработка операций между ними. Архив или аналитическое хранилище отделяет исторические запросы от OLTP, но старые данные нельзя убрать туда, если продукт требует прежней интерактивной задержки.</p>
 <p>Специализированное хранилище — например, key-value или документное — выбирается под конкретный профиль доступа и модель согласованности. Число пользователей и несколько тысяч записей в секунду сами по себе не доказывают необходимость отказаться от SQL. Аналогично разделение Read/Write API оправдано разными требованиями к ресурсам и релизам, а не самим наличием двух HTTP-методов.</p>
