@@ -10398,78 +10398,110 @@ outbox
 <p><b>Источники:</b> <a href="https://github.com/donnemartin/system-design-primer/blob/master/solutions/system_design/twitter/README.md">System Design Primer: лента и поиск</a>; <a href="https://engineering.fb.com/2021/01/26/core-infra/news-feed-ranking/">Meta: многоэтапное ранжирование ленты</a>; <a href="https://engineering.fb.com/2013/10/24/core-infra/under-the-hood-building-posts-search/">Meta: построение и обновление индекса постов</a>. Это материалы о механизмах в разные годы; приведённая выше архитектура — самостоятельное решение для собеседования.</p>
     </div></div></article>
 <article id="q280" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">280. Спроектируйте Mint.com — сервис учёта личных финансов <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
-<p><b>Подключённые банковские счета синхронизируются в фоне, отчёты читаются из локальных данных.</b> Планировщик, webhook или ручное обновление создают задание. Синхронизатор загружает изменения, нормализует операции и сохраняет их вместе с курсором; события запускают категоризацию и пересчёт итогов.</p>
+<p><b>Подключённые банковские счета синхронизируются в фоне, отчёты читаются из локальных данных.</b> Планировщик, webhook или ручное обновление создают задание. Синхронизатор сохраняет изменения вместе с курсором. Далее операции получают категории, расходы агрегируются по месяцу и валюте, сравниваются с бюджетом; пересечение порога создаёт уведомление через outbox.</p>
 <figure class="concept" aria-labelledby="sd-mint-scaled-summary-caption">
-<svg id="sd-mint-scaled-summary" viewBox="0 0 320 706" role="img" aria-labelledby="sd-mint-scaled-summary-title sd-mint-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-mint-scaled-summary-title">Mint.com: синхронизация и отчёты после масштабирования</title><desc id="sd-mint-scaled-summary-desc">Балансировщик разделяет API подключений и чтение отчётов. PostgreSQL хранит операции, курсоры, outbox и итоги. Очереди отделяют загрузку банковских данных от пересчёта отчётов. Синхронизаторы и обработчики итогов масштабируются независимо; отчёты читают кеш и БД.</desc>
+<div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
+<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled-summary" viewBox="0 0 320 598" role="img" aria-labelledby="sd-mint-scaled-summary-title sd-mint-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-mint-scaled-summary-title">Mint.com: приём и синхронизация</title><desc id="sd-mint-scaled-summary-desc">Клиент, планировщик и webhook создают задания через API счетов. Задания и outbox сохраняются в БД, очередь передаёт работу синхронизаторам. Они вызывают банк, нормализуют операции и фиксируют результат с курсором.</desc>
 <defs><marker id="sd-mint-scaled-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 48 V78" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M98 126 V156 H74 V180" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M222 126 V156 H239 V180" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M74 254 V294" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M300 225 H318 V449 H316" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M245 420 V402 M245 380 V362" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
-<text class="concept-label" x="244" y="394" text-anchor="middle">промах</text>
-<path class="concept-edge" d="M80 358 V380 M80 403 V416" marker-end="url(#sd-mint-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<text class="concept-label" x="80" y="396" text-anchor="middle">Публикатор</text>
-<path class="concept-edge" d="M74 478 V534" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M148 449 H162 V514 H239 V534" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M74 608 V646" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M8 579 H2 V328 H36" marker-end="url(#sd-mint-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M178 579 H168 V380 H160 V362" marker-end="url(#sd-mint-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<rect class="concept-node plain" x="64" y="8" width="192" height="40" rx="9"/>
-<text x="160" y="32" text-anchor="middle">Клиент</text>
-<rect class="concept-node accent" x="40" y="82" width="240" height="44" rx="9"/>
-<text x="160" y="108" text-anchor="middle">Балансировщик</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="184" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="20" y="184" width="132" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="190" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="14" y="190" width="132" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="196" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="8" y="196" width="132" height="58" rx="9"/>
-<text x="74" y="220.5" text-anchor="middle">API счетов</text>
-<text x="74" y="237.5" text-anchor="middle">и обновлений</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="184" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="184" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="190" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="190" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="196" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="196" width="122" height="58" rx="9"/>
-<text x="239" y="229" text-anchor="middle">API отчётов</text>
-<rect class="concept-node plain" x="40" y="298" width="240" height="60" rx="9"/>
-<text x="160" y="323.5" text-anchor="middle">БД: операции и курсоры</text>
-<text x="160" y="340.5" text-anchor="middle">Outbox, бюджеты и итоги</text>
-<rect class="concept-node plain" x="8" y="420" width="140" height="58" rx="9"/>
-<text x="78" y="444.5" text-anchor="middle">Очереди</text>
-<text x="78" y="461.5" text-anchor="middle">Sync / изменения</text>
-<rect class="concept-node plain" x="178" y="420" width="134" height="58" rx="9"/>
-<text x="245" y="453" text-anchor="middle">Кеш отчётов</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="538" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="20" y="538" width="132" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="544" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="14" y="544" width="132" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="550" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="8" y="550" width="132" height="58" rx="9"/>
-<text x="74" y="574.5" text-anchor="middle">Загрузка</text>
-<text x="74" y="591.5" text-anchor="middle">операций</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="538" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="538" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="544" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="544" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="550" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="550" width="122" height="58" rx="9"/>
-<text x="239" y="574.5" text-anchor="middle">Пересчёт</text>
-<text x="239" y="591.5" text-anchor="middle">итогов</text>
-<rect class="concept-node plain" x="8" y="650" width="140" height="44" rx="9"/>
-<text x="78" y="676" text-anchor="middle">Банки / агрегатор</text>
-</svg><figcaption id="sd-mint-scaled-summary-caption">Стопки показывают независимые группы API, синхронизаторов и обработчиков итогов. Очереди содержат отдельные задания синхронизации и события изменений; пунктир — сохранение результатов и публикация outbox. Планировщик и webhook создают задания через тот же надёжный механизм. Токены доступа хранятся отдельно от кеша отчётов.</figcaption></figure>
+<path class="concept-edge" d="M160 92 V126" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M154 190 V240" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M160 302 V344" marker-end="url(#sd-mint-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M160 392 V434" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M154 508 V550" marker-end="url(#sd-mint-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M40 479 H8 V273 H36" marker-end="url(#sd-mint-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<text x="160" y="22" text-anchor="middle">Приём и синхронизация</text>
+<rect class="concept-node plain" x="40" y="48" width="240" height="44" rx="9"/>
+<text x="160" y="74" text-anchor="middle">Клиент / расписание / webhook</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="130" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="130" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="136" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="136" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="142" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="142" width="228" height="48" rx="9"/>
+<text x="154" y="170" text-anchor="middle">API счетов и обновлений</text>
+<rect class="concept-node plain" x="40" y="244" width="240" height="58" rx="9"/>
+<text x="160" y="268.5" text-anchor="middle">БД: задания и курсоры</text>
+<text x="160" y="285.5" text-anchor="middle">+ outbox</text>
+<rect class="concept-node plain" x="40" y="348" width="240" height="44" rx="9"/>
+<text x="160" y="374" text-anchor="middle">Очередь синхронизации</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="438" width="228" height="58" rx="9"/>
+<rect class="concept-node accent" x="52" y="438" width="228" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="444" width="228" height="58" rx="9"/>
+<rect class="concept-node accent" x="46" y="444" width="228" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="450" width="228" height="58" rx="9"/>
+<rect class="concept-node accent" x="40" y="450" width="228" height="58" rx="9"/>
+<text x="154" y="483" text-anchor="middle">Загрузка и нормализация</text>
+<rect class="concept-node plain" x="40" y="554" width="240" height="40" rx="9"/>
+<text x="160" y="578" text-anchor="middle">Банки / агрегатор</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled-summary-product" viewBox="0 0 320 658" role="img" aria-labelledby="sd-mint-scaled-summary-product-title sd-mint-scaled-summary-product-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-mint-scaled-summary-product-title">Mint.com: от операции до бюджета и уведомления</title><desc id="sd-mint-scaled-summary-product-desc">Изменения канонических операций запускают категоризацию, пересчёт расходов и сравнение с бюджетом. Уведомления отправляются через outbox и отдельную очередь. API отчётов читает кеш и сохранённые итоги без вызова банка.</desc>
+<defs><marker id="sd-mint-scaled-summary-product-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M160 106 V148" marker-end="url(#sd-mint-scaled-summary-product-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M154 212 V254" marker-end="url(#sd-mint-scaled-summary-product-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M154 328 V370" marker-end="url(#sd-mint-scaled-summary-product-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M100 434 V464 H74 V494" marker-end="url(#sd-mint-scaled-summary-product-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M74 550 V588" marker-end="url(#sd-mint-scaled-summary-product-arrow)"/>
+<path class="concept-edge" d="M239 550 V600" marker-end="url(#sd-mint-scaled-summary-product-arrow)"/>
+<path class="concept-edge" d="M312 628 H318 V299 H284" marker-end="url(#sd-mint-scaled-summary-product-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Расходы, бюджет и отчёты</text>
+<rect class="concept-node plain" x="40" y="48" width="240" height="58" rx="9"/>
+<text x="160" y="72.5" text-anchor="middle">Канонические операции</text>
+<text x="160" y="89.5" text-anchor="middle">БД + события изменений</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="152" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="152" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="158" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="158" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="164" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="164" width="228" height="48" rx="9"/>
+<text x="154" y="192" text-anchor="middle">Категоризация</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="258" width="228" height="58" rx="9"/>
+<rect class="concept-node accent" x="52" y="258" width="228" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="264" width="228" height="58" rx="9"/>
+<rect class="concept-node accent" x="46" y="264" width="228" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="270" width="228" height="58" rx="9"/>
+<rect class="concept-node accent" x="40" y="270" width="228" height="58" rx="9"/>
+<text x="154" y="294.5" text-anchor="middle">Итоги расходов в БД</text>
+<text x="154" y="311.5" text-anchor="middle">Месяц / категория / валюта</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="374" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="374" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="380" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="380" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="386" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="386" width="228" height="48" rx="9"/>
+<text x="154" y="414" text-anchor="middle">Сравнение с бюджетом</text>
+<rect class="concept-node plain" x="8" y="498" width="132" height="52" rx="9"/>
+<text x="74" y="519.5" text-anchor="middle">Outbox</text>
+<text x="74" y="536.5" text-anchor="middle">→ очередь</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="486" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="486" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="492" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="492" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="498" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="498" width="122" height="52" rx="9"/>
+<text x="239" y="528" text-anchor="middle">API отчётов</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="592" width="132" height="48" rx="9"/>
+<rect class="concept-node accent" x="20" y="592" width="132" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="598" width="132" height="48" rx="9"/>
+<rect class="concept-node accent" x="14" y="598" width="132" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="604" width="132" height="48" rx="9"/>
+<rect class="concept-node accent" x="8" y="604" width="132" height="48" rx="9"/>
+<text x="74" y="632" text-anchor="middle">Уведомления</text>
+<rect class="concept-node plain" x="178" y="604" width="134" height="48" rx="9"/>
+<text x="245" y="632" text-anchor="middle">Кеш отчётов</text>
+</svg>
+</div>
+<figcaption id="sd-mint-scaled-summary-caption">Два потока одной системы: слева — получение данных банка, справа — преобразование сохранённых операций в расходы и бюджетные события. Пунктир — надёжные задания, сохранение результатов и события изменений. Категоризация, расчёт итогов и проверка бюджета — логические этапы; их можно выполнять одним обработчиком, разделяя группы по мере роста нагрузки. API отчётов читает кеш, при промахе — итоги в БД. Стопки обозначают несколько экземпляров.</figcaption></figure>
 <p><b>Повторная загрузка не должна удваивать расходы.</b> Нужны идентификаторы провайдера, обработка исправлений и удалений, восстановление после сбоя. Отчёт показывает время последнего обновления; суммы хранятся точно и считаются отдельно по валютам.</p>
     </div>
     <div class="more">
 <p><b>Шаг 1 — Требования и ограничения</b></p>
 <p>Mint.com здесь — задача на <b>агрегацию личных финансов</b>: подключить счета разных банков, загрузить историю, распределить операции по категориям, показать расходы за месяц и сравнить их с бюджетом. Пользователь может исправить категорию и запросить обновление. Автоматическое предложение бюджета можно начать с настраиваемого шаблона по истории расходов; финансовые рекомендации и выполнение платежей остаются за рамками.</p>
 <p>Нужно уточнить страны, доступные банковские API, число подключений, глубину истории, допустимую задержку данных и квоты провайдеров. Подключение работает через согласие пользователя и токенизированный доступ банка или агрегатора. Пароли интернет-банка не являются частью API приложения. Внутренний сервис не может сделать банковские данные свежее, чем позволяет источник.</p>
-<p><b>Допущения:</b> 10 млн пользователей, по 3 банковских подключения; 20% подключений требуют фонового обновления в сутки. Первичная загрузка охватывает год, последующие — изменения. 50 млн новых или изменённых операций в сутки и 10 млн запросов отчётов; пик в 5 раз выше среднего. Цель p99 чтения отчёта — до 300 мс, фоновая синхронизация укладывается в согласованное окно свежести при работающем источнике.</p>
+<p><b>Допущения:</b> 10 млн пользователей, по 3 банковских подключения; 20% подключений требуют фонового обновления в сутки. Первичная загрузка охватывает год, последующие — изменения. 50 млн новых или изменённых операций в сутки и 10 млн запросов отчётов; пик в 5 раз выше среднего. Цель p99 чтения отчёта — до 300 мс. Для примера вводятся следующие SLO свежести:</p>
+<ul><li><b>Проверка банка:</b> для 99% подключений активных пользователей возраст последней успешной проверки не превышает 24 часа при доступном провайдере и действующем согласии. Это соответствует принятой оценке одного планового обновления 6 млн активных подключений в сутки.</li><li><b>Расходы:</b> 99% зафиксированных изменений отражаются в итогах и доступном через API отчёте в течение 1 минуты.</li><li><b>Уведомления:</b> 99% событий превышения порога передаются провайдеру уведомлений в течение 5 минут после фиксации актуального итога; это не обещание доставки на устройство.</li></ul>
+<p><b>У отчёта несколько часов свежести:</b> время последней проверки подключения, время данных самого банка и время расчёта итогов. Успешная проверка API не означает, что банк уже отразил сегодняшнюю покупку. Недоступность провайдера и требование повторной авторизации показываются отдельно, а не маскируются прежним временем успешного импорта.</p>
 <div class="table-wrap"><table><tr><th>Показатель</th><th>Оценка</th></tr>
 <tr><td>Плановые синхронизации</td><td>30 млн × 20% = 6 млн/сутки, ≈ 69 заданий/с</td></tr>
 <tr><td>При 5 запросах к провайдеру на задание</td><td>≈ 350 вызовов/с в среднем; первичная история требует отдельного бюджета</td></tr>
@@ -10521,81 +10553,121 @@ outbox
 <tr><td>account</td><td>connection_<wbr>id, external_<wbr>account_<wbr>id, currency, balance, balance_<wbr>as_<wbr>of</td></tr>
 <tr><td>transaction</td><td>user_<wbr>id, account_<wbr>id, external_<wbr>id, amount, currency, booking_<wbr>date, merchant, status, deleted_<wbr>at, automatic_<wbr>category, user_<wbr>category</td></tr>
 <tr><td>sync_<wbr>job</td><td>connection_<wbr>id, state, next_<wbr>attempt_<wbr>at, lease_<wbr>until, lock_<wbr>token</td></tr>
-<tr><td>budget / monthly_<wbr>spending</td><td>user_<wbr>id, month, category, currency, limit / total, generation</td></tr>
+<tr><td>budget / monthly_<wbr>spending</td><td>План: user_<wbr>id, month, currency, total_<wbr>limit, template_<wbr>version; переопределение: category, limit; итоги: total, generation</td></tr>
 <tr><td>outbox</td><td>События обновления операций и задания на пересчёт, сохранённые с изменениями БД</td></tr></table></div>
 <p><b>Синхронизация:</b> занять задание короткой транзакцией → получить токен → вне транзакции загрузить изменения с сохранённого курсора → проверить и подготовить пакет → в транзакции применить изменения, записать события и сохранить новый курсор → подтвердить выполнение задания. Одно подключение обрабатывается последовательно в пределах области действия курсора. Lease с проверкой lock_token при фиксации не позволяет старому работнику перезаписать результат после перехвата задания.</p>
 <p><b>Курсор нельзя продвигать раньше данных:</b> после сбоя изменения будут потеряны. Граница checkpoint определяется контрактом провайдера. Если весь набор страниц представляет один согласованный цикл, страницы сначала собираются во временную область, а курсор продвигается после применения полного набора. При требовании перезапустить пагинацию обработка начинается с исходного курсора; в БД не должна остаться половина такого цикла. Большую первичную историю нужно загружать отдельно, возобновляемыми порциями по контракту источника. Пример курсорного протокола — <a href="https://plaid.com/docs/transactions/sync-migration/">Transactions Sync</a>.</p>
 <p><b>Идемпотентность — по идентичности операции.</b> Ограничение <code><span class="t">UNIQUE</span>(account_id, external_id)</code> защищает повторную загрузку от дублей. Исправления обновляют существующую запись, удаления исключают её из текущих расходов. Сумма, дата и продавец не являются надёжным ключом: две одинаковые покупки могут быть разными операциями.</p>
 <p><b>Pending и posted нельзя слепо складывать.</b> Провайдер может удалить ожидающую операцию и добавить подтверждённую с другим ID и другой суммой. Для связи используется явная ссылка источника, если она есть; нельзя считать новый ID гарантированно новой покупкой. Для примера отчёт расходов включает только подтверждённые операции, а ожидающие показываются отдельно. Такую модель описывает <a href="https://plaid.com/docs/transactions/transactions-data/">документация Plaid о состояниях транзакций</a>.</p>
-<p><b>Категории и бюджеты.</b> Начальный классификатор — правила по нормализованному продавцу или коду категории, неизвестное остаётся без категории. Пользовательская категория имеет приоритет и не перетирается при следующей загрузке. Бюджет хранит лимит по месяцу, категории и валюте; шаблон задаёт значения по умолчанию, пользователь может их изменить. Машинное обучение не требуется для первой версии.</p>
+<p><b>Категоризация.</b> Сначала нормализуются продавец и банковское описание, затем проверяется ручная категория конкретной операции, пользовательское правило для продавца и общий справочник merchant/MCC → category. Если совпадения нет, операция остаётся в «Без категории». Ручное исправление отдельной покупки не должно автоматически переклассифицировать все покупки у этого продавца: для этого пользователь создаёт отдельное правило. Изменение автоматического классификатора не перетирает ручной выбор.</p>
+<p><b>Предложение бюджета.</b> Пользователь задаёт общий месячный лимит <code><span class="t">B</span></code> в одной валюте. Если есть три полных месяца истории, приложение предлагает доли категорий по подтверждённым расходам за этот период, исключая собственные переводы; пользователь проверяет предложение. Без достаточной истории предлагается базовый версионированный шаблон, который также требует подтверждения. Для выбранного шаблона сумма долей равна 1, а лимит категории равен <code><span class="t">B</span> × доля</code>. Округление выполняется в минимальных единицах валюты, остаток распределяется явно.</p>
+<p>Например, при условном общем лимите 100 000 ₽ и доле «Продуктов» 20% предложенный лимит — 20 000 ₽. Это пример вычисления, а не рекомендация по распределению денег. Пользователь может заменить его на 25 000 ₽. Эффективный лимит — ручное значение, если оно есть, иначе значение из сохранённой версии шаблона. Изменение общего шаблона не меняет уже подтверждённый бюджет прошлого месяца.</p>
+<p>План хранит общий лимит, валюту и версию шаблона; отдельно сохраняются пользовательские переопределения. После ручных изменений сумма категорий может превысить общий лимит: приложение показывает разницу и предлагает её согласовать, а не скрыто уменьшает остальные категории. Изменение бюджета запускает повторное сравнение с актуальными расходами. Для первой версии достаточно правил и арифметики; ML не требуется.</p>
+
 <p><b>Итоги должны переживать повторы и исправления.</b> Простой вариант — по событию пометить затронутые месяцы как требующие пересчёта и заново получить сумму по актуальным операциям. Если операция переехала в другую категорию или месяц, пересчитываются и старый, и новый набор. Результат заменяет прежний итог, а не прибавляется к нему. Версия изменений или generation не позволяет завершить пересчёт как актуальный, если во время расчёта пришло новое изменение.</p>
+<p><b>Пример пересчёта после ручной правки.</b> Покупка на 3 000 ₽ уже включена в «Продукты», но пользователь переносит её в «Транспорт». Изменение категории и событие фиксируются одной транзакцией. Обработчик пересчитывает обе категории по актуальным операциям:</p>
+<div class="table-wrap"><table><tr><th>Категория</th><th>Было</th><th>Стало</th></tr>
+<tr><td>Продукты</td><td>9 000 ₽</td><td>6 000 ₽</td></tr>
+<tr><td>Транспорт</td><td>4 000 ₽</td><td>7 000 ₽</td></tr>
+<tr><td>Всего расходов</td><td>13 000 ₽</td><td>13 000 ₽</td></tr></table></div>
+<p>При лимите «Транспорта» 6 000 ₽ появляется превышение на 1 000 ₽. Повторная обработка события снова даст 6 000 и 7 000 ₽, а не повторно перенесёт ещё 3 000 ₽. Обновление итогов, новая generation и событие проверки бюджета фиксируются согласованно; версия кеша меняется или прежние записи инвалидируются в пределах минутного SLO. Новая покупка или правка во время расчёта оставляет период требующим дополнительного пересчёта.</p>
 <p><b>Деньги и смысл отчёта.</b> Суммы хранятся как DECIMAL или целые минимальные единицы с корректной шкалой валюты, не float/double. Валюты не складываются без явно выбранного курса и даты конвертации. Возвраты уменьшают расходы по выбранной политике, переводы между собственными счетами исключаются из потребления. Баланс берётся у источника вместе со временем снимка: сумма загруженных операций без начального остатка не восстанавливает баланс счёта.</p>
 <p><b>Секреты и отключение доступа.</b> Токены шифруются с ключами из KMS или хранятся в vault; в обычной таблице остаётся ссылка. Токены и полные банковские ответы не попадают в логи. При отзыве согласия новые задания блокируются, секрет удаляется или отзывается по протоколу провайдера; выполняющийся работник перепроверяет статус подключения перед фиксацией. Срок хранения истории и её удаление согласуются отдельно.</p>
 <p><b>Шаг 4 — Масштабирование и узкие места</b></p>
 <figure class="concept" aria-labelledby="sd-mint-scaled-caption">
-<svg id="sd-mint-scaled" viewBox="0 0 320 706" role="img" aria-labelledby="sd-mint-scaled-title sd-mint-scaled-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-mint-scaled-title">Mint.com: синхронизация и отчёты после масштабирования</title><desc id="sd-mint-scaled-desc">Балансировщик разделяет API подключений и чтение отчётов. PostgreSQL хранит операции, курсоры, outbox и итоги. Очереди отделяют загрузку банковских данных от пересчёта отчётов. Синхронизаторы и обработчики итогов масштабируются независимо; отчёты читают кеш и БД.</desc>
+<div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
+<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled" viewBox="0 0 320 598" role="img" aria-labelledby="sd-mint-scaled-title sd-mint-scaled-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-mint-scaled-title">Mint.com: приём и синхронизация</title><desc id="sd-mint-scaled-desc">Клиент, планировщик и webhook создают задания через API счетов. Задания и outbox сохраняются в БД, очередь передаёт работу синхронизаторам. Они вызывают банк, нормализуют операции и фиксируют результат с курсором.</desc>
 <defs><marker id="sd-mint-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 48 V78" marker-end="url(#sd-mint-scaled-arrow)"/>
-<path class="concept-edge" d="M98 126 V156 H74 V180" marker-end="url(#sd-mint-scaled-arrow)"/>
-<path class="concept-edge" d="M222 126 V156 H239 V180" marker-end="url(#sd-mint-scaled-arrow)"/>
-<path class="concept-edge" d="M74 254 V294" marker-end="url(#sd-mint-scaled-arrow)"/>
-<path class="concept-edge" d="M300 225 H318 V449 H316" marker-end="url(#sd-mint-scaled-arrow)"/>
-<path class="concept-edge" d="M245 420 V402 M245 380 V362" marker-end="url(#sd-mint-scaled-arrow)"/>
-<text class="concept-label" x="244" y="394" text-anchor="middle">промах</text>
-<path class="concept-edge" d="M80 358 V380 M80 403 V416" marker-end="url(#sd-mint-scaled-arrow)" stroke-dasharray="4 4"/>
-<text class="concept-label" x="80" y="396" text-anchor="middle">Публикатор</text>
-<path class="concept-edge" d="M74 478 V534" marker-end="url(#sd-mint-scaled-arrow)"/>
-<path class="concept-edge" d="M148 449 H162 V514 H239 V534" marker-end="url(#sd-mint-scaled-arrow)"/>
-<path class="concept-edge" d="M74 608 V646" marker-end="url(#sd-mint-scaled-arrow)"/>
-<path class="concept-edge" d="M8 579 H2 V328 H36" marker-end="url(#sd-mint-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M178 579 H168 V380 H160 V362" marker-end="url(#sd-mint-scaled-arrow)" stroke-dasharray="4 4"/>
-<rect class="concept-node plain" x="64" y="8" width="192" height="40" rx="9"/>
-<text x="160" y="32" text-anchor="middle">Клиент</text>
-<rect class="concept-node accent" x="40" y="82" width="240" height="44" rx="9"/>
-<text x="160" y="108" text-anchor="middle">Балансировщик</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="184" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="20" y="184" width="132" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="190" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="14" y="190" width="132" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="196" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="8" y="196" width="132" height="58" rx="9"/>
-<text x="74" y="220.5" text-anchor="middle">API счетов</text>
-<text x="74" y="237.5" text-anchor="middle">и обновлений</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="184" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="184" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="190" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="190" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="196" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="196" width="122" height="58" rx="9"/>
-<text x="239" y="229" text-anchor="middle">API отчётов</text>
-<rect class="concept-node plain" x="40" y="298" width="240" height="60" rx="9"/>
-<text x="160" y="323.5" text-anchor="middle">БД: операции и курсоры</text>
-<text x="160" y="340.5" text-anchor="middle">Outbox, бюджеты и итоги</text>
-<rect class="concept-node plain" x="8" y="420" width="140" height="58" rx="9"/>
-<text x="78" y="444.5" text-anchor="middle">Очереди</text>
-<text x="78" y="461.5" text-anchor="middle">Sync / изменения</text>
-<rect class="concept-node plain" x="178" y="420" width="134" height="58" rx="9"/>
-<text x="245" y="453" text-anchor="middle">Кеш отчётов</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="538" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="20" y="538" width="132" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="544" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="14" y="544" width="132" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="550" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="8" y="550" width="132" height="58" rx="9"/>
-<text x="74" y="574.5" text-anchor="middle">Загрузка</text>
-<text x="74" y="591.5" text-anchor="middle">операций</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="538" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="538" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="544" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="544" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="550" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="550" width="122" height="58" rx="9"/>
-<text x="239" y="574.5" text-anchor="middle">Пересчёт</text>
-<text x="239" y="591.5" text-anchor="middle">итогов</text>
-<rect class="concept-node plain" x="8" y="650" width="140" height="44" rx="9"/>
-<text x="78" y="676" text-anchor="middle">Банки / агрегатор</text>
-</svg><figcaption id="sd-mint-scaled-caption">Стопки показывают независимые группы API, синхронизаторов и обработчиков итогов. Очереди содержат отдельные задания синхронизации и события изменений; пунктир — сохранение результатов и публикация outbox. Планировщик и webhook создают задания через тот же надёжный механизм. Токены доступа хранятся отдельно от кеша отчётов.</figcaption></figure>
+<path class="concept-edge" d="M160 92 V126" marker-end="url(#sd-mint-scaled-arrow)"/>
+<path class="concept-edge" d="M154 190 V240" marker-end="url(#sd-mint-scaled-arrow)"/>
+<path class="concept-edge" d="M160 302 V344" marker-end="url(#sd-mint-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M160 392 V434" marker-end="url(#sd-mint-scaled-arrow)"/>
+<path class="concept-edge" d="M154 508 V550" marker-end="url(#sd-mint-scaled-arrow)"/>
+<path class="concept-edge" d="M40 479 H8 V273 H36" marker-end="url(#sd-mint-scaled-arrow)" stroke-dasharray="4 4"/>
+<text x="160" y="22" text-anchor="middle">Приём и синхронизация</text>
+<rect class="concept-node plain" x="40" y="48" width="240" height="44" rx="9"/>
+<text x="160" y="74" text-anchor="middle">Клиент / расписание / webhook</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="130" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="130" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="136" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="136" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="142" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="142" width="228" height="48" rx="9"/>
+<text x="154" y="170" text-anchor="middle">API счетов и обновлений</text>
+<rect class="concept-node plain" x="40" y="244" width="240" height="58" rx="9"/>
+<text x="160" y="268.5" text-anchor="middle">БД: задания и курсоры</text>
+<text x="160" y="285.5" text-anchor="middle">+ outbox</text>
+<rect class="concept-node plain" x="40" y="348" width="240" height="44" rx="9"/>
+<text x="160" y="374" text-anchor="middle">Очередь синхронизации</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="438" width="228" height="58" rx="9"/>
+<rect class="concept-node accent" x="52" y="438" width="228" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="444" width="228" height="58" rx="9"/>
+<rect class="concept-node accent" x="46" y="444" width="228" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="450" width="228" height="58" rx="9"/>
+<rect class="concept-node accent" x="40" y="450" width="228" height="58" rx="9"/>
+<text x="154" y="483" text-anchor="middle">Загрузка и нормализация</text>
+<rect class="concept-node plain" x="40" y="554" width="240" height="40" rx="9"/>
+<text x="160" y="578" text-anchor="middle">Банки / агрегатор</text>
+</svg>
+<svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled-product" viewBox="0 0 320 658" role="img" aria-labelledby="sd-mint-scaled-product-title sd-mint-scaled-product-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-mint-scaled-product-title">Mint.com: от операции до бюджета и уведомления</title><desc id="sd-mint-scaled-product-desc">Изменения канонических операций запускают категоризацию, пересчёт расходов и сравнение с бюджетом. Уведомления отправляются через outbox и отдельную очередь. API отчётов читает кеш и сохранённые итоги без вызова банка.</desc>
+<defs><marker id="sd-mint-scaled-product-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M160 106 V148" marker-end="url(#sd-mint-scaled-product-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M154 212 V254" marker-end="url(#sd-mint-scaled-product-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M154 328 V370" marker-end="url(#sd-mint-scaled-product-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M100 434 V464 H74 V494" marker-end="url(#sd-mint-scaled-product-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M74 550 V588" marker-end="url(#sd-mint-scaled-product-arrow)"/>
+<path class="concept-edge" d="M239 550 V600" marker-end="url(#sd-mint-scaled-product-arrow)"/>
+<path class="concept-edge" d="M312 628 H318 V299 H284" marker-end="url(#sd-mint-scaled-product-arrow)"/>
+<text x="160" y="22" text-anchor="middle">Расходы, бюджет и отчёты</text>
+<rect class="concept-node plain" x="40" y="48" width="240" height="58" rx="9"/>
+<text x="160" y="72.5" text-anchor="middle">Канонические операции</text>
+<text x="160" y="89.5" text-anchor="middle">БД + события изменений</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="152" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="152" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="158" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="158" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="164" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="164" width="228" height="48" rx="9"/>
+<text x="154" y="192" text-anchor="middle">Категоризация</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="258" width="228" height="58" rx="9"/>
+<rect class="concept-node accent" x="52" y="258" width="228" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="264" width="228" height="58" rx="9"/>
+<rect class="concept-node accent" x="46" y="264" width="228" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="270" width="228" height="58" rx="9"/>
+<rect class="concept-node accent" x="40" y="270" width="228" height="58" rx="9"/>
+<text x="154" y="294.5" text-anchor="middle">Итоги расходов в БД</text>
+<text x="154" y="311.5" text-anchor="middle">Месяц / категория / валюта</text>
+<rect fill="var(--bg)" stroke="none" x="52" y="374" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="52" y="374" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="46" y="380" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="46" y="380" width="228" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="40" y="386" width="228" height="48" rx="9"/>
+<rect class="concept-node accent" x="40" y="386" width="228" height="48" rx="9"/>
+<text x="154" y="414" text-anchor="middle">Сравнение с бюджетом</text>
+<rect class="concept-node plain" x="8" y="498" width="132" height="52" rx="9"/>
+<text x="74" y="519.5" text-anchor="middle">Outbox</text>
+<text x="74" y="536.5" text-anchor="middle">→ очередь</text>
+<rect fill="var(--bg)" stroke="none" x="190" y="486" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="190" y="486" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="184" y="492" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="184" y="492" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="498" width="122" height="52" rx="9"/>
+<rect class="concept-node accent" x="178" y="498" width="122" height="52" rx="9"/>
+<text x="239" y="528" text-anchor="middle">API отчётов</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="592" width="132" height="48" rx="9"/>
+<rect class="concept-node accent" x="20" y="592" width="132" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="598" width="132" height="48" rx="9"/>
+<rect class="concept-node accent" x="14" y="598" width="132" height="48" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="604" width="132" height="48" rx="9"/>
+<rect class="concept-node accent" x="8" y="604" width="132" height="48" rx="9"/>
+<text x="74" y="632" text-anchor="middle">Уведомления</text>
+<rect class="concept-node plain" x="178" y="604" width="134" height="48" rx="9"/>
+<text x="245" y="632" text-anchor="middle">Кеш отчётов</text>
+</svg>
+</div>
+<figcaption id="sd-mint-scaled-caption">Два потока одной системы: слева — получение данных банка, справа — преобразование сохранённых операций в расходы и бюджетные события. Пунктир — надёжные задания, сохранение результатов и события изменений. Категоризация, расчёт итогов и проверка бюджета — логические этапы; их можно выполнять одним обработчиком, разделяя группы по мере роста нагрузки. API отчётов читает кеш, при промахе — итоги в БД. Стопки обозначают несколько экземпляров.</figcaption></figure>
 <p><b>Разделение по нагрузке.</b> API счетов управляет подключениями и обновлениями, Read API обслуживает историю и отчёты, синхронизаторы выполняют внешние вызовы, обработчики итогов пересчитывают затронутые периоды. Очереди отделяют импорт от обработки. Создание задания и outbox фиксируются одной транзакцией; публикация может повториться, поэтому повторно обработать задание должно быть безопасно.</p>
 <p><b>Планирование и квоты.</b> Задания распределяются по времени с jitter, обновления активных подключений имеют больший приоритет, начальная история получает отдельный бюджет. Webhook используется как сигнал проверить изменения; отправитель проверяется, повторный сигнал не создаёт параллельную синхронизацию. Лимитер учитывает общую квоту провайдера по всем экземплярам. Дополнительные работники не увеличат разрешённую скорость банка.</p>
 <div class="table-wrap"><table><tr><th>Узкое место или сбой</th><th>Решение и компромисс</th></tr>
@@ -10606,8 +10678,13 @@ outbox
 <tr><td>Отчёты перегружают БД</td><td>Предрассчитанные итоги и кеш по user_<wbr>id, месяцу, валюте и версии; при необходимости реплики чтения</td></tr>
 <tr><td>История превысила возможности узла</td><td>Сначала индексы и план запросов; затем шардирование по user_<wbr>id, чтобы операции и отчёты пользователя оставались вместе</td></tr>
 <tr><td>Пересчёт остановился</td><td>Отдать прежний отчёт с временем расчёта и статусом обновления, затем обработать накопленные изменения</td></tr></table></div>
+<p><b>История и архив.</b> Пример политики продукта: последние 24 месяца нормализованных операций доступны в основной БД, более старая история — до 5 лет — хранится в зашифрованном объектном хранилище. Архив содержит ID источника, нормализованные поля, версии и ручные категории, а не только месячные суммы. Месячные итоги за весь разрешённый срок остаются доступны для быстрых отчётов. Границы 24 месяца и 5 лет — допущения задачи, их нужно согласовать с требованиями хранения и удаления.</p>
+<p>Перед удалением из основной БД архив проверяется по числу записей и контрольным суммам. История старше горячего окна загружается по отдельному возобновляемому заданию; API показывает, что детализация готовится. Позднее исправление архивной операции должно обновить её версию и затронутые итоги; при необходимости соответствующая часть архива восстанавливается для обработки. Холодное хранение удешевляет историю, но увеличивает время её детального просмотра и пересчёта.</p>
+<p><b>Пересборка после ошибки классификатора.</b> Сначала берётся согласованный снимок нормализованных операций и позиция журнала изменений. Новая версия правил пересчитывает автоматические категории, сохраняя ручные; затем заново строятся месячные итоги. Более новые события доигрываются из журнала, результаты проверяются по суммам и переключаются на новую generation. При пересборке не отправляются исторические бюджетные предупреждения; после переключения проверяется актуальный период по обычным правилам дедупликации. Срок хранения журнала должен покрывать время такой операции.</p>
+<p>Нормализованная история позволяет пересчитать категории, но не исправить потерянное при разборе поле. Если требуется повторный запуск банковского адаптера без повторной загрузки у провайдера, можно отдельно согласовать короткий срок хранения очищенных исходных пакетов, например 7 дней, с шифрованием и ограниченным доступом. Токены и секреты из них исключаются. Такие пакеты не являются обычными логами; после истечения срока данные восстанавливаются у провайдера лишь в пределах его контракта.</p>
 <p>Для списка операций нужен индекс по <code>user_id, booking_date, id</code> и курсорная пагинация. Уникальный индекс по внешнему ID решает другую задачу — дедупликацию. Временные партиции удобны для хранения и удаления истории, но сами по себе не распределяют нагрузку между независимыми серверами.</p>
-<p>Уведомление о превышении бюджета отправляется после фиксации актуального итога через outbox. Ключ уведомления включает пользователя, период, категорию и порог, чтобы повторный пересчёт не отправлял одно предупреждение много раз. Правила повторного уведомления после коррекции расходов задаются явно.</p>
+<p><b>Проверка бюджета и уведомления.</b> После фиксации итогов обработчик сравнивает расходы с эффективным лимитом, например проверяет пересечение 80% и 100%. Событие уведомления и отметка о пройденном пороге сохраняются в одной транзакции. Ключ включает пользователя, период, категорию и порог; отдельная очередь отделяет отчёты от скорости email/push-провайдера. Отправитель уведомлений также выдерживает повторы, но отсутствие дублей при неизвестном исходе зависит от протокола провайдера.</p>
+<p>Если исправление уменьшило расходы, уже доставленное сообщение отозвать нельзя. Для примера один и тот же порог не уведомляется повторно в этом месяце, даже если расходы временно опустились ниже него. Другую политику повторного пересечения нужно согласовать явно. Сообщение содержит категорию, лимит, рассчитанную сумму и время расчёта; банковские секреты в него не включаются.</p>
 <p>Основные метрики — возраст данных и последней успешной синхронизации по провайдерам, глубина и возраст очередей, доля reauth_required, ошибки и throttling, задержка пересчёта и расхождения контрольных сумм. Тестовые сценарии обязательно включают повторный пакет, изменение суммы, удаление, переход pending → posted, падение до сохранения курсора и отзыв доступа.</p>
 <p class="follow"><b>Почему нельзя просто прибавлять все загруженные суммы к расходам месяца?</b> Повторная загрузка удвоит расход, а исправление или удаление оставит прежнюю сумму. Сначала нужно обновить каноническое состояние операций, затем идемпотентно пересчитать затронутые итоги либо применить корректную разницу старого и нового состояния.</p>
 <p><b>Основа задачи:</b> <a href="https://github.com/donnemartin/system-design-primer/blob/master/solutions/system_design/mint/README.md">System Design Primer: Design Mint.com</a>. Выше приведён самостоятельный вариант решения с токенизированным доступом, курсорной синхронизацией и обработкой изменений операций.</p>
