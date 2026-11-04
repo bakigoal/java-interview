@@ -9699,11 +9699,23 @@ local allowed = count &lt;= limit
 <defs><marker id="sd-search-projection-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
 <path class="concept-edge" d="M160 64 V98" marker-end="url(#sd-search-projection-arrow)"/>
 <path class="concept-edge" d="M160 156 V190" marker-end="url(#sd-search-projection-arrow)"/>
-<rect class="concept-node accent" x="16" y="8" width="288" height="56" rx="9"/>
-<rect class="concept-node plain" x="16" y="102" width="288" height="54" rx="9"/>
-<rect class="concept-node accent" x="16" y="194" width="288" height="54" rx="9"/>
-<g text-anchor="middle"><text x="160" y="32">Основная БД</text><text x="160" y="52">источник истины</text><text x="160" y="125">CDC / Outbox</text><text x="160" y="145">→ индексатор</text><text x="160" y="217">Поисковый индекс</text><text x="160" y="237">поиск и ранжирование</text></g>
-</svg><figcaption id="sd-search-projection-caption">Асинхронная доставка: индекс может отставать от БД.</figcaption></figure>
+<path fill="var(--bg)" stroke="none" d="M16 15 A144 7 0 0 1 304 15 V57 A144 7 0 0 1 16 57 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="160" cy="15" rx="144" ry="7"/>
+<path class="concept-db" d="M16 15 A144 7 0 0 1 304 15 V57 A144 7 0 0 1 16 57 Z"/>
+<ellipse class="concept-db" cx="160" cy="15" rx="144" ry="7"/>
+<rect fill="var(--bg)" stroke="none" x="16" y="102" width="288" height="54" rx="9"/>
+<rect class="concept-node warning" x="16" y="102" width="288" height="54" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M16 201 A144 7 0 0 1 304 201 V241 A144 7 0 0 1 16 241 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="160" cy="201" rx="144" ry="7"/>
+<path class="concept-db" d="M16 201 A144 7 0 0 1 304 201 V241 A144 7 0 0 1 16 241 Z"/>
+<ellipse class="concept-db" cx="160" cy="201" rx="144" ry="7"/>
+<g text-anchor="middle"><text x="160" y="37">Основная БД</text><text x="160" y="57">источник истины</text><text x="160" y="125">CDC / Outbox</text><text x="160" y="145">→ индексатор</text><text x="160" y="223">Поисковый индекс</text><text x="160" y="243">поиск и ранжирование</text></g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="304" cy="102" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="304" cy="102" r="9"/>
+<text x="304" y="106" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+</svg><figcaption id="sd-search-projection-caption">Асинхронная доставка: индекс может отставать от БД. Обозначения: зелёный цилиндр — БД или поисковый индекс, янтарный блок с W — фоновый обработчик.</figcaption></figure>
 <ol><li>Сервис сохраняет изменение товара в БД.</li><li><b>CDC</b> читает изменения из журнала БД. Альтернатива — <b>outbox</b>: сервис в одной транзакции сохраняет товар и событие для индексирования.</li><li>Индексатор получает изменение и обновляет поисковый документ.</li><li>Поисковый запрос идёт в индекс, который возвращает подходящие товары с учётом релевантности.</li></ol>
 <p><b>Почему отдельный индекс ускоряет поиск?</b> В нём используется <b>инвертированный индекс</b>: для каждого слова хранится список документов, где оно встречается. Для запроса «кофемашина автоматическая» движок находит списки соответствующих документов, объединяет результаты и ранжирует их. Анализ текста может включать разбиение на слова, нормализацию и обработку словоформ.</p>
 <p>Условный обработчик события:</p>
@@ -9816,26 +9828,48 @@ local allowed = count &lt;= limit
 <rect fill="var(--bg)" stroke="none" x="172" y="124" width="128" height="58" rx="9"/><rect class="concept-node accent" x="172" y="124" width="128" height="58" rx="9"/>
 <text x="236" y="148.5" text-anchor="middle">Write Service</text>
 <text x="236" y="165.5" text-anchor="middle">Создание</text>
-<rect class="concept-node plain" x="8" y="242" width="144" height="50" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M16 242 H144 L152 250 V284 L144 292 H16 L8 284 V250 Z"/>
+<path class="concept-cache" d="M16 242 H144 L152 250 V284 L144 292 H16 L8 284 V250 Z"/>
 <text x="80" y="262.5" text-anchor="middle">Redis</text>
 <text x="80" y="279.5" text-anchor="middle">кеш ссылок</text>
-<rect class="concept-node plain" x="172" y="242" width="140" height="50" rx="9"/>
-<text x="242" y="262.5" text-anchor="middle">PostgreSQL</text>
-<text x="242" y="279.5" text-anchor="middle">primary</text>
-<rect class="concept-node plain" x="8" y="358" width="144" height="50" rx="9"/>
-<text x="80" y="378.5" text-anchor="middle">Очередь</text>
-<text x="80" y="395.5" text-anchor="middle">переходов</text>
-<rect class="concept-node plain" x="190" y="346" width="122" height="50" rx="7"/>
-<rect class="concept-node plain" x="184" y="352" width="122" height="50" rx="7"/>
-<rect class="concept-node plain" x="178" y="358" width="122" height="50" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M172 249 A70 7 0 0 1 312 249 V285 A70 7 0 0 1 172 285 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="242" cy="249" rx="70" ry="7"/>
+<path class="concept-db" d="M172 249 A70 7 0 0 1 312 249 V285 A70 7 0 0 1 172 285 Z"/>
+<ellipse class="concept-db" cx="242" cy="249" rx="70" ry="7"/>
+<text x="242" y="271" text-anchor="middle">PostgreSQL</text>
+<text x="242" y="288" text-anchor="middle">primary</text>
+<path fill="var(--bg)" stroke="none" d="M16 358 H144 A8 25 0 0 1 144 408 H16 A8 25 0 0 1 16 358 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="16" cy="383" rx="8" ry="25"/>
+<path class="concept-broker" d="M16 358 H144 A8 25 0 0 1 144 408 H16 A8 25 0 0 1 16 358 Z"/>
+<ellipse class="concept-broker" cx="16" cy="383" rx="8" ry="25"/>
+<text x="84" y="378.5" text-anchor="middle">Очередь</text>
+<text x="84" y="395.5" text-anchor="middle">переходов</text>
+<path fill="var(--bg)" stroke="none" d="M190 353 A61 7 0 0 1 312 353 V389 A61 7 0 0 1 190 389 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="353" rx="61" ry="7"/>
+<path class="concept-db" d="M190 353 A61 7 0 0 1 312 353 V389 A61 7 0 0 1 190 389 Z"/>
+<ellipse class="concept-db" cx="251" cy="353" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 359 A61 7 0 0 1 306 359 V395 A61 7 0 0 1 184 395 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="359" rx="61" ry="7"/>
+<path class="concept-db" d="M184 359 A61 7 0 0 1 306 359 V395 A61 7 0 0 1 184 395 Z"/>
+<ellipse class="concept-db" cx="245" cy="359" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 365 A61 7 0 0 1 300 365 V401 A61 7 0 0 1 178 401 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="365" rx="61" ry="7"/>
+<path class="concept-db" d="M178 365 A61 7 0 0 1 300 365 V401 A61 7 0 0 1 178 401 Z"/>
+<ellipse class="concept-db" cx="239" cy="365" rx="61" ry="7"/>
 <text x="239" y="387" text-anchor="middle">Реплики БД</text>
-<rect class="concept-node plain" x="8" y="438" width="144" height="44" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="438" width="144" height="44" rx="9"/>
+<rect class="concept-node warning" x="8" y="438" width="144" height="44" rx="9"/>
 <text x="80" y="464" text-anchor="middle">Аналитика</text>
 <text class="concept-label" x="39" y="101" text-anchor="middle">GET /{code}</text>
 <text class="concept-label" x="276" y="101" text-anchor="middle">POST /urls</text>
 <text class="concept-label" x="103" y="320" text-anchor="middle">Промах кеша</text>
 <text class="concept-label" x="242" y="326" text-anchor="middle">репликация</text>
-</svg><figcaption id="sd-url-scaled-summary-caption">Стопки блоков обозначают несколько экземпляров: Write Service и Redirect Service масштабируются независимо. Redis разгружает переходы, реплики обслуживают промахи кеша. При отсутствии кода на реплике Redirect Service проверяет primary. Пунктир — репликация и события аналитики.</figcaption></figure>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="152" cy="438" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="152" cy="438" r="9"/>
+<text x="152" y="442" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+</svg><figcaption id="sd-url-scaled-summary-caption">Стопки блоков обозначают несколько экземпляров: Write Service и Redirect Service масштабируются независимо. Redis разгружает переходы, реплики обслуживают промахи кеша. При отсутствии кода на реплике Redirect Service проверяет primary. Пунктир — репликация и события аналитики. Обозначения: зелёный цилиндр — БД или поисковый индекс, фиолетовый блок — кеш, бирюзовый горизонтальный цилиндр — очередь или поток событий, янтарный блок с W — фоновый обработчик.</figcaption></figure>
 <p><b>Write Service создаёт ссылки, Redirect Service обслуживает переходы.</b> Сервисы масштабируются независимо: переходов в 100 раз больше, поэтому им нужна отдельная группа экземпляров. БД — источник истины, Redis ускоряет чтение, аналитика обрабатывается асинхронно.</p>
     </div>
     <div class="more">
@@ -9863,9 +9897,12 @@ local allowed = count &lt;= limit
 <rect class="concept-node accent" x="40" y="100" width="240" height="64" rx="9"/>
 <text x="160" y="127.5" text-anchor="middle">Одно приложение</text>
 <text x="160" y="144.5" text-anchor="middle">Создание / переход</text>
-<rect class="concept-node plain" x="40" y="228" width="240" height="50" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M40 235 A120 7 0 0 1 280 235 V271 A120 7 0 0 1 40 271 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="160" cy="235" rx="120" ry="7"/>
+<path class="concept-db" d="M40 235 A120 7 0 0 1 280 235 V271 A120 7 0 0 1 40 271 Z"/>
+<ellipse class="concept-db" cx="160" cy="235" rx="120" ry="7"/>
 <text x="160" y="257" text-anchor="middle">PostgreSQL: code → URL</text>
-</svg><figcaption id="sd-url-base-caption">Базовая схема: одно приложение и одна БД. Кеш и распределение данных пока не нужны.</figcaption></figure>
+</svg><figcaption id="sd-url-base-caption">Базовая схема: одно приложение и одна БД. Кеш и распределение данных пока не нужны. Обозначения: зелёный цилиндр — БД или поисковый индекс.</figcaption></figure>
 <p>Начальная схема — <b>одно приложение и PostgreSQL</b>. Создание и переход — два сценария внутри приложения. БД хранит ссылки и обеспечивает уникальность кода. Redis добавляется для разгрузки чтения, очередь с обработчиком аналитики — если нужна статистика.</p>
 <p>Это исходная схема до масштабирования. В шаге 4 создание ссылок и переходы разделяются на <b>Write Service и Redirect Service</b>: нагрузка на них различается в 100 раз. В коротком ответе показана эта итоговая архитектура. <b>Источником истины остаётся БД.</b></p>
 <p><b>Шаг 3 — Детали ключевых компонентов</b></p>
@@ -9929,26 +9966,48 @@ owner_id</pre>
 <rect fill="var(--bg)" stroke="none" x="172" y="124" width="128" height="58" rx="9"/><rect class="concept-node accent" x="172" y="124" width="128" height="58" rx="9"/>
 <text x="236" y="148.5" text-anchor="middle">Write Service</text>
 <text x="236" y="165.5" text-anchor="middle">Создание</text>
-<rect class="concept-node plain" x="8" y="242" width="144" height="50" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M16 242 H144 L152 250 V284 L144 292 H16 L8 284 V250 Z"/>
+<path class="concept-cache" d="M16 242 H144 L152 250 V284 L144 292 H16 L8 284 V250 Z"/>
 <text x="80" y="262.5" text-anchor="middle">Redis</text>
 <text x="80" y="279.5" text-anchor="middle">кеш ссылок</text>
-<rect class="concept-node plain" x="172" y="242" width="140" height="50" rx="9"/>
-<text x="242" y="262.5" text-anchor="middle">PostgreSQL</text>
-<text x="242" y="279.5" text-anchor="middle">primary</text>
-<rect class="concept-node plain" x="8" y="358" width="144" height="50" rx="9"/>
-<text x="80" y="378.5" text-anchor="middle">Очередь</text>
-<text x="80" y="395.5" text-anchor="middle">переходов</text>
-<rect class="concept-node plain" x="190" y="346" width="122" height="50" rx="7"/>
-<rect class="concept-node plain" x="184" y="352" width="122" height="50" rx="7"/>
-<rect class="concept-node plain" x="178" y="358" width="122" height="50" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M172 249 A70 7 0 0 1 312 249 V285 A70 7 0 0 1 172 285 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="242" cy="249" rx="70" ry="7"/>
+<path class="concept-db" d="M172 249 A70 7 0 0 1 312 249 V285 A70 7 0 0 1 172 285 Z"/>
+<ellipse class="concept-db" cx="242" cy="249" rx="70" ry="7"/>
+<text x="242" y="271" text-anchor="middle">PostgreSQL</text>
+<text x="242" y="288" text-anchor="middle">primary</text>
+<path fill="var(--bg)" stroke="none" d="M16 358 H144 A8 25 0 0 1 144 408 H16 A8 25 0 0 1 16 358 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="16" cy="383" rx="8" ry="25"/>
+<path class="concept-broker" d="M16 358 H144 A8 25 0 0 1 144 408 H16 A8 25 0 0 1 16 358 Z"/>
+<ellipse class="concept-broker" cx="16" cy="383" rx="8" ry="25"/>
+<text x="84" y="378.5" text-anchor="middle">Очередь</text>
+<text x="84" y="395.5" text-anchor="middle">переходов</text>
+<path fill="var(--bg)" stroke="none" d="M190 353 A61 7 0 0 1 312 353 V389 A61 7 0 0 1 190 389 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="353" rx="61" ry="7"/>
+<path class="concept-db" d="M190 353 A61 7 0 0 1 312 353 V389 A61 7 0 0 1 190 389 Z"/>
+<ellipse class="concept-db" cx="251" cy="353" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 359 A61 7 0 0 1 306 359 V395 A61 7 0 0 1 184 395 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="359" rx="61" ry="7"/>
+<path class="concept-db" d="M184 359 A61 7 0 0 1 306 359 V395 A61 7 0 0 1 184 395 Z"/>
+<ellipse class="concept-db" cx="245" cy="359" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 365 A61 7 0 0 1 300 365 V401 A61 7 0 0 1 178 401 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="365" rx="61" ry="7"/>
+<path class="concept-db" d="M178 365 A61 7 0 0 1 300 365 V401 A61 7 0 0 1 178 401 Z"/>
+<ellipse class="concept-db" cx="239" cy="365" rx="61" ry="7"/>
 <text x="239" y="387" text-anchor="middle">Реплики БД</text>
-<rect class="concept-node plain" x="8" y="438" width="144" height="44" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="438" width="144" height="44" rx="9"/>
+<rect class="concept-node warning" x="8" y="438" width="144" height="44" rx="9"/>
 <text x="80" y="464" text-anchor="middle">Аналитика</text>
 <text class="concept-label" x="39" y="101" text-anchor="middle">GET /{code}</text>
 <text class="concept-label" x="276" y="101" text-anchor="middle">POST /urls</text>
 <text class="concept-label" x="103" y="320" text-anchor="middle">Промах кеша</text>
 <text class="concept-label" x="242" y="326" text-anchor="middle">репликация</text>
-</svg><figcaption id="sd-url-scaled-caption">Стопки блоков обозначают несколько экземпляров: Write Service и Redirect Service масштабируются независимо. Redis разгружает переходы, реплики обслуживают промахи кеша. При отсутствии кода на реплике Redirect Service проверяет primary. Пунктир — репликация и события аналитики.</figcaption></figure>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="152" cy="438" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="152" cy="438" r="9"/>
+<text x="152" y="442" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+</svg><figcaption id="sd-url-scaled-caption">Стопки блоков обозначают несколько экземпляров: Write Service и Redirect Service масштабируются независимо. Redis разгружает переходы, реплики обслуживают промахи кеша. При отсутствии кода на реплике Redirect Service проверяет primary. Пунктир — репликация и события аналитики. Обозначения: зелёный цилиндр — БД или поисковый индекс, фиолетовый блок — кеш, бирюзовый горизонтальный цилиндр — очередь или поток событий, янтарный блок с W — фоновый обработчик.</figcaption></figure>
 <p><b>Разделение по нагрузке.</b> Запросы <code><span class="t">POST</span> /api/v1/urls</code> и операции управления направляются в <b>Write Service</b>, а <code><span class="t">GET</span> /{code}</code> — в <b>Redirect Service</b>. У каждого сервиса собственная группа stateless-экземпляров, пулы соединений и лимиты. Поэтому рост переходов требует увеличивать N экземпляров Redirect Service, сохраняя M экземпляров Write Service по фактической нагрузке записи. Ни один переход не требует синхронного вызова Write Service.</p>
 <p><b>Данные пока общие.</b> Write Service владеет изменениями таблицы ссылок и пишет в PostgreSQL primary. Redirect Service имеет доступ на чтение: Redis → при промахе реплика → при отсутствии кода проверка primary. Отдельная копия данных с доставкой через события здесь не требуется. Общая БД сохраняет связь сервисов по схеме данных и ресурсам, поэтому доступ к primary и число соединений нужно ограничить отдельно для каждого сервиса.</p>
 <p><b>Деактивация проходит через Write Service:</b> изменение фиксируется в primary, затем инвалидируется кеш. Гарантия свежести статуса остаётся отдельным требованием. Для заданных 38 600 пиковых RPS кеш с hit rate 95% оставляет БД около <b>1 930 чтений/с</b>. Это расчёт для прогретого кеша; реальный hit rate зависит от распределения запросов.</p>
@@ -10317,50 +10376,92 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
 <rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
 <text x="74" y="94" text-anchor="middle">Write API</text>
-<rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
-<text x="245" y="85.5" text-anchor="middle">SQL: посты</text>
-<text x="245" y="102.5" text-anchor="middle">+ outbox</text>
-<rect class="concept-node plain" x="40" y="176" width="240" height="44" rx="9"/>
-<text x="160" y="202" text-anchor="middle">События публикаций</text>
+<path fill="var(--bg)" stroke="none" d="M178 71 A67 7 0 0 1 312 71 V109 A67 7 0 0 1 178 109 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="71" rx="67" ry="7"/>
+<path class="concept-db" d="M178 71 A67 7 0 0 1 312 71 V109 A67 7 0 0 1 178 109 Z"/>
+<ellipse class="concept-db" cx="245" cy="71" rx="67" ry="7"/>
+<text x="245" y="93" text-anchor="middle">SQL: посты</text>
+<text x="245" y="110" text-anchor="middle">+ outbox</text>
+<path fill="var(--bg)" stroke="none" d="M48 176 H272 A8 22 0 0 1 272 220 H48 A8 22 0 0 1 48 176 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="48" cy="198" rx="8" ry="22"/>
+<path class="concept-broker" d="M48 176 H272 A8 22 0 0 1 272 220 H48 A8 22 0 0 1 48 176 Z"/>
+<ellipse class="concept-broker" cx="48" cy="198" rx="8" ry="22"/>
+<text x="164" y="202" text-anchor="middle">События публикаций</text>
+
 <rect fill="var(--bg)" stroke="none" x="20" y="270" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="20" y="270" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="20" y="270" width="132" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="14" y="276" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="14" y="276" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="14" y="276" width="132" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="8" y="282" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="8" y="282" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="8" y="282" width="132" height="58" rx="9"/>
 <text x="74" y="315" text-anchor="middle">Fanout Service</text>
+
 <rect fill="var(--bg)" stroke="none" x="190" y="270" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="270" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="190" y="270" width="122" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="184" y="276" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="276" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="184" y="276" width="122" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="178" y="282" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="282" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="178" y="282" width="122" height="58" rx="9"/>
 <text x="239" y="315" text-anchor="middle">Search Service</text>
 <rect class="concept-node plain" x="20" y="394" width="132" height="52" rx="9"/>
 <rect class="concept-node plain" x="14" y="400" width="132" height="52" rx="9"/>
 <rect class="concept-node plain" x="8" y="406" width="132" height="52" rx="9"/>
 <text x="74" y="427.5" text-anchor="middle">User Graph</text>
 <text x="74" y="444.5" text-anchor="middle">Подписчики</text>
-<rect class="concept-node plain" x="190" y="394" width="122" height="52" rx="9"/>
-<rect class="concept-node plain" x="184" y="400" width="122" height="52" rx="9"/>
-<rect class="concept-node plain" x="178" y="406" width="122" height="52" rx="9"/>
-<text x="239" y="427.5" text-anchor="middle">Поисковый</text>
-<text x="239" y="444.5" text-anchor="middle">индекс</text>
-<rect class="concept-node plain" x="20" y="518" width="132" height="52" rx="9"/>
-<rect class="concept-node plain" x="14" y="524" width="132" height="52" rx="9"/>
-<rect class="concept-node plain" x="8" y="530" width="132" height="52" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M190 401 A61 7 0 0 1 312 401 V439 A61 7 0 0 1 190 439 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="401" rx="61" ry="7"/>
+<path class="concept-db" d="M190 401 A61 7 0 0 1 312 401 V439 A61 7 0 0 1 190 439 Z"/>
+<ellipse class="concept-db" cx="251" cy="401" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 407 A61 7 0 0 1 306 407 V445 A61 7 0 0 1 184 445 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="407" rx="61" ry="7"/>
+<path class="concept-db" d="M184 407 A61 7 0 0 1 306 407 V445 A61 7 0 0 1 184 445 Z"/>
+<ellipse class="concept-db" cx="245" cy="407" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 413 A61 7 0 0 1 300 413 V451 A61 7 0 0 1 178 451 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="413" rx="61" ry="7"/>
+<path class="concept-db" d="M178 413 A61 7 0 0 1 300 413 V451 A61 7 0 0 1 178 451 Z"/>
+<ellipse class="concept-db" cx="239" cy="413" rx="61" ry="7"/>
+<text x="239" y="435" text-anchor="middle">Поисковый</text>
+<text x="239" y="452" text-anchor="middle">индекс</text>
+<path fill="var(--bg)" stroke="none" d="M28 518 H144 L152 526 V562 L144 570 H28 L20 562 V526 Z"/>
+<path class="concept-cache" d="M28 518 H144 L152 526 V562 L144 570 H28 L20 562 V526 Z"/>
+<path fill="var(--bg)" stroke="none" d="M22 524 H138 L146 532 V568 L138 576 H22 L14 568 V532 Z"/>
+<path class="concept-cache" d="M22 524 H138 L146 532 V568 L138 576 H22 L14 568 V532 Z"/>
+<path fill="var(--bg)" stroke="none" d="M16 530 H132 L140 538 V574 L132 582 H16 L8 574 V538 Z"/>
+<path class="concept-cache" d="M16 530 H132 L140 538 V574 L132 582 H16 L8 574 V538 Z"/>
 <text x="74" y="560" text-anchor="middle">Кеш ID ленты</text>
+
 <rect fill="var(--bg)" stroke="none" x="190" y="518" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="190" y="518" width="122" height="52" rx="9"/>
+<rect class="concept-node warning" x="190" y="518" width="122" height="52" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="184" y="524" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="184" y="524" width="122" height="52" rx="9"/>
+<rect class="concept-node warning" x="184" y="524" width="122" height="52" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="178" y="530" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="178" y="530" width="122" height="52" rx="9"/>
+<rect class="concept-node warning" x="178" y="530" width="122" height="52" rx="9"/>
 <text x="239" y="551.5" text-anchor="middle">Notification</text>
 <text x="239" y="568.5" text-anchor="middle">Service</text>
 <rect class="concept-node plain" x="40" y="654" width="240" height="52" rx="9"/>
 <text x="160" y="675.5" text-anchor="middle">Объектное хранилище</text>
 <text x="160" y="692.5" text-anchor="middle">Медиа и статика</text>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="282" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="282" r="9"/>
+<text x="140" y="286" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="300" cy="282" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="300" cy="282" r="9"/>
+<text x="300" y="286" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="300" cy="530" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="300" cy="530" r="9"/>
+<text x="300" y="534" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
 </svg>
 <svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-summary-read" viewBox="0 0 320 658" role="img" aria-labelledby="sd-facebook-scaled-summary-read-title sd-facebook-scaled-summary-read-desc" xmlns="http://www.w3.org/2000/svg">
 <title id="sd-facebook-scaled-summary-read-title">Чтение: Read API, Timeline и Search Service</title><desc id="sd-facebook-scaled-summary-read-desc">Read API вызывает Timeline Service для общей ленты и читает SQL для ленты автора. Timeline запрашивает ID в кеше, посты у Post Info и авторов у User Info. Search API вызывает Search Service и индекс, затем получает актуальные посты и профили. Чтения завершаются проверкой прав и ранжированием.</desc>
@@ -10406,15 +10507,27 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="178" y="190" width="122" height="58" rx="9"/>
 <rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
 <text x="239" y="223" text-anchor="middle">Search Service</text>
-<rect class="concept-node plain" x="20" y="302" width="132" height="52" rx="9"/>
-<rect class="concept-node plain" x="14" y="308" width="132" height="52" rx="9"/>
-<rect class="concept-node plain" x="8" y="314" width="132" height="52" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M28 302 H144 L152 310 V346 L144 354 H28 L20 346 V310 Z"/>
+<path class="concept-cache" d="M28 302 H144 L152 310 V346 L144 354 H28 L20 346 V310 Z"/>
+<path fill="var(--bg)" stroke="none" d="M22 308 H138 L146 316 V352 L138 360 H22 L14 352 V316 Z"/>
+<path class="concept-cache" d="M22 308 H138 L146 316 V352 L138 360 H22 L14 352 V316 Z"/>
+<path fill="var(--bg)" stroke="none" d="M16 314 H132 L140 322 V358 L132 366 H16 L8 358 V322 Z"/>
+<path class="concept-cache" d="M16 314 H132 L140 322 V358 L132 366 H16 L8 358 V322 Z"/>
 <text x="74" y="344" text-anchor="middle">Кеш ID ленты</text>
-<rect class="concept-node plain" x="190" y="302" width="122" height="52" rx="9"/>
-<rect class="concept-node plain" x="184" y="308" width="122" height="52" rx="9"/>
-<rect class="concept-node plain" x="178" y="314" width="122" height="52" rx="9"/>
-<text x="239" y="335.5" text-anchor="middle">Поисковый</text>
-<text x="239" y="352.5" text-anchor="middle">индекс</text>
+<path fill="var(--bg)" stroke="none" d="M190 309 A61 7 0 0 1 312 309 V347 A61 7 0 0 1 190 347 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="309" rx="61" ry="7"/>
+<path class="concept-db" d="M190 309 A61 7 0 0 1 312 309 V347 A61 7 0 0 1 190 347 Z"/>
+<ellipse class="concept-db" cx="251" cy="309" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 315 A61 7 0 0 1 306 315 V353 A61 7 0 0 1 184 353 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="315" rx="61" ry="7"/>
+<path class="concept-db" d="M184 315 A61 7 0 0 1 306 315 V353 A61 7 0 0 1 184 353 Z"/>
+<ellipse class="concept-db" cx="245" cy="315" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 321 A61 7 0 0 1 300 321 V359 A61 7 0 0 1 178 359 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="321" rx="61" ry="7"/>
+<path class="concept-db" d="M178 321 A61 7 0 0 1 300 321 V359 A61 7 0 0 1 178 359 Z"/>
+<ellipse class="concept-db" cx="239" cy="321" rx="61" ry="7"/>
+<text x="239" y="343" text-anchor="middle">Поисковый</text>
+<text x="239" y="360" text-anchor="middle">индекс</text>
 <rect fill="var(--bg)" stroke="none" x="20" y="426" width="132" height="52" rx="9"/>
 <rect class="concept-node accent" x="20" y="426" width="132" height="52" rx="9"/>
 <rect fill="var(--bg)" stroke="none" x="14" y="432" width="132" height="52" rx="9"/>
@@ -10429,15 +10542,24 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="178" y="438" width="122" height="52" rx="9"/>
 <rect class="concept-node accent" x="178" y="438" width="122" height="52" rx="9"/>
 <text x="239" y="468" text-anchor="middle">User Info</text>
-<rect class="concept-node plain" x="52" y="556" width="228" height="58" rx="9"/>
-<rect class="concept-node plain" x="46" y="562" width="228" height="58" rx="9"/>
-<rect class="concept-node plain" x="40" y="568" width="228" height="58" rx="9"/>
-<text x="154" y="592.5" text-anchor="middle">SQL: посты и профили</text>
-<text x="154" y="609.5" text-anchor="middle">Реплики чтения</text>
+<path fill="var(--bg)" stroke="none" d="M52 563 A114 7 0 0 1 280 563 V607 A114 7 0 0 1 52 607 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="166" cy="563" rx="114" ry="7"/>
+<path class="concept-db" d="M52 563 A114 7 0 0 1 280 563 V607 A114 7 0 0 1 52 607 Z"/>
+<ellipse class="concept-db" cx="166" cy="563" rx="114" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M46 569 A114 7 0 0 1 274 569 V613 A114 7 0 0 1 46 613 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="160" cy="569" rx="114" ry="7"/>
+<path class="concept-db" d="M46 569 A114 7 0 0 1 274 569 V613 A114 7 0 0 1 46 613 Z"/>
+<ellipse class="concept-db" cx="160" cy="569" rx="114" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M40 575 A114 7 0 0 1 268 575 V619 A114 7 0 0 1 40 619 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="154" cy="575" rx="114" ry="7"/>
+<path class="concept-db" d="M40 575 A114 7 0 0 1 268 575 V619 A114 7 0 0 1 40 619 Z"/>
+<ellipse class="concept-db" cx="154" cy="575" rx="114" ry="7"/>
+<text x="154" y="597" text-anchor="middle">SQL: посты и профили</text>
+<text x="154" y="614" text-anchor="middle">Реплики чтения</text>
 <text class="concept-label" x="160" y="653" text-anchor="middle">После загрузки: права → ранжирование → ответ</text>
 </svg>
 </div>
-<figcaption id="sd-facebook-scaled-summary-caption">Три части одной архитектуры: доступ клиента, обработка публикации и чтение. DNS разрешает имена; клиент получает файлы у CDN, API вызывает напрямую через API Gateway. CDN читает объектное хранилище. Read API вызывает Timeline и читает ленту автора из SQL; Timeline и Search Service загружают посты/профили пакетно. Fanout и индексирование получают события независимо; Notification Service отправляет выбранные уведомления через отдельную очередь. Повторённые роли — те же компоненты. Пунктир — DNS, события и фоновые обновления; стопки — несколько экземпляров.</figcaption></figure>
+<figcaption id="sd-facebook-scaled-summary-caption">Три части одной архитектуры: доступ клиента, обработка публикации и чтение. DNS разрешает имена; клиент получает файлы у CDN, API вызывает напрямую через API Gateway. CDN читает объектное хранилище. Read API вызывает Timeline и читает ленту автора из SQL; Timeline и Search Service загружают посты/профили пакетно. Fanout и индексирование получают события независимо; Notification Service отправляет выбранные уведомления через отдельную очередь. Повторённые роли — те же компоненты. Пунктир — DNS, события и фоновые обновления; стопки — несколько экземпляров. Обозначения: зелёный цилиндр — БД или поисковый индекс, фиолетовый блок — кеш, бирюзовый горизонтальный цилиндр — очередь или поток событий, янтарный блок с W — фоновый обработчик.</figcaption></figure>
 <p><b>Лента строится гибридно:</b> ID постов обычных авторов заранее попадают в ленты активных подписчиков, посты популярных авторов подмешиваются при чтении. Поиск получает кандидатов из инвертированного индекса. Перед выдачей оба сценария проверяют актуальную видимость, затем ранжируют результаты.</p>
     </div>
     <div class="more">
@@ -10488,29 +10610,57 @@ outbox
 <text x="160" y="22" text-anchor="middle">Обработка публикации</text>
 <rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
 <text x="74" y="94" text-anchor="middle">Write API</text>
-<rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
-<text x="245" y="85.5" text-anchor="middle">SQL: посты</text>
-<text x="245" y="102.5" text-anchor="middle">+ outbox</text>
-<rect class="concept-node plain" x="40" y="176" width="240" height="44" rx="9"/>
-<text x="160" y="202" text-anchor="middle">События публикаций</text>
-<rect class="concept-node accent" x="8" y="282" width="132" height="58" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M178 71 A67 7 0 0 1 312 71 V109 A67 7 0 0 1 178 109 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="71" rx="67" ry="7"/>
+<path class="concept-db" d="M178 71 A67 7 0 0 1 312 71 V109 A67 7 0 0 1 178 109 Z"/>
+<ellipse class="concept-db" cx="245" cy="71" rx="67" ry="7"/>
+<text x="245" y="93" text-anchor="middle">SQL: посты</text>
+<text x="245" y="110" text-anchor="middle">+ outbox</text>
+<path fill="var(--bg)" stroke="none" d="M48 176 H272 A8 22 0 0 1 272 220 H48 A8 22 0 0 1 48 176 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="48" cy="198" rx="8" ry="22"/>
+<path class="concept-broker" d="M48 176 H272 A8 22 0 0 1 272 220 H48 A8 22 0 0 1 48 176 Z"/>
+<ellipse class="concept-broker" cx="48" cy="198" rx="8" ry="22"/>
+<text x="164" y="202" text-anchor="middle">События публикаций</text>
+<rect fill="var(--bg)" stroke="none" x="8" y="282" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="8" y="282" width="132" height="58" rx="9"/>
 <text x="74" y="315" text-anchor="middle">Fanout Service</text>
-<rect class="concept-node accent" x="178" y="282" width="122" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="282" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="178" y="282" width="122" height="58" rx="9"/>
 <text x="239" y="315" text-anchor="middle">Search Service</text>
 <rect class="concept-node plain" x="8" y="406" width="132" height="52" rx="9"/>
 <text x="74" y="427.5" text-anchor="middle">User Graph</text>
 <text x="74" y="444.5" text-anchor="middle">Подписчики</text>
-<rect class="concept-node plain" x="178" y="406" width="122" height="52" rx="9"/>
-<text x="239" y="427.5" text-anchor="middle">Поисковый</text>
-<text x="239" y="444.5" text-anchor="middle">индекс</text>
-<rect class="concept-node plain" x="8" y="530" width="132" height="52" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M178 413 A61 7 0 0 1 300 413 V451 A61 7 0 0 1 178 451 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="413" rx="61" ry="7"/>
+<path class="concept-db" d="M178 413 A61 7 0 0 1 300 413 V451 A61 7 0 0 1 178 451 Z"/>
+<ellipse class="concept-db" cx="239" cy="413" rx="61" ry="7"/>
+<text x="239" y="435" text-anchor="middle">Поисковый</text>
+<text x="239" y="452" text-anchor="middle">индекс</text>
+<path fill="var(--bg)" stroke="none" d="M16 530 H132 L140 538 V574 L132 582 H16 L8 574 V538 Z"/>
+<path class="concept-cache" d="M16 530 H132 L140 538 V574 L132 582 H16 L8 574 V538 Z"/>
 <text x="74" y="560" text-anchor="middle">Кеш ID ленты</text>
-<rect class="concept-node accent" x="178" y="530" width="122" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="530" width="122" height="52" rx="9"/>
+<rect class="concept-node warning" x="178" y="530" width="122" height="52" rx="9"/>
 <text x="239" y="551.5" text-anchor="middle">Notification</text>
 <text x="239" y="568.5" text-anchor="middle">Service</text>
 <rect class="concept-node plain" x="40" y="654" width="240" height="52" rx="9"/>
 <text x="160" y="675.5" text-anchor="middle">Объектное хранилище</text>
 <text x="160" y="692.5" text-anchor="middle">Медиа и статика</text>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="282" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="282" r="9"/>
+<text x="140" y="286" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="300" cy="282" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="300" cy="282" r="9"/>
+<text x="300" y="286" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="300" cy="530" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="300" cy="530" r="9"/>
+<text x="300" y="534" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
 </svg>
 <svg style="flex:1 1 280px; min-width:0" id="sd-facebook-base-read" viewBox="0 0 320 658" role="img" aria-labelledby="sd-facebook-base-read-title sd-facebook-base-read-desc" xmlns="http://www.w3.org/2000/svg">
 <title id="sd-facebook-base-read-title">Чтение: Read API, Timeline и Search Service</title><desc id="sd-facebook-base-read-desc">Read API вызывает Timeline Service для общей ленты и читает SQL для ленты автора. Timeline запрашивает ID в кеше, посты у Post Info и авторов у User Info. Search API вызывает Search Service и индекс, затем получает актуальные посты и профили. Чтения завершаются проверкой прав и ранжированием.</desc>
@@ -10536,22 +10686,29 @@ outbox
 <text x="74" y="231.5" text-anchor="middle">Service</text>
 <rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
 <text x="239" y="223" text-anchor="middle">Search Service</text>
-<rect class="concept-node plain" x="8" y="314" width="132" height="52" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M16 314 H132 L140 322 V358 L132 366 H16 L8 358 V322 Z"/>
+<path class="concept-cache" d="M16 314 H132 L140 322 V358 L132 366 H16 L8 358 V322 Z"/>
 <text x="74" y="344" text-anchor="middle">Кеш ID ленты</text>
-<rect class="concept-node plain" x="178" y="314" width="122" height="52" rx="9"/>
-<text x="239" y="335.5" text-anchor="middle">Поисковый</text>
-<text x="239" y="352.5" text-anchor="middle">индекс</text>
+<path fill="var(--bg)" stroke="none" d="M178 321 A61 7 0 0 1 300 321 V359 A61 7 0 0 1 178 359 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="321" rx="61" ry="7"/>
+<path class="concept-db" d="M178 321 A61 7 0 0 1 300 321 V359 A61 7 0 0 1 178 359 Z"/>
+<ellipse class="concept-db" cx="239" cy="321" rx="61" ry="7"/>
+<text x="239" y="343" text-anchor="middle">Поисковый</text>
+<text x="239" y="360" text-anchor="middle">индекс</text>
 <rect class="concept-node accent" x="8" y="438" width="132" height="52" rx="9"/>
 <text x="74" y="468" text-anchor="middle">Post Info</text>
 <rect class="concept-node accent" x="178" y="438" width="122" height="52" rx="9"/>
 <text x="239" y="468" text-anchor="middle">User Info</text>
-<rect class="concept-node plain" x="40" y="568" width="228" height="58" rx="9"/>
-<text x="154" y="592.5" text-anchor="middle">SQL: посты и профили</text>
-<text x="154" y="609.5" text-anchor="middle">Основная БД</text>
+<path fill="var(--bg)" stroke="none" d="M40 575 A114 7 0 0 1 268 575 V619 A114 7 0 0 1 40 619 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="154" cy="575" rx="114" ry="7"/>
+<path class="concept-db" d="M40 575 A114 7 0 0 1 268 575 V619 A114 7 0 0 1 40 619 Z"/>
+<ellipse class="concept-db" cx="154" cy="575" rx="114" ry="7"/>
+<text x="154" y="597" text-anchor="middle">SQL: посты и профили</text>
+<text x="154" y="614" text-anchor="middle">Основная БД</text>
 <text class="concept-label" x="160" y="653" text-anchor="middle">После загрузки: права → ранжирование → ответ</text>
 </svg>
 </div>
-<figcaption id="sd-facebook-base-caption">Базовые логические роли: API Gateway, API чтения/записи/поиска, Timeline, Fanout, граф связей, данные постов и авторов. В первой реализации часть ролей может быть модулями одного приложения, а индекс — частью SQL-БД. Повторённые API, индекс и хранилища обозначают те же компоненты. События и outbox отделяют надёжную публикацию от обработки.</figcaption></figure>
+<figcaption id="sd-facebook-base-caption">Базовые логические роли: API Gateway, API чтения/записи/поиска, Timeline, Fanout, граф связей, данные постов и авторов. В первой реализации часть ролей может быть модулями одного приложения, а индекс — частью SQL-БД. Повторённые API, индекс и хранилища обозначают те же компоненты. События и outbox отделяют надёжную публикацию от обработки. Обозначения: зелёный цилиндр — БД или поисковый индекс, фиолетовый блок — кеш, бирюзовый горизонтальный цилиндр — очередь или поток событий, янтарный блок с W — фоновый обработчик.</figcaption></figure>
 <p><b>Базовая логическая схема</b> разделяет API Gateway, Read/Write/Search API и предметные роли: Timeline, Fanout, граф связей, Post Info, User Info, поиск и уведомления. Часть этих ролей может начинаться модулями одного приложения, а поиск — полнотекстовым индексом PostgreSQL. Стрелки показывают обращения и потоки данных, а не обязательное разнесение каждого блока на отдельный сервер.</p>
 <p>При росте станут дороги объединение постов множества авторов на каждом чтении, полнотекстовый поиск на основной БД и рассылка поста миллионам получателей. Поэтому в шаге 4 API Gateway, API и обработчики получают независимые группы экземпляров, а представления для чтения обновляются асинхронно.</p>
 <p><b>Шаг 3 — Детали ключевых компонентов</b></p>
@@ -10676,50 +10833,92 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
 <rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
 <text x="74" y="94" text-anchor="middle">Write API</text>
-<rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
-<text x="245" y="85.5" text-anchor="middle">SQL: посты</text>
-<text x="245" y="102.5" text-anchor="middle">+ outbox</text>
-<rect class="concept-node plain" x="40" y="176" width="240" height="44" rx="9"/>
-<text x="160" y="202" text-anchor="middle">События публикаций</text>
+<path fill="var(--bg)" stroke="none" d="M178 71 A67 7 0 0 1 312 71 V109 A67 7 0 0 1 178 109 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="71" rx="67" ry="7"/>
+<path class="concept-db" d="M178 71 A67 7 0 0 1 312 71 V109 A67 7 0 0 1 178 109 Z"/>
+<ellipse class="concept-db" cx="245" cy="71" rx="67" ry="7"/>
+<text x="245" y="93" text-anchor="middle">SQL: посты</text>
+<text x="245" y="110" text-anchor="middle">+ outbox</text>
+<path fill="var(--bg)" stroke="none" d="M48 176 H272 A8 22 0 0 1 272 220 H48 A8 22 0 0 1 48 176 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="48" cy="198" rx="8" ry="22"/>
+<path class="concept-broker" d="M48 176 H272 A8 22 0 0 1 272 220 H48 A8 22 0 0 1 48 176 Z"/>
+<ellipse class="concept-broker" cx="48" cy="198" rx="8" ry="22"/>
+<text x="164" y="202" text-anchor="middle">События публикаций</text>
+
 <rect fill="var(--bg)" stroke="none" x="20" y="270" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="20" y="270" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="20" y="270" width="132" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="14" y="276" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="14" y="276" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="14" y="276" width="132" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="8" y="282" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="8" y="282" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="8" y="282" width="132" height="58" rx="9"/>
 <text x="74" y="315" text-anchor="middle">Fanout Service</text>
+
 <rect fill="var(--bg)" stroke="none" x="190" y="270" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="270" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="190" y="270" width="122" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="184" y="276" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="276" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="184" y="276" width="122" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="178" y="282" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="282" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="178" y="282" width="122" height="58" rx="9"/>
 <text x="239" y="315" text-anchor="middle">Search Service</text>
 <rect class="concept-node plain" x="20" y="394" width="132" height="52" rx="9"/>
 <rect class="concept-node plain" x="14" y="400" width="132" height="52" rx="9"/>
 <rect class="concept-node plain" x="8" y="406" width="132" height="52" rx="9"/>
 <text x="74" y="427.5" text-anchor="middle">User Graph</text>
 <text x="74" y="444.5" text-anchor="middle">Подписчики</text>
-<rect class="concept-node plain" x="190" y="394" width="122" height="52" rx="9"/>
-<rect class="concept-node plain" x="184" y="400" width="122" height="52" rx="9"/>
-<rect class="concept-node plain" x="178" y="406" width="122" height="52" rx="9"/>
-<text x="239" y="427.5" text-anchor="middle">Поисковый</text>
-<text x="239" y="444.5" text-anchor="middle">индекс</text>
-<rect class="concept-node plain" x="20" y="518" width="132" height="52" rx="9"/>
-<rect class="concept-node plain" x="14" y="524" width="132" height="52" rx="9"/>
-<rect class="concept-node plain" x="8" y="530" width="132" height="52" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M190 401 A61 7 0 0 1 312 401 V439 A61 7 0 0 1 190 439 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="401" rx="61" ry="7"/>
+<path class="concept-db" d="M190 401 A61 7 0 0 1 312 401 V439 A61 7 0 0 1 190 439 Z"/>
+<ellipse class="concept-db" cx="251" cy="401" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 407 A61 7 0 0 1 306 407 V445 A61 7 0 0 1 184 445 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="407" rx="61" ry="7"/>
+<path class="concept-db" d="M184 407 A61 7 0 0 1 306 407 V445 A61 7 0 0 1 184 445 Z"/>
+<ellipse class="concept-db" cx="245" cy="407" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 413 A61 7 0 0 1 300 413 V451 A61 7 0 0 1 178 451 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="413" rx="61" ry="7"/>
+<path class="concept-db" d="M178 413 A61 7 0 0 1 300 413 V451 A61 7 0 0 1 178 451 Z"/>
+<ellipse class="concept-db" cx="239" cy="413" rx="61" ry="7"/>
+<text x="239" y="435" text-anchor="middle">Поисковый</text>
+<text x="239" y="452" text-anchor="middle">индекс</text>
+<path fill="var(--bg)" stroke="none" d="M28 518 H144 L152 526 V562 L144 570 H28 L20 562 V526 Z"/>
+<path class="concept-cache" d="M28 518 H144 L152 526 V562 L144 570 H28 L20 562 V526 Z"/>
+<path fill="var(--bg)" stroke="none" d="M22 524 H138 L146 532 V568 L138 576 H22 L14 568 V532 Z"/>
+<path class="concept-cache" d="M22 524 H138 L146 532 V568 L138 576 H22 L14 568 V532 Z"/>
+<path fill="var(--bg)" stroke="none" d="M16 530 H132 L140 538 V574 L132 582 H16 L8 574 V538 Z"/>
+<path class="concept-cache" d="M16 530 H132 L140 538 V574 L132 582 H16 L8 574 V538 Z"/>
 <text x="74" y="560" text-anchor="middle">Кеш ID ленты</text>
+
 <rect fill="var(--bg)" stroke="none" x="190" y="518" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="190" y="518" width="122" height="52" rx="9"/>
+<rect class="concept-node warning" x="190" y="518" width="122" height="52" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="184" y="524" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="184" y="524" width="122" height="52" rx="9"/>
+<rect class="concept-node warning" x="184" y="524" width="122" height="52" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="178" y="530" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="178" y="530" width="122" height="52" rx="9"/>
+<rect class="concept-node warning" x="178" y="530" width="122" height="52" rx="9"/>
 <text x="239" y="551.5" text-anchor="middle">Notification</text>
 <text x="239" y="568.5" text-anchor="middle">Service</text>
 <rect class="concept-node plain" x="40" y="654" width="240" height="52" rx="9"/>
 <text x="160" y="675.5" text-anchor="middle">Объектное хранилище</text>
 <text x="160" y="692.5" text-anchor="middle">Медиа и статика</text>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="282" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="282" r="9"/>
+<text x="140" y="286" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="300" cy="282" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="300" cy="282" r="9"/>
+<text x="300" y="286" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="300" cy="530" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="300" cy="530" r="9"/>
+<text x="300" y="534" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
 </svg>
 <svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-read" viewBox="0 0 320 658" role="img" aria-labelledby="sd-facebook-scaled-read-title sd-facebook-scaled-read-desc" xmlns="http://www.w3.org/2000/svg">
 <title id="sd-facebook-scaled-read-title">Чтение: Read API, Timeline и Search Service</title><desc id="sd-facebook-scaled-read-desc">Read API вызывает Timeline Service для общей ленты и читает SQL для ленты автора. Timeline запрашивает ID в кеше, посты у Post Info и авторов у User Info. Search API вызывает Search Service и индекс, затем получает актуальные посты и профили. Чтения завершаются проверкой прав и ранжированием.</desc>
@@ -10765,15 +10964,27 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="178" y="190" width="122" height="58" rx="9"/>
 <rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
 <text x="239" y="223" text-anchor="middle">Search Service</text>
-<rect class="concept-node plain" x="20" y="302" width="132" height="52" rx="9"/>
-<rect class="concept-node plain" x="14" y="308" width="132" height="52" rx="9"/>
-<rect class="concept-node plain" x="8" y="314" width="132" height="52" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M28 302 H144 L152 310 V346 L144 354 H28 L20 346 V310 Z"/>
+<path class="concept-cache" d="M28 302 H144 L152 310 V346 L144 354 H28 L20 346 V310 Z"/>
+<path fill="var(--bg)" stroke="none" d="M22 308 H138 L146 316 V352 L138 360 H22 L14 352 V316 Z"/>
+<path class="concept-cache" d="M22 308 H138 L146 316 V352 L138 360 H22 L14 352 V316 Z"/>
+<path fill="var(--bg)" stroke="none" d="M16 314 H132 L140 322 V358 L132 366 H16 L8 358 V322 Z"/>
+<path class="concept-cache" d="M16 314 H132 L140 322 V358 L132 366 H16 L8 358 V322 Z"/>
 <text x="74" y="344" text-anchor="middle">Кеш ID ленты</text>
-<rect class="concept-node plain" x="190" y="302" width="122" height="52" rx="9"/>
-<rect class="concept-node plain" x="184" y="308" width="122" height="52" rx="9"/>
-<rect class="concept-node plain" x="178" y="314" width="122" height="52" rx="9"/>
-<text x="239" y="335.5" text-anchor="middle">Поисковый</text>
-<text x="239" y="352.5" text-anchor="middle">индекс</text>
+<path fill="var(--bg)" stroke="none" d="M190 309 A61 7 0 0 1 312 309 V347 A61 7 0 0 1 190 347 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="309" rx="61" ry="7"/>
+<path class="concept-db" d="M190 309 A61 7 0 0 1 312 309 V347 A61 7 0 0 1 190 347 Z"/>
+<ellipse class="concept-db" cx="251" cy="309" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 315 A61 7 0 0 1 306 315 V353 A61 7 0 0 1 184 353 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="315" rx="61" ry="7"/>
+<path class="concept-db" d="M184 315 A61 7 0 0 1 306 315 V353 A61 7 0 0 1 184 353 Z"/>
+<ellipse class="concept-db" cx="245" cy="315" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 321 A61 7 0 0 1 300 321 V359 A61 7 0 0 1 178 359 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="321" rx="61" ry="7"/>
+<path class="concept-db" d="M178 321 A61 7 0 0 1 300 321 V359 A61 7 0 0 1 178 359 Z"/>
+<ellipse class="concept-db" cx="239" cy="321" rx="61" ry="7"/>
+<text x="239" y="343" text-anchor="middle">Поисковый</text>
+<text x="239" y="360" text-anchor="middle">индекс</text>
 <rect fill="var(--bg)" stroke="none" x="20" y="426" width="132" height="52" rx="9"/>
 <rect class="concept-node accent" x="20" y="426" width="132" height="52" rx="9"/>
 <rect fill="var(--bg)" stroke="none" x="14" y="432" width="132" height="52" rx="9"/>
@@ -10788,15 +10999,24 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="178" y="438" width="122" height="52" rx="9"/>
 <rect class="concept-node accent" x="178" y="438" width="122" height="52" rx="9"/>
 <text x="239" y="468" text-anchor="middle">User Info</text>
-<rect class="concept-node plain" x="52" y="556" width="228" height="58" rx="9"/>
-<rect class="concept-node plain" x="46" y="562" width="228" height="58" rx="9"/>
-<rect class="concept-node plain" x="40" y="568" width="228" height="58" rx="9"/>
-<text x="154" y="592.5" text-anchor="middle">SQL: посты и профили</text>
-<text x="154" y="609.5" text-anchor="middle">Реплики чтения</text>
+<path fill="var(--bg)" stroke="none" d="M52 563 A114 7 0 0 1 280 563 V607 A114 7 0 0 1 52 607 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="166" cy="563" rx="114" ry="7"/>
+<path class="concept-db" d="M52 563 A114 7 0 0 1 280 563 V607 A114 7 0 0 1 52 607 Z"/>
+<ellipse class="concept-db" cx="166" cy="563" rx="114" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M46 569 A114 7 0 0 1 274 569 V613 A114 7 0 0 1 46 613 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="160" cy="569" rx="114" ry="7"/>
+<path class="concept-db" d="M46 569 A114 7 0 0 1 274 569 V613 A114 7 0 0 1 46 613 Z"/>
+<ellipse class="concept-db" cx="160" cy="569" rx="114" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M40 575 A114 7 0 0 1 268 575 V619 A114 7 0 0 1 40 619 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="154" cy="575" rx="114" ry="7"/>
+<path class="concept-db" d="M40 575 A114 7 0 0 1 268 575 V619 A114 7 0 0 1 40 619 Z"/>
+<ellipse class="concept-db" cx="154" cy="575" rx="114" ry="7"/>
+<text x="154" y="597" text-anchor="middle">SQL: посты и профили</text>
+<text x="154" y="614" text-anchor="middle">Реплики чтения</text>
 <text class="concept-label" x="160" y="653" text-anchor="middle">После загрузки: права → ранжирование → ответ</text>
 </svg>
 </div>
-<figcaption id="sd-facebook-scaled-caption">Три части одной архитектуры: доступ клиента, обработка публикации и чтение. DNS разрешает имена; клиент получает файлы у CDN, API вызывает напрямую через API Gateway. CDN читает объектное хранилище. Read API вызывает Timeline и читает ленту автора из SQL; Timeline и Search Service загружают посты/профили пакетно. Fanout и индексирование получают события независимо; Notification Service отправляет выбранные уведомления через отдельную очередь. Повторённые роли — те же компоненты. Пунктир — DNS, события и фоновые обновления; стопки — несколько экземпляров.</figcaption></figure>
+<figcaption id="sd-facebook-scaled-caption">Три части одной архитектуры: доступ клиента, обработка публикации и чтение. DNS разрешает имена; клиент получает файлы у CDN, API вызывает напрямую через API Gateway. CDN читает объектное хранилище. Read API вызывает Timeline и читает ленту автора из SQL; Timeline и Search Service загружают посты/профили пакетно. Fanout и индексирование получают события независимо; Notification Service отправляет выбранные уведомления через отдельную очередь. Повторённые роли — те же компоненты. Пунктир — DNS, события и фоновые обновления; стопки — несколько экземпляров. Обозначения: зелёный цилиндр — БД или поисковый индекс, фиолетовый блок — кеш, бирюзовый горизонтальный цилиндр — очередь или поток событий, янтарный блок с W — фоновый обработчик.</figcaption></figure>
 <p><b>Разделение по профилю нагрузки.</b> Write API отвечает за публикацию и изменения, Read API — за ленту автора и вызов Timeline Service, Search API — за вызов Search Service. Timeline Service формирует общую ленту, Search Service разбирает запрос и объединяет ответы поисковых шардов. У каждого свои экземпляры, лимиты и пулы. Журнал событий имеет независимых потребителей: fanout-работников и индексаторов. Разделение сервисов позволяет независимо увеличивать ресурсы, но требует контроля задержки производных данных.</p>
 <p><b>Распределение данных.</b> Посты можно распределять по author_id: публикация и чтение истории автора попадают в один шард. Пакетная загрузка постов разных авторов обращается к нескольким шардам. Кандидаты ленты распределяются по user_id получателя. Поисковые документы — по post_id: запрос обходит нужные поисковые шарды, каждый возвращает своих кандидатов, координатор объединяет top-K. Число шардов и глубину запросов выбирают по измерениям, а не по числу пользователей само по себе.</p>
 <div class="table-wrap"><table><tr><th>Узкое место или сбой</th><th>Решение и цена</th></tr>
@@ -10890,51 +11110,99 @@ outbox
 <text x="74" y="94" text-anchor="middle">Accounts API</text>
 <rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
 <text x="245" y="94" text-anchor="middle">Банки / агрегатор</text>
-<rect class="concept-node plain" x="8" y="190" width="132" height="52" rx="9"/>
-<text x="74" y="220" text-anchor="middle">Очередь sync</text>
+<path fill="var(--bg)" stroke="none" d="M16 190 H132 A8 26 0 0 1 132 242 H16 A8 26 0 0 1 16 190 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="16" cy="216" rx="8" ry="26"/>
+<path class="concept-broker" d="M16 190 H132 A8 26 0 0 1 132 242 H16 A8 26 0 0 1 16 190 Z"/>
+<ellipse class="concept-broker" cx="16" cy="216" rx="8" ry="26"/>
+<text x="78" y="220" text-anchor="middle">Очередь sync</text>
+
 <rect fill="var(--bg)" stroke="none" x="190" y="178" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="178" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="190" y="178" width="122" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="184" y="184" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="184" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="184" y="184" width="122" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="178" y="190" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="178" y="190" width="122" height="58" rx="9"/>
 <text x="239" y="214.5" text-anchor="middle">Загрузчик</text>
 <text x="239" y="231.5" text-anchor="middle">операций</text>
+
 <rect fill="var(--bg)" stroke="none" x="20" y="302" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="302" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="20" y="302" width="132" height="52" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="14" y="308" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="308" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="14" y="308" width="132" height="52" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="8" y="314" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="314" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="8" y="314" width="132" height="52" rx="9"/>
 <text x="74" y="335.5" text-anchor="middle">Category</text>
 <text x="74" y="352.5" text-anchor="middle">Service</text>
+
 <rect fill="var(--bg)" stroke="none" x="20" y="426" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="20" y="426" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="20" y="426" width="132" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="14" y="432" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="14" y="432" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="14" y="432" width="132" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="8" y="438" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="8" y="438" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="8" y="438" width="132" height="58" rx="9"/>
 <text x="74" y="462.5" text-anchor="middle">Budget Service</text>
 <text x="74" y="479.5" text-anchor="middle">Расходы и лимиты</text>
-<rect class="concept-node plain" x="190" y="426" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="184" y="432" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="178" y="438" width="122" height="58" rx="9"/>
-<text x="239" y="462.5" text-anchor="middle">SQL primary</text>
-<text x="239" y="479.5" text-anchor="middle">Операции, итоги</text>
+<path fill="var(--bg)" stroke="none" d="M190 433 A61 7 0 0 1 312 433 V477 A61 7 0 0 1 190 477 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="433" rx="61" ry="7"/>
+<path class="concept-db" d="M190 433 A61 7 0 0 1 312 433 V477 A61 7 0 0 1 190 477 Z"/>
+<ellipse class="concept-db" cx="251" cy="433" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 439 A61 7 0 0 1 306 439 V483 A61 7 0 0 1 184 483 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="439" rx="61" ry="7"/>
+<path class="concept-db" d="M184 439 A61 7 0 0 1 306 439 V483 A61 7 0 0 1 184 483 Z"/>
+<ellipse class="concept-db" cx="245" cy="439" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 445 A61 7 0 0 1 300 445 V489 A61 7 0 0 1 178 489 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="445" rx="61" ry="7"/>
+<path class="concept-db" d="M178 445 A61 7 0 0 1 300 445 V489 A61 7 0 0 1 178 489 Z"/>
+<ellipse class="concept-db" cx="239" cy="445" rx="61" ry="7"/>
+<text x="239" y="467" text-anchor="middle">SQL primary</text>
+<text x="239" y="484" text-anchor="middle">Операции, итоги</text>
+
 <rect fill="var(--bg)" stroke="none" x="20" y="554" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="554" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="20" y="554" width="132" height="52" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="14" y="560" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="560" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="14" y="560" width="132" height="52" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="8" y="566" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="566" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="8" y="566" width="132" height="52" rx="9"/>
 <text x="74" y="587.5" text-anchor="middle">Notification</text>
 <text x="74" y="604.5" text-anchor="middle">Service</text>
 <rect class="concept-node plain" x="178" y="566" width="134" height="52" rx="9"/>
 <text x="245" y="587.5" text-anchor="middle">Закрытый архив</text>
 <text x="245" y="604.5" text-anchor="middle">Объекты</text>
-<rect class="concept-node plain" x="40" y="676" width="240" height="44" rx="9"/>
-<text x="160" y="702" text-anchor="middle">Очередь отправки → email / push</text>
+<path fill="var(--bg)" stroke="none" d="M48 676 H272 A8 22 0 0 1 272 720 H48 A8 22 0 0 1 48 676 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="48" cy="698" rx="8" ry="22"/>
+<path class="concept-broker" d="M48 676 H272 A8 22 0 0 1 272 720 H48 A8 22 0 0 1 48 676 Z"/>
+<ellipse class="concept-broker" cx="48" cy="698" rx="8" ry="22"/>
+<text x="164" y="693" text-anchor="middle">Очередь отправки</text>
+<text x="164" y="710" text-anchor="middle">→ email / push</text>
 <text class="concept-label" x="115" y="157" text-anchor="middle">outbox</text>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="300" cy="190" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="300" cy="190" r="9"/>
+<text x="300" y="194" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="314" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="314" r="9"/>
+<text x="140" y="318" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="438" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="438" r="9"/>
+<text x="140" y="442" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="566" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="566" r="9"/>
+<text x="140" y="570" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
 </svg>
 <svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled-summary-read" viewBox="0 0 320 512" role="img" aria-labelledby="sd-mint-scaled-summary-read-title sd-mint-scaled-summary-read-desc" xmlns="http://www.w3.org/2000/svg">
 <title id="sd-mint-scaled-summary-read-title">Mint: чтение отчётов и истории</title><desc id="sd-mint-scaled-summary-read-desc">Read API читает кеш, при промахе — реплики SQL. Чтения со строгой свежестью направляются на primary с обходом старого кеша. Архив истории закрыт и доступен через отдельное задание, а не через публичный CDN.</desc>
@@ -10952,25 +11220,44 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
 <rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
 <text x="74" y="94" text-anchor="middle">Read API</text>
-<rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M186 64 H304 L312 72 V108 L304 116 H186 L178 108 V72 Z"/>
+<path class="concept-cache" d="M186 64 H304 L312 72 V108 L304 116 H186 L178 108 V72 Z"/>
 <text x="245" y="94" text-anchor="middle">Кеш отчётов</text>
-<rect class="concept-node plain" x="20" y="232" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="14" y="238" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="8" y="244" width="132" height="58" rx="9"/>
-<text x="74" y="268.5" text-anchor="middle">SQL primary</text>
-<text x="74" y="285.5" text-anchor="middle">и резерв</text>
-<rect class="concept-node plain" x="190" y="232" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="184" y="238" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="178" y="244" width="122" height="58" rx="9"/>
-<text x="239" y="268.5" text-anchor="middle">Реплики</text>
-<text x="239" y="285.5" text-anchor="middle">чтения</text>
+<path fill="var(--bg)" stroke="none" d="M20 239 A66 7 0 0 1 152 239 V283 A66 7 0 0 1 20 283 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="86" cy="239" rx="66" ry="7"/>
+<path class="concept-db" d="M20 239 A66 7 0 0 1 152 239 V283 A66 7 0 0 1 20 283 Z"/>
+<ellipse class="concept-db" cx="86" cy="239" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M14 245 A66 7 0 0 1 146 245 V289 A66 7 0 0 1 14 289 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="80" cy="245" rx="66" ry="7"/>
+<path class="concept-db" d="M14 245 A66 7 0 0 1 146 245 V289 A66 7 0 0 1 14 289 Z"/>
+<ellipse class="concept-db" cx="80" cy="245" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M8 251 A66 7 0 0 1 140 251 V295 A66 7 0 0 1 8 295 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="74" cy="251" rx="66" ry="7"/>
+<path class="concept-db" d="M8 251 A66 7 0 0 1 140 251 V295 A66 7 0 0 1 8 295 Z"/>
+<ellipse class="concept-db" cx="74" cy="251" rx="66" ry="7"/>
+<text x="74" y="273" text-anchor="middle">SQL primary</text>
+<text x="74" y="290" text-anchor="middle">и резерв</text>
+<path fill="var(--bg)" stroke="none" d="M190 239 A61 7 0 0 1 312 239 V283 A61 7 0 0 1 190 283 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="239" rx="61" ry="7"/>
+<path class="concept-db" d="M190 239 A61 7 0 0 1 312 239 V283 A61 7 0 0 1 190 283 Z"/>
+<ellipse class="concept-db" cx="251" cy="239" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 245 A61 7 0 0 1 306 245 V289 A61 7 0 0 1 184 289 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="245" rx="61" ry="7"/>
+<path class="concept-db" d="M184 245 A61 7 0 0 1 306 245 V289 A61 7 0 0 1 184 289 Z"/>
+<ellipse class="concept-db" cx="245" cy="245" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 251 A61 7 0 0 1 300 251 V295 A61 7 0 0 1 178 295 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="251" rx="61" ry="7"/>
+<path class="concept-db" d="M178 251 A61 7 0 0 1 300 251 V295 A61 7 0 0 1 178 295 Z"/>
+<ellipse class="concept-db" cx="239" cy="251" rx="61" ry="7"/>
+<text x="239" y="273" text-anchor="middle">Реплики</text>
+<text x="239" y="290" text-anchor="middle">чтения</text>
 <rect class="concept-node plain" x="40" y="414" width="240" height="58" rx="9"/>
 <text x="160" y="438.5" text-anchor="middle">Закрытый архив истории</text>
 <text x="160" y="455.5" text-anchor="middle">Доступ через фоновое задание</text>
 <text class="concept-label" x="239" y="206" text-anchor="middle">промах</text>
 </svg>
 </div>
-<figcaption id="sd-mint-scaled-summary-caption">Три части одной системы: входные маршруты, обработка операций и чтение. DNS, CDN и API Gateway — разные обращения клиента. CDN читает только статику интерфейса; банковские ответы и история находятся в закрытом архиве и не являются его origin. Accounts API и загрузчик используют одну основную SQL-БД, Read API — кеш и реплики с учётом свежести. Загрузчик получает категории, запускает расчёт бюджета и уведомляет о завершении синхронизации; Budget Service создаёт события бюджетных предупреждений. Внешние вызовы выполняются вне SQL-транзакции; задания и события фиксируются надёжно через outbox. Пунктир — DNS, задания, события и репликация; стопки — несколько экземпляров.</figcaption></figure>
+<figcaption id="sd-mint-scaled-summary-caption">Три части одной системы: входные маршруты, обработка операций и чтение. DNS, CDN и API Gateway — разные обращения клиента. CDN читает только статику интерфейса; банковские ответы и история находятся в закрытом архиве и не являются его origin. Accounts API и загрузчик используют одну основную SQL-БД, Read API — кеш и реплики с учётом свежести. Загрузчик получает категории, запускает расчёт бюджета и уведомляет о завершении синхронизации; Budget Service создаёт события бюджетных предупреждений. Внешние вызовы выполняются вне SQL-транзакции; задания и события фиксируются надёжно через outbox. Пунктир — DNS, задания, события и репликация; стопки — несколько экземпляров. Обозначения: зелёный цилиндр — БД или поисковый индекс, фиолетовый блок — кеш, бирюзовый горизонтальный цилиндр — очередь или поток событий, янтарный блок с W — фоновый обработчик.</figcaption></figure>
 <p><b>Повторная загрузка не должна удваивать расходы.</b> Нужны идентификаторы провайдера, обработка исправлений и удалений, восстановление после сбоя. Отчёт показывает время последнего обновления; суммы хранятся точно и считаются отдельно по валютам.</p>
     </div>
     <div class="more">
@@ -11022,29 +11309,63 @@ outbox
 <text x="74" y="94" text-anchor="middle">Accounts API</text>
 <rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
 <text x="245" y="94" text-anchor="middle">Банки / агрегатор</text>
-<rect class="concept-node plain" x="8" y="190" width="132" height="52" rx="9"/>
-<text x="74" y="220" text-anchor="middle">Очередь sync</text>
-<rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M16 190 H132 A8 26 0 0 1 132 242 H16 A8 26 0 0 1 16 190 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="16" cy="216" rx="8" ry="26"/>
+<path class="concept-broker" d="M16 190 H132 A8 26 0 0 1 132 242 H16 A8 26 0 0 1 16 190 Z"/>
+<ellipse class="concept-broker" cx="16" cy="216" rx="8" ry="26"/>
+<text x="78" y="220" text-anchor="middle">Очередь sync</text>
+<rect fill="var(--bg)" stroke="none" x="178" y="190" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="178" y="190" width="122" height="58" rx="9"/>
 <text x="239" y="214.5" text-anchor="middle">Загрузчик</text>
 <text x="239" y="231.5" text-anchor="middle">операций</text>
-<rect class="concept-node accent" x="8" y="314" width="132" height="52" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="314" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="8" y="314" width="132" height="52" rx="9"/>
 <text x="74" y="335.5" text-anchor="middle">Category</text>
 <text x="74" y="352.5" text-anchor="middle">Service</text>
-<rect class="concept-node accent" x="8" y="438" width="132" height="58" rx="9"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="438" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="8" y="438" width="132" height="58" rx="9"/>
 <text x="74" y="462.5" text-anchor="middle">Budget Service</text>
 <text x="74" y="479.5" text-anchor="middle">Расходы и лимиты</text>
-<rect class="concept-node plain" x="178" y="438" width="122" height="58" rx="9"/>
-<text x="239" y="462.5" text-anchor="middle">SQL-БД</text>
-<text x="239" y="479.5" text-anchor="middle">Операции, итоги</text>
-<rect class="concept-node accent" x="8" y="566" width="132" height="52" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M178 445 A61 7 0 0 1 300 445 V489 A61 7 0 0 1 178 489 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="445" rx="61" ry="7"/>
+<path class="concept-db" d="M178 445 A61 7 0 0 1 300 445 V489 A61 7 0 0 1 178 489 Z"/>
+<ellipse class="concept-db" cx="239" cy="445" rx="61" ry="7"/>
+<text x="239" y="467" text-anchor="middle">SQL-БД</text>
+<text x="239" y="484" text-anchor="middle">Операции, итоги</text>
+<rect fill="var(--bg)" stroke="none" x="8" y="566" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="8" y="566" width="132" height="52" rx="9"/>
 <text x="74" y="587.5" text-anchor="middle">Notification</text>
 <text x="74" y="604.5" text-anchor="middle">Service</text>
 <rect class="concept-node plain" x="178" y="566" width="134" height="52" rx="9"/>
 <text x="245" y="587.5" text-anchor="middle">Закрытый архив</text>
 <text x="245" y="604.5" text-anchor="middle">Объекты</text>
-<rect class="concept-node plain" x="40" y="676" width="240" height="44" rx="9"/>
-<text x="160" y="702" text-anchor="middle">Очередь отправки → email / push</text>
+<path fill="var(--bg)" stroke="none" d="M48 676 H272 A8 22 0 0 1 272 720 H48 A8 22 0 0 1 48 676 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="48" cy="698" rx="8" ry="22"/>
+<path class="concept-broker" d="M48 676 H272 A8 22 0 0 1 272 720 H48 A8 22 0 0 1 48 676 Z"/>
+<ellipse class="concept-broker" cx="48" cy="698" rx="8" ry="22"/>
+<text x="164" y="693" text-anchor="middle">Очередь отправки</text>
+<text x="164" y="710" text-anchor="middle">→ email / push</text>
 <text class="concept-label" x="115" y="157" text-anchor="middle">outbox</text>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="300" cy="190" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="300" cy="190" r="9"/>
+<text x="300" y="194" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="314" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="314" r="9"/>
+<text x="140" y="318" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="438" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="438" r="9"/>
+<text x="140" y="442" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="566" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="566" r="9"/>
+<text x="140" y="570" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
 </svg>
 <svg style="flex:1 1 280px; min-width:0" id="sd-mint-base-read" viewBox="0 0 320 286" role="img" aria-labelledby="sd-mint-base-read-title sd-mint-base-read-desc" xmlns="http://www.w3.org/2000/svg">
 <title id="sd-mint-base-read-title">Базовое чтение отчётов</title><desc id="sd-mint-base-read-desc">Accounts API получает сохранённые операции и итоги из SQL-БД. Чтение отчёта не вызывает банк и не ожидает завершения синхронизации.</desc>
@@ -11053,11 +11374,14 @@ outbox
 <text x="160" y="22" text-anchor="middle">Чтение отчётов и истории</text>
 <rect class="concept-node accent" x="40" y="64" width="240" height="52" rx="9"/>
 <text x="160" y="94" text-anchor="middle">Accounts API: чтение отчёта</text>
-<rect class="concept-node plain" x="40" y="198" width="240" height="58" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M40 205 A120 7 0 0 1 280 205 V249 A120 7 0 0 1 40 249 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="160" cy="205" rx="120" ry="7"/>
+<path class="concept-db" d="M40 205 A120 7 0 0 1 280 205 V249 A120 7 0 0 1 40 249 Z"/>
+<ellipse class="concept-db" cx="160" cy="205" rx="120" ry="7"/>
 <text x="160" y="231" text-anchor="middle">SQL: операции и итоги</text>
 </svg>
 </div>
-<figcaption id="sd-mint-base-caption">Базовая схема показывает роли, а не обязательные отдельные микросервисы. Accounts API обслуживает подключения и чтение, очередь отделяет загрузку банка, загрузчик обращается к категоризации, бюджету, уведомлениям, SQL и закрытому архиву. Эти роли могут начинаться модулями одного приложения. Вызовы сервисов показывают зависимости; они не означают одну длинную SQL-транзакцию.</figcaption></figure>
+<figcaption id="sd-mint-base-caption">Базовая схема показывает роли, а не обязательные отдельные микросервисы. Accounts API обслуживает подключения и чтение, очередь отделяет загрузку банка, загрузчик обращается к категоризации, бюджету, уведомлениям, SQL и закрытому архиву. Эти роли могут начинаться модулями одного приложения. Вызовы сервисов показывают зависимости; они не означают одну длинную SQL-транзакцию. Обозначения: зелёный цилиндр — БД или поисковый индекс, бирюзовый горизонтальный цилиндр — очередь или поток событий, янтарный блок с W — фоновый обработчик.</figcaption></figure>
 <p><b>Базовая логическая схема</b> разделяет API Gateway, Accounts API, очередь, загрузчик, категоризацию, бюджеты, уведомления и хранилища. Начать можно с модулей одного приложения и PostgreSQL: Accounts API обслуживает подключения и отчёты, таблица заданий и фоновый исполнитель обеспечивают загрузку. Сетевой запрос к банку выполняется за пределами транзакции БД. Отчёт использует сохранённые операции и показывает <code>last_successful_sync_at</code>, поэтому отказ банка не блокирует чтение.</p>
 <p>Подключение, начальная загрузка истории и последующие обновления имеют разные сроки и стоимость. Их нужно различать уже в модели задания. При росте API Gateway, Accounts API, Read API и обработчики масштабируются отдельными группами, как показано в шаге 4.</p>
 <p><b>Шаг 3 — Детали ключевых компонентов</b></p>
@@ -11179,51 +11503,99 @@ outbox
 <text x="74" y="94" text-anchor="middle">Accounts API</text>
 <rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
 <text x="245" y="94" text-anchor="middle">Банки / агрегатор</text>
-<rect class="concept-node plain" x="8" y="190" width="132" height="52" rx="9"/>
-<text x="74" y="220" text-anchor="middle">Очередь sync</text>
+<path fill="var(--bg)" stroke="none" d="M16 190 H132 A8 26 0 0 1 132 242 H16 A8 26 0 0 1 16 190 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="16" cy="216" rx="8" ry="26"/>
+<path class="concept-broker" d="M16 190 H132 A8 26 0 0 1 132 242 H16 A8 26 0 0 1 16 190 Z"/>
+<ellipse class="concept-broker" cx="16" cy="216" rx="8" ry="26"/>
+<text x="78" y="220" text-anchor="middle">Очередь sync</text>
+
 <rect fill="var(--bg)" stroke="none" x="190" y="178" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="178" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="190" y="178" width="122" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="184" y="184" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="184" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="184" y="184" width="122" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="178" y="190" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="178" y="190" width="122" height="58" rx="9"/>
 <text x="239" y="214.5" text-anchor="middle">Загрузчик</text>
 <text x="239" y="231.5" text-anchor="middle">операций</text>
+
 <rect fill="var(--bg)" stroke="none" x="20" y="302" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="302" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="20" y="302" width="132" height="52" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="14" y="308" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="308" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="14" y="308" width="132" height="52" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="8" y="314" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="314" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="8" y="314" width="132" height="52" rx="9"/>
 <text x="74" y="335.5" text-anchor="middle">Category</text>
 <text x="74" y="352.5" text-anchor="middle">Service</text>
+
 <rect fill="var(--bg)" stroke="none" x="20" y="426" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="20" y="426" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="20" y="426" width="132" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="14" y="432" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="14" y="432" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="14" y="432" width="132" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="8" y="438" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="8" y="438" width="132" height="58" rx="9"/>
+<rect class="concept-node warning" x="8" y="438" width="132" height="58" rx="9"/>
 <text x="74" y="462.5" text-anchor="middle">Budget Service</text>
 <text x="74" y="479.5" text-anchor="middle">Расходы и лимиты</text>
-<rect class="concept-node plain" x="190" y="426" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="184" y="432" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="178" y="438" width="122" height="58" rx="9"/>
-<text x="239" y="462.5" text-anchor="middle">SQL primary</text>
-<text x="239" y="479.5" text-anchor="middle">Операции, итоги</text>
+<path fill="var(--bg)" stroke="none" d="M190 433 A61 7 0 0 1 312 433 V477 A61 7 0 0 1 190 477 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="433" rx="61" ry="7"/>
+<path class="concept-db" d="M190 433 A61 7 0 0 1 312 433 V477 A61 7 0 0 1 190 477 Z"/>
+<ellipse class="concept-db" cx="251" cy="433" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 439 A61 7 0 0 1 306 439 V483 A61 7 0 0 1 184 483 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="439" rx="61" ry="7"/>
+<path class="concept-db" d="M184 439 A61 7 0 0 1 306 439 V483 A61 7 0 0 1 184 483 Z"/>
+<ellipse class="concept-db" cx="245" cy="439" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 445 A61 7 0 0 1 300 445 V489 A61 7 0 0 1 178 489 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="445" rx="61" ry="7"/>
+<path class="concept-db" d="M178 445 A61 7 0 0 1 300 445 V489 A61 7 0 0 1 178 489 Z"/>
+<ellipse class="concept-db" cx="239" cy="445" rx="61" ry="7"/>
+<text x="239" y="467" text-anchor="middle">SQL primary</text>
+<text x="239" y="484" text-anchor="middle">Операции, итоги</text>
+
 <rect fill="var(--bg)" stroke="none" x="20" y="554" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="554" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="20" y="554" width="132" height="52" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="14" y="560" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="560" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="14" y="560" width="132" height="52" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="8" y="566" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="566" width="132" height="52" rx="9"/>
+<rect class="concept-node warning" x="8" y="566" width="132" height="52" rx="9"/>
 <text x="74" y="587.5" text-anchor="middle">Notification</text>
 <text x="74" y="604.5" text-anchor="middle">Service</text>
 <rect class="concept-node plain" x="178" y="566" width="134" height="52" rx="9"/>
 <text x="245" y="587.5" text-anchor="middle">Закрытый архив</text>
 <text x="245" y="604.5" text-anchor="middle">Объекты</text>
-<rect class="concept-node plain" x="40" y="676" width="240" height="44" rx="9"/>
-<text x="160" y="702" text-anchor="middle">Очередь отправки → email / push</text>
+<path fill="var(--bg)" stroke="none" d="M48 676 H272 A8 22 0 0 1 272 720 H48 A8 22 0 0 1 48 676 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="48" cy="698" rx="8" ry="22"/>
+<path class="concept-broker" d="M48 676 H272 A8 22 0 0 1 272 720 H48 A8 22 0 0 1 48 676 Z"/>
+<ellipse class="concept-broker" cx="48" cy="698" rx="8" ry="22"/>
+<text x="164" y="693" text-anchor="middle">Очередь отправки</text>
+<text x="164" y="710" text-anchor="middle">→ email / push</text>
 <text class="concept-label" x="115" y="157" text-anchor="middle">outbox</text>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="300" cy="190" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="300" cy="190" r="9"/>
+<text x="300" y="194" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="314" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="314" r="9"/>
+<text x="140" y="318" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="438" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="438" r="9"/>
+<text x="140" y="442" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="566" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="566" r="9"/>
+<text x="140" y="570" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
 </svg>
 <svg style="flex:1 1 280px; min-width:0" id="sd-mint-scaled-read" viewBox="0 0 320 512" role="img" aria-labelledby="sd-mint-scaled-read-title sd-mint-scaled-read-desc" xmlns="http://www.w3.org/2000/svg">
 <title id="sd-mint-scaled-read-title">Mint: чтение отчётов и истории</title><desc id="sd-mint-scaled-read-desc">Read API читает кеш, при промахе — реплики SQL. Чтения со строгой свежестью направляются на primary с обходом старого кеша. Архив истории закрыт и доступен через отдельное задание, а не через публичный CDN.</desc>
@@ -11241,25 +11613,44 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
 <rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
 <text x="74" y="94" text-anchor="middle">Read API</text>
-<rect class="concept-node plain" x="178" y="64" width="134" height="52" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M186 64 H304 L312 72 V108 L304 116 H186 L178 108 V72 Z"/>
+<path class="concept-cache" d="M186 64 H304 L312 72 V108 L304 116 H186 L178 108 V72 Z"/>
 <text x="245" y="94" text-anchor="middle">Кеш отчётов</text>
-<rect class="concept-node plain" x="20" y="232" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="14" y="238" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="8" y="244" width="132" height="58" rx="9"/>
-<text x="74" y="268.5" text-anchor="middle">SQL primary</text>
-<text x="74" y="285.5" text-anchor="middle">и резерв</text>
-<rect class="concept-node plain" x="190" y="232" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="184" y="238" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="178" y="244" width="122" height="58" rx="9"/>
-<text x="239" y="268.5" text-anchor="middle">Реплики</text>
-<text x="239" y="285.5" text-anchor="middle">чтения</text>
+<path fill="var(--bg)" stroke="none" d="M20 239 A66 7 0 0 1 152 239 V283 A66 7 0 0 1 20 283 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="86" cy="239" rx="66" ry="7"/>
+<path class="concept-db" d="M20 239 A66 7 0 0 1 152 239 V283 A66 7 0 0 1 20 283 Z"/>
+<ellipse class="concept-db" cx="86" cy="239" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M14 245 A66 7 0 0 1 146 245 V289 A66 7 0 0 1 14 289 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="80" cy="245" rx="66" ry="7"/>
+<path class="concept-db" d="M14 245 A66 7 0 0 1 146 245 V289 A66 7 0 0 1 14 289 Z"/>
+<ellipse class="concept-db" cx="80" cy="245" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M8 251 A66 7 0 0 1 140 251 V295 A66 7 0 0 1 8 295 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="74" cy="251" rx="66" ry="7"/>
+<path class="concept-db" d="M8 251 A66 7 0 0 1 140 251 V295 A66 7 0 0 1 8 295 Z"/>
+<ellipse class="concept-db" cx="74" cy="251" rx="66" ry="7"/>
+<text x="74" y="273" text-anchor="middle">SQL primary</text>
+<text x="74" y="290" text-anchor="middle">и резерв</text>
+<path fill="var(--bg)" stroke="none" d="M190 239 A61 7 0 0 1 312 239 V283 A61 7 0 0 1 190 283 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="239" rx="61" ry="7"/>
+<path class="concept-db" d="M190 239 A61 7 0 0 1 312 239 V283 A61 7 0 0 1 190 283 Z"/>
+<ellipse class="concept-db" cx="251" cy="239" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 245 A61 7 0 0 1 306 245 V289 A61 7 0 0 1 184 289 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="245" rx="61" ry="7"/>
+<path class="concept-db" d="M184 245 A61 7 0 0 1 306 245 V289 A61 7 0 0 1 184 289 Z"/>
+<ellipse class="concept-db" cx="245" cy="245" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 251 A61 7 0 0 1 300 251 V295 A61 7 0 0 1 178 295 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="251" rx="61" ry="7"/>
+<path class="concept-db" d="M178 251 A61 7 0 0 1 300 251 V295 A61 7 0 0 1 178 295 Z"/>
+<ellipse class="concept-db" cx="239" cy="251" rx="61" ry="7"/>
+<text x="239" y="273" text-anchor="middle">Реплики</text>
+<text x="239" y="290" text-anchor="middle">чтения</text>
 <rect class="concept-node plain" x="40" y="414" width="240" height="58" rx="9"/>
 <text x="160" y="438.5" text-anchor="middle">Закрытый архив истории</text>
 <text x="160" y="455.5" text-anchor="middle">Доступ через фоновое задание</text>
 <text class="concept-label" x="239" y="206" text-anchor="middle">промах</text>
 </svg>
 </div>
-<figcaption id="sd-mint-scaled-caption">Три части одной системы: входные маршруты, обработка операций и чтение. DNS, CDN и API Gateway — разные обращения клиента. CDN читает только статику интерфейса; банковские ответы и история находятся в закрытом архиве и не являются его origin. Accounts API и загрузчик используют одну основную SQL-БД, Read API — кеш и реплики с учётом свежести. Загрузчик получает категории, запускает расчёт бюджета и уведомляет о завершении синхронизации; Budget Service создаёт события бюджетных предупреждений. Внешние вызовы выполняются вне SQL-транзакции; задания и события фиксируются надёжно через outbox. Пунктир — DNS, задания, события и репликация; стопки — несколько экземпляров.</figcaption></figure>
+<figcaption id="sd-mint-scaled-caption">Три части одной системы: входные маршруты, обработка операций и чтение. DNS, CDN и API Gateway — разные обращения клиента. CDN читает только статику интерфейса; банковские ответы и история находятся в закрытом архиве и не являются его origin. Accounts API и загрузчик используют одну основную SQL-БД, Read API — кеш и реплики с учётом свежести. Загрузчик получает категории, запускает расчёт бюджета и уведомляет о завершении синхронизации; Budget Service создаёт события бюджетных предупреждений. Внешние вызовы выполняются вне SQL-транзакции; задания и события фиксируются надёжно через outbox. Пунктир — DNS, задания, события и репликация; стопки — несколько экземпляров. Обозначения: зелёный цилиндр — БД или поисковый индекс, фиолетовый блок — кеш, бирюзовый горизонтальный цилиндр — очередь или поток событий, янтарный блок с W — фоновый обработчик.</figcaption></figure>
 <p><b>Разделение по нагрузке.</b> Accounts API управляет подключениями и обновлениями, Read API обслуживает историю и отчёты, загрузчики выполняют банковские вызовы, Category Service определяет категории, Budget Service пересчитывает расходы и проверяет лимиты, Notification Service отправляет выбранные уведомления. Очереди отделяют импорт от обработки. Создание задания и outbox фиксируются одной транзакцией; публикация может повториться, поэтому повторно обработать задание должно быть безопасно.</p>
 <p><b>Планирование и квоты.</b> Задания распределяются по времени с jitter, обновления активных подключений имеют больший приоритет, начальная история получает отдельный бюджет. Webhook используется как сигнал проверить изменения; отправитель проверяется, повторный сигнал не создаёт параллельную синхронизацию. Лимитер учитывает общую квоту провайдера по всем экземплярам. Дополнительные работники не увеличат разрешённую скорость банка.</p>
 <div class="table-wrap"><table><tr><th>Узкое место или сбой</th><th>Решение и компромисс</th></tr>
@@ -11364,18 +11755,37 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="178" y="64" width="122" height="52" rx="9"/>
 <rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
 <text x="239" y="94" text-anchor="middle">Read API</text>
-<rect class="concept-node plain" x="178" y="190" width="134" height="52" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M186 190 H304 L312 198 V234 L304 242 H186 L178 234 V198 Z"/>
+<path class="concept-cache" d="M186 190 H304 L312 198 V234 L304 242 H186 L178 234 V198 Z"/>
 <text x="245" y="220" text-anchor="middle">Кеш в памяти</text>
-<rect class="concept-node plain" x="20" y="302" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="14" y="308" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="8" y="314" width="132" height="58" rx="9"/>
-<text x="74" y="338.5" text-anchor="middle">SQL primary</text>
-<text x="74" y="355.5" text-anchor="middle">и резерв</text>
-<rect class="concept-node plain" x="190" y="302" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="184" y="308" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="178" y="314" width="122" height="58" rx="9"/>
-<text x="239" y="338.5" text-anchor="middle">Реплики</text>
-<text x="239" y="355.5" text-anchor="middle">чтения</text>
+<path fill="var(--bg)" stroke="none" d="M20 309 A66 7 0 0 1 152 309 V353 A66 7 0 0 1 20 353 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="86" cy="309" rx="66" ry="7"/>
+<path class="concept-db" d="M20 309 A66 7 0 0 1 152 309 V353 A66 7 0 0 1 20 353 Z"/>
+<ellipse class="concept-db" cx="86" cy="309" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M14 315 A66 7 0 0 1 146 315 V359 A66 7 0 0 1 14 359 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="80" cy="315" rx="66" ry="7"/>
+<path class="concept-db" d="M14 315 A66 7 0 0 1 146 315 V359 A66 7 0 0 1 14 359 Z"/>
+<ellipse class="concept-db" cx="80" cy="315" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M8 321 A66 7 0 0 1 140 321 V365 A66 7 0 0 1 8 365 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="74" cy="321" rx="66" ry="7"/>
+<path class="concept-db" d="M8 321 A66 7 0 0 1 140 321 V365 A66 7 0 0 1 8 365 Z"/>
+<ellipse class="concept-db" cx="74" cy="321" rx="66" ry="7"/>
+<text x="74" y="343" text-anchor="middle">SQL primary</text>
+<text x="74" y="360" text-anchor="middle">и резерв</text>
+<path fill="var(--bg)" stroke="none" d="M190 309 A61 7 0 0 1 312 309 V353 A61 7 0 0 1 190 353 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="309" rx="61" ry="7"/>
+<path class="concept-db" d="M190 309 A61 7 0 0 1 312 309 V353 A61 7 0 0 1 190 353 Z"/>
+<ellipse class="concept-db" cx="251" cy="309" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 315 A61 7 0 0 1 306 315 V359 A61 7 0 0 1 184 359 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="315" rx="61" ry="7"/>
+<path class="concept-db" d="M184 315 A61 7 0 0 1 306 315 V359 A61 7 0 0 1 184 359 Z"/>
+<ellipse class="concept-db" cx="245" cy="315" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 321 A61 7 0 0 1 300 321 V365 A61 7 0 0 1 178 365 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="321" rx="61" ry="7"/>
+<path class="concept-db" d="M178 321 A61 7 0 0 1 300 321 V365 A61 7 0 0 1 178 365 Z"/>
+<ellipse class="concept-db" cx="239" cy="321" rx="61" ry="7"/>
+<text x="239" y="343" text-anchor="middle">Реплики</text>
+<text x="239" y="360" text-anchor="middle">чтения</text>
 <rect class="concept-node plain" x="40" y="450" width="240" height="56" rx="9"/>
 <text x="160" y="482" text-anchor="middle">Объектное хранилище</text>
 <text class="concept-label" x="275" y="278" text-anchor="middle">промах</text>
@@ -11399,21 +11809,39 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
 <rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
 <text x="74" y="94" text-anchor="middle">Async API</text>
-<rect class="concept-node plain" x="8" y="190" width="132" height="52" rx="9"/>
-<text x="74" y="211.5" text-anchor="middle">БД заданий</text>
-<text x="74" y="228.5" text-anchor="middle">+ outbox</text>
-<rect class="concept-node plain" x="178" y="190" width="134" height="52" rx="9"/>
-<text x="245" y="220" text-anchor="middle">Очередь</text>
+<path fill="var(--bg)" stroke="none" d="M8 197 A66 7 0 0 1 140 197 V235 A66 7 0 0 1 8 235 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="74" cy="197" rx="66" ry="7"/>
+<path class="concept-db" d="M8 197 A66 7 0 0 1 140 197 V235 A66 7 0 0 1 8 235 Z"/>
+<ellipse class="concept-db" cx="74" cy="197" rx="66" ry="7"/>
+<text x="74" y="219" text-anchor="middle">БД заданий</text>
+<text x="74" y="236" text-anchor="middle">+ outbox</text>
+<path fill="var(--bg)" stroke="none" d="M186 190 H304 A8 26 0 0 1 304 242 H186 A8 26 0 0 1 186 190 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="186" cy="216" rx="8" ry="26"/>
+<path class="concept-broker" d="M186 190 H304 A8 26 0 0 1 304 242 H186 A8 26 0 0 1 186 190 Z"/>
+<ellipse class="concept-broker" cx="186" cy="216" rx="8" ry="26"/>
+<text x="249" y="220" text-anchor="middle">Очередь</text>
+
 <rect fill="var(--bg)" stroke="none" x="190" y="302" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="302" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="190" y="302" width="122" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="184" y="308" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="308" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="184" y="308" width="122" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="178" y="314" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="314" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="178" y="314" width="122" height="58" rx="9"/>
 <text x="239" y="347" text-anchor="middle">Воркеры</text>
-<rect class="concept-node plain" x="20" y="426" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="14" y="432" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="8" y="438" width="132" height="58" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M20 433 A66 7 0 0 1 152 433 V477 A66 7 0 0 1 20 477 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="86" cy="433" rx="66" ry="7"/>
+<path class="concept-db" d="M20 433 A66 7 0 0 1 152 433 V477 A66 7 0 0 1 20 477 Z"/>
+<ellipse class="concept-db" cx="86" cy="433" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M14 439 A66 7 0 0 1 146 439 V483 A66 7 0 0 1 14 483 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="80" cy="439" rx="66" ry="7"/>
+<path class="concept-db" d="M14 439 A66 7 0 0 1 146 439 V483 A66 7 0 0 1 14 483 Z"/>
+<ellipse class="concept-db" cx="80" cy="439" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M8 445 A66 7 0 0 1 140 445 V489 A66 7 0 0 1 8 489 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="74" cy="445" rx="66" ry="7"/>
+<path class="concept-db" d="M8 445 A66 7 0 0 1 140 445 V489 A66 7 0 0 1 8 489 Z"/>
+<ellipse class="concept-db" cx="74" cy="445" rx="66" ry="7"/>
 <text x="74" y="471" text-anchor="middle">SQL-БД</text>
 <rect class="concept-node plain" x="178" y="438" width="134" height="58" rx="9"/>
 <text x="245" y="462.5" text-anchor="middle">Объектное</text>
@@ -11422,15 +11850,26 @@ outbox
 <text x="74" y="569.5" text-anchor="middle">Другое</text>
 <text x="74" y="586.5" text-anchor="middle">хранилище</text>
 <text class="concept-label" x="160" y="642" text-anchor="middle">Варианты масштабирования SQL</text>
-<rect class="concept-node plain" x="8" y="662" width="132" height="52" rx="9"/>
-<text x="74" y="683.5" text-anchor="middle">Шарды</text>
-<text x="74" y="700.5" text-anchor="middle">по user_id</text>
-<rect class="concept-node plain" x="178" y="662" width="134" height="52" rx="9"/>
-<text x="245" y="683.5" text-anchor="middle">БД по доменам</text>
-<text x="245" y="700.5" text-anchor="middle">Клиенты / товары</text>
+<path fill="var(--bg)" stroke="none" d="M8 669 A66 7 0 0 1 140 669 V707 A66 7 0 0 1 8 707 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="74" cy="669" rx="66" ry="7"/>
+<path class="concept-db" d="M8 669 A66 7 0 0 1 140 669 V707 A66 7 0 0 1 8 707 Z"/>
+<ellipse class="concept-db" cx="74" cy="669" rx="66" ry="7"/>
+<text x="74" y="691" text-anchor="middle">Шарды</text>
+<text x="74" y="708" text-anchor="middle">по user_id</text>
+<path fill="var(--bg)" stroke="none" d="M178 669 A67 7 0 0 1 312 669 V707 A67 7 0 0 1 178 707 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="669" rx="67" ry="7"/>
+<path class="concept-db" d="M178 669 A67 7 0 0 1 312 669 V707 A67 7 0 0 1 178 707 Z"/>
+<ellipse class="concept-db" cx="245" cy="669" rx="67" ry="7"/>
+<text x="245" y="691" text-anchor="middle">БД по доменам</text>
+<text x="245" y="708" text-anchor="middle">Клиенты / товары</text>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="300" cy="314" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="300" cy="314" r="9"/>
+<text x="300" y="318" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
 </svg>
 </div>
-<figcaption id="sd-scaling-scaled-summary-caption">Три части одной системы: входные маршруты, Read/Write API и фоновая обработка. Клиент запрашивает адрес у DNS; файлы получает через CDN, API вызывает напрямую через API Gateway. CDN читает объектное хранилище, а не передаёт API-запросы API Gateway. Повторённые API и хранилища обозначают те же компоненты. Другое хранилище, шарды и разделение БД по доменам — варианты по результатам измерений, их не требуется вводить одновременно. Стопки — несколько экземпляров; пунктир — DNS, репликация, outbox и варианты эволюции.</figcaption></figure>
+<figcaption id="sd-scaling-scaled-summary-caption">Три части одной системы: входные маршруты, Read/Write API и фоновая обработка. Клиент запрашивает адрес у DNS; файлы получает через CDN, API вызывает напрямую через API Gateway. CDN читает объектное хранилище, а не передаёт API-запросы API Gateway. Повторённые API и хранилища обозначают те же компоненты. Другое хранилище, шарды и разделение БД по доменам — варианты по результатам измерений, их не требуется вводить одновременно. Стопки — несколько экземпляров; пунктир — DNS, репликация, outbox и варианты эволюции. Обозначения: зелёный цилиндр — БД или поисковый индекс, фиолетовый блок — кеш, бирюзовый горизонтальный цилиндр — очередь или поток событий, янтарный блок с W — фоновый обработчик.</figcaption></figure>
 <p><b>Количество пользователей не задаёт число серверов.</b> Нужны RPS, профиль запросов, размеры данных, пики и допустимая свежесть. После каждого изменения повторяется цикл: нагрузочный тест → поиск узкого места → сравнение вариантов → проверка результата.</p>
     </div>
     <div class="more">
@@ -11482,12 +11921,15 @@ outbox
 <text x="245" y="36" text-anchor="middle">DNS</text>
 <rect class="concept-node accent" x="40" y="128" width="240" height="58" rx="9"/>
 <text x="160" y="161" text-anchor="middle">Приложение</text>
-<rect class="concept-node plain" x="8" y="266" width="140" height="62" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M8 273 A70 7 0 0 1 148 273 V321 A70 7 0 0 1 8 321 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="78" cy="273" rx="70" ry="7"/>
+<path class="concept-db" d="M8 273 A70 7 0 0 1 148 273 V321 A70 7 0 0 1 8 321 Z"/>
+<ellipse class="concept-db" cx="78" cy="273" rx="70" ry="7"/>
 <text x="78" y="301" text-anchor="middle">SQL-БД</text>
 <rect class="concept-node plain" x="178" y="266" width="134" height="62" rx="9"/>
 <text x="245" y="292.5" text-anchor="middle">Объектное</text>
 <text x="245" y="309.5" text-anchor="middle">хранилище</text>
-</svg><figcaption id="sd-scaling-separated-caption">Клиент обращается к DNS за адресом, к приложению — по HTTPS. Приложение читает и записывает данные в отдельных хранилищах. DNS не является промежуточным HTTP-сервером.</figcaption></figure>
+</svg><figcaption id="sd-scaling-separated-caption">Клиент обращается к DNS за адресом, к приложению — по HTTPS. Приложение читает и записывает данные в отдельных хранилищах. DNS не является промежуточным HTTP-сервером. Обозначения: зелёный цилиндр — БД или поисковый индекс.</figcaption></figure>
 <p><b>Допущение.</b> БД и приложение конкурируют за CPU/память, локальный диск заполняется файлами. Увеличивать общий сервер становится дорого, а ресурсы нужны разным компонентам в разных пропорциях.</p>
 <p><b>Цель.</b> Масштабировать вычисления и хранение независимо.</p>
 <p><b>Изменения.</b> Перенести реляционную БД на отдельный узел, файлы — в объектное хранилище. Приложение сохраняет в БД ключ объекта и метаданные. Доступ к пользовательским файлам выдаётся после проверки прав. БД находится в закрытом сетевом сегменте; её порт доступен только компонентам, которым он нужен. Управляемая или собственная инфраструктура — отдельный эксплуатационный выбор.</p>
@@ -11545,12 +11987,21 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="178" y="334" width="122" height="52" rx="9"/>
 <rect class="concept-node accent" x="178" y="334" width="122" height="52" rx="9"/>
 <text x="239" y="364" text-anchor="middle">Read API</text>
-<rect class="concept-node plain" x="20" y="426" width="132" height="56" rx="9"/>
-<rect class="concept-node plain" x="14" y="432" width="132" height="56" rx="9"/>
-<rect class="concept-node plain" x="8" y="438" width="132" height="56" rx="9"/>
-<text x="74" y="461.5" text-anchor="middle">SQL primary</text>
-<text x="74" y="478.5" text-anchor="middle">и резерв</text>
-</svg><figcaption id="sd-scaling-available-caption">Клиент → DNS — запрос адреса, клиент → CDN — файлы, клиент → API Gateway — API. CDN обращается к объектному хранилищу. API Gateway маршрутизирует запросы в Read/Write API. SQL primary имеет резерв в другой зоне; каждый слой масштабируется своей группой.</figcaption></figure>
+<path fill="var(--bg)" stroke="none" d="M20 433 A66 7 0 0 1 152 433 V475 A66 7 0 0 1 20 475 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="86" cy="433" rx="66" ry="7"/>
+<path class="concept-db" d="M20 433 A66 7 0 0 1 152 433 V475 A66 7 0 0 1 20 475 Z"/>
+<ellipse class="concept-db" cx="86" cy="433" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M14 439 A66 7 0 0 1 146 439 V481 A66 7 0 0 1 14 481 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="80" cy="439" rx="66" ry="7"/>
+<path class="concept-db" d="M14 439 A66 7 0 0 1 146 439 V481 A66 7 0 0 1 14 481 Z"/>
+<ellipse class="concept-db" cx="80" cy="439" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M8 445 A66 7 0 0 1 140 445 V487 A66 7 0 0 1 8 487 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="74" cy="445" rx="66" ry="7"/>
+<path class="concept-db" d="M8 445 A66 7 0 0 1 140 445 V487 A66 7 0 0 1 8 487 Z"/>
+<ellipse class="concept-db" cx="74" cy="445" rx="66" ry="7"/>
+<text x="74" y="467" text-anchor="middle">SQL primary</text>
+<text x="74" y="484" text-anchor="middle">и резерв</text>
+</svg><figcaption id="sd-scaling-available-caption">Клиент → DNS — запрос адреса, клиент → CDN — файлы, клиент → API Gateway — API. CDN обращается к объектному хранилищу. API Gateway маршрутизирует запросы в Read/Write API. SQL primary имеет резерв в другой зоне; каждый слой масштабируется своей группой. Обозначения: зелёный цилиндр — БД или поисковый индекс.</figcaption></figure>
 <p><b>Допущение.</b> Один экземпляр приложения не выдерживает пик или его отказ нарушает требования доступности. Одновременно отдача файлов расходует сетевые ресурсы приложения.</p>
 <p><b>Цель.</b> Распределить API-запросы и переживать отказ отдельного узла или зоны.</p>
 <p><b>Изменения.</b> API Gateway направляет HTTP-запросы к группам экземпляров приложения в независимых зонах отказа. Это площадки с раздельными критичными зависимостями, например питанием и сетью; два процесса на одном хосте такой независимости не дают. Состояние сессии не привязывается к памяти одного экземпляра: используются проверяемый токен или общее хранилище. Клиент получает файлы и версии JS/CSS через CDN, а API вызывает напрямую через API Gateway, минуя CDN. При промахе CDN запрашивает файл в объектном хранилище. API Gateway маршрутизирует запросы в Read API или Write API. В этой схеме API Gateway и API имеют отдельные группы экземпляров. Хранилище доступно CDN по защищённому механизму. Персональные ответы нельзя кешировать общей политикой без учёта авторизации и ключа кеша.</p>
@@ -11631,24 +12082,43 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="178" y="64" width="122" height="52" rx="9"/>
 <rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
 <text x="239" y="94" text-anchor="middle">Read API</text>
-<rect class="concept-node plain" x="178" y="190" width="134" height="52" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M186 190 H304 L312 198 V234 L304 242 H186 L178 234 V198 Z"/>
+<path class="concept-cache" d="M186 190 H304 L312 198 V234 L304 242 H186 L178 234 V198 Z"/>
 <text x="245" y="220" text-anchor="middle">Кеш в памяти</text>
-<rect class="concept-node plain" x="20" y="302" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="14" y="308" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="8" y="314" width="132" height="58" rx="9"/>
-<text x="74" y="338.5" text-anchor="middle">SQL primary</text>
-<text x="74" y="355.5" text-anchor="middle">и резерв</text>
-<rect class="concept-node plain" x="190" y="302" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="184" y="308" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="178" y="314" width="122" height="58" rx="9"/>
-<text x="239" y="338.5" text-anchor="middle">Реплики</text>
-<text x="239" y="355.5" text-anchor="middle">чтения</text>
+<path fill="var(--bg)" stroke="none" d="M20 309 A66 7 0 0 1 152 309 V353 A66 7 0 0 1 20 353 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="86" cy="309" rx="66" ry="7"/>
+<path class="concept-db" d="M20 309 A66 7 0 0 1 152 309 V353 A66 7 0 0 1 20 353 Z"/>
+<ellipse class="concept-db" cx="86" cy="309" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M14 315 A66 7 0 0 1 146 315 V359 A66 7 0 0 1 14 359 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="80" cy="315" rx="66" ry="7"/>
+<path class="concept-db" d="M14 315 A66 7 0 0 1 146 315 V359 A66 7 0 0 1 14 359 Z"/>
+<ellipse class="concept-db" cx="80" cy="315" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M8 321 A66 7 0 0 1 140 321 V365 A66 7 0 0 1 8 365 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="74" cy="321" rx="66" ry="7"/>
+<path class="concept-db" d="M8 321 A66 7 0 0 1 140 321 V365 A66 7 0 0 1 8 365 Z"/>
+<ellipse class="concept-db" cx="74" cy="321" rx="66" ry="7"/>
+<text x="74" y="343" text-anchor="middle">SQL primary</text>
+<text x="74" y="360" text-anchor="middle">и резерв</text>
+<path fill="var(--bg)" stroke="none" d="M190 309 A61 7 0 0 1 312 309 V353 A61 7 0 0 1 190 353 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="309" rx="61" ry="7"/>
+<path class="concept-db" d="M190 309 A61 7 0 0 1 312 309 V353 A61 7 0 0 1 190 353 Z"/>
+<ellipse class="concept-db" cx="251" cy="309" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 315 A61 7 0 0 1 306 315 V359 A61 7 0 0 1 184 359 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="315" rx="61" ry="7"/>
+<path class="concept-db" d="M184 315 A61 7 0 0 1 306 315 V359 A61 7 0 0 1 184 359 Z"/>
+<ellipse class="concept-db" cx="245" cy="315" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 321 A61 7 0 0 1 300 321 V365 A61 7 0 0 1 178 365 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="321" rx="61" ry="7"/>
+<path class="concept-db" d="M178 321 A61 7 0 0 1 300 321 V365 A61 7 0 0 1 178 365 Z"/>
+<ellipse class="concept-db" cx="239" cy="321" rx="61" ry="7"/>
+<text x="239" y="343" text-anchor="middle">Реплики</text>
+<text x="239" y="360" text-anchor="middle">чтения</text>
 <rect class="concept-node plain" x="40" y="450" width="240" height="56" rx="9"/>
 <text x="160" y="482" text-anchor="middle">Объектное хранилище</text>
 <text class="concept-label" x="275" y="278" text-anchor="middle">промах</text>
 </svg>
 </div>
-<figcaption id="sd-scaling-read-scale-caption">Первая часть — доступ к системе, вторая — продолжение маршрутов Read/Write API; это одни и те же группы экземпляров, а не дополнительные сервисы. Файлы читаются через CDN либо API, CDN загружает их из объектного хранилища. API-запросы клиента идут прямо к API Gateway. Пунктир обозначает DNS-запрос и репликацию. На схеме резерв БД и реплики чтения выполняют разные роли.</figcaption></figure>
+<figcaption id="sd-scaling-read-scale-caption">Первая часть — доступ к системе, вторая — продолжение маршрутов Read/Write API; это одни и те же группы экземпляров, а не дополнительные сервисы. Файлы читаются через CDN либо API, CDN загружает их из объектного хранилища. API-запросы клиента идут прямо к API Gateway. Пунктир обозначает DNS-запрос и репликацию. На схеме резерв БД и реплики чтения выполняют разные роли. Обозначения: зелёный цилиндр — БД или поисковый индекс, фиолетовый блок — кеш.</figcaption></figure>
 <p><b>Допущение.</b> Профиль 100:1 подтверждён, а чтения перегружают БД даже после настройки запросов и индексов.</p>
 <p><b>Цель.</b> Уменьшить поток SQL-чтений и независимо наращивать оставшуюся пропускную способность.</p>
 <p><b>Изменения.</b> Добавить распределённый кеш в памяти для повторно используемых данных и отдельные реплики чтения БД. Cache-aside: чтение кеша → при промахе запрос к БД → заполнение кеша с TTL. В выбранной схеме реплики чтения обновляются асинхронно, а синхронный резерв служит для переключения при отказе. Их роли и допустимая задержка данных задаются явно.</p>
@@ -11732,18 +12202,37 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="178" y="64" width="122" height="52" rx="9"/>
 <rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
 <text x="239" y="94" text-anchor="middle">Read API</text>
-<rect class="concept-node plain" x="178" y="190" width="134" height="52" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M186 190 H304 L312 198 V234 L304 242 H186 L178 234 V198 Z"/>
+<path class="concept-cache" d="M186 190 H304 L312 198 V234 L304 242 H186 L178 234 V198 Z"/>
 <text x="245" y="220" text-anchor="middle">Кеш в памяти</text>
-<rect class="concept-node plain" x="20" y="302" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="14" y="308" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="8" y="314" width="132" height="58" rx="9"/>
-<text x="74" y="338.5" text-anchor="middle">SQL primary</text>
-<text x="74" y="355.5" text-anchor="middle">и резерв</text>
-<rect class="concept-node plain" x="190" y="302" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="184" y="308" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="178" y="314" width="122" height="58" rx="9"/>
-<text x="239" y="338.5" text-anchor="middle">Реплики</text>
-<text x="239" y="355.5" text-anchor="middle">чтения</text>
+<path fill="var(--bg)" stroke="none" d="M20 309 A66 7 0 0 1 152 309 V353 A66 7 0 0 1 20 353 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="86" cy="309" rx="66" ry="7"/>
+<path class="concept-db" d="M20 309 A66 7 0 0 1 152 309 V353 A66 7 0 0 1 20 353 Z"/>
+<ellipse class="concept-db" cx="86" cy="309" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M14 315 A66 7 0 0 1 146 315 V359 A66 7 0 0 1 14 359 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="80" cy="315" rx="66" ry="7"/>
+<path class="concept-db" d="M14 315 A66 7 0 0 1 146 315 V359 A66 7 0 0 1 14 359 Z"/>
+<ellipse class="concept-db" cx="80" cy="315" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M8 321 A66 7 0 0 1 140 321 V365 A66 7 0 0 1 8 365 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="74" cy="321" rx="66" ry="7"/>
+<path class="concept-db" d="M8 321 A66 7 0 0 1 140 321 V365 A66 7 0 0 1 8 365 Z"/>
+<ellipse class="concept-db" cx="74" cy="321" rx="66" ry="7"/>
+<text x="74" y="343" text-anchor="middle">SQL primary</text>
+<text x="74" y="360" text-anchor="middle">и резерв</text>
+<path fill="var(--bg)" stroke="none" d="M190 309 A61 7 0 0 1 312 309 V353 A61 7 0 0 1 190 353 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="309" rx="61" ry="7"/>
+<path class="concept-db" d="M190 309 A61 7 0 0 1 312 309 V353 A61 7 0 0 1 190 353 Z"/>
+<ellipse class="concept-db" cx="251" cy="309" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 315 A61 7 0 0 1 306 315 V359 A61 7 0 0 1 184 359 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="315" rx="61" ry="7"/>
+<path class="concept-db" d="M184 315 A61 7 0 0 1 306 315 V359 A61 7 0 0 1 184 359 Z"/>
+<ellipse class="concept-db" cx="245" cy="315" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 321 A61 7 0 0 1 300 321 V365 A61 7 0 0 1 178 365 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="321" rx="61" ry="7"/>
+<path class="concept-db" d="M178 321 A61 7 0 0 1 300 321 V365 A61 7 0 0 1 178 365 Z"/>
+<ellipse class="concept-db" cx="239" cy="321" rx="61" ry="7"/>
+<text x="239" y="343" text-anchor="middle">Реплики</text>
+<text x="239" y="360" text-anchor="middle">чтения</text>
 <rect class="concept-node plain" x="40" y="450" width="240" height="56" rx="9"/>
 <text x="160" y="482" text-anchor="middle">Объектное хранилище</text>
 <text class="concept-label" x="275" y="278" text-anchor="middle">промах</text>
@@ -11752,7 +12241,7 @@ outbox
 <text x="74" y="228.5" text-anchor="middle">Контроллер</text>
 </svg>
 </div>
-<figcaption id="sd-scaling-auto-scale-caption">Маршруты клиента остаются прежними: DNS отдельно, файлы через CDN, API через API Gateway. API Gateway и группы API масштабируются независимо в разных зонах. Пунктир от контроллера — управляющая связь, а не поток запросов; остальные пунктиры — DNS и репликация. Стопки обозначают несколько экземпляров.</figcaption></figure>
+<figcaption id="sd-scaling-auto-scale-caption">Маршруты клиента остаются прежними: DNS отдельно, файлы через CDN, API через API Gateway. API Gateway и группы API масштабируются независимо в разных зонах. Пунктир от контроллера — управляющая связь, а не поток запросов; остальные пунктиры — DNS и репликация. Стопки обозначают несколько экземпляров. Обозначения: зелёный цилиндр — БД или поисковый индекс, фиолетовый блок — кеш.</figcaption></figure>
 <p><b>Допущение.</b> Суточные пики предсказуемы или меняются достаточно медленно, чтобы новые экземпляры успели запуститься. Постоянно держать мощность пика дорого.</p>
 <p><b>Цель.</b> Менять число экземпляров в установленных пределах, сохраняя запас на рост и отказ.</p>
 <p><b>Изменения.</b> Контроллер автомасштабирования независимо меняет размер групп API Gateway, API и воркеров по подходящим для них метрикам: например, CPU или числу запросов на экземпляр, с целевым значением из нагрузочного теста. Группа охватывает несколько независимых зон; задаются минимальная и максимальная мощность, время запуска и прогрева, правила увеличения и уменьшения группы. Известный пик можно подготовить заранее по расписанию. Это может быть функция облака, платформы контейнеров или собственной системы управления серверами.</p>
@@ -11842,18 +12331,37 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="178" y="64" width="122" height="52" rx="9"/>
 <rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
 <text x="239" y="94" text-anchor="middle">Read API</text>
-<rect class="concept-node plain" x="178" y="190" width="134" height="52" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M186 190 H304 L312 198 V234 L304 242 H186 L178 234 V198 Z"/>
+<path class="concept-cache" d="M186 190 H304 L312 198 V234 L304 242 H186 L178 234 V198 Z"/>
 <text x="245" y="220" text-anchor="middle">Кеш в памяти</text>
-<rect class="concept-node plain" x="20" y="302" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="14" y="308" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="8" y="314" width="132" height="58" rx="9"/>
-<text x="74" y="338.5" text-anchor="middle">SQL primary</text>
-<text x="74" y="355.5" text-anchor="middle">и резерв</text>
-<rect class="concept-node plain" x="190" y="302" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="184" y="308" width="122" height="58" rx="9"/>
-<rect class="concept-node plain" x="178" y="314" width="122" height="58" rx="9"/>
-<text x="239" y="338.5" text-anchor="middle">Реплики</text>
-<text x="239" y="355.5" text-anchor="middle">чтения</text>
+<path fill="var(--bg)" stroke="none" d="M20 309 A66 7 0 0 1 152 309 V353 A66 7 0 0 1 20 353 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="86" cy="309" rx="66" ry="7"/>
+<path class="concept-db" d="M20 309 A66 7 0 0 1 152 309 V353 A66 7 0 0 1 20 353 Z"/>
+<ellipse class="concept-db" cx="86" cy="309" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M14 315 A66 7 0 0 1 146 315 V359 A66 7 0 0 1 14 359 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="80" cy="315" rx="66" ry="7"/>
+<path class="concept-db" d="M14 315 A66 7 0 0 1 146 315 V359 A66 7 0 0 1 14 359 Z"/>
+<ellipse class="concept-db" cx="80" cy="315" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M8 321 A66 7 0 0 1 140 321 V365 A66 7 0 0 1 8 365 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="74" cy="321" rx="66" ry="7"/>
+<path class="concept-db" d="M8 321 A66 7 0 0 1 140 321 V365 A66 7 0 0 1 8 365 Z"/>
+<ellipse class="concept-db" cx="74" cy="321" rx="66" ry="7"/>
+<text x="74" y="343" text-anchor="middle">SQL primary</text>
+<text x="74" y="360" text-anchor="middle">и резерв</text>
+<path fill="var(--bg)" stroke="none" d="M190 309 A61 7 0 0 1 312 309 V353 A61 7 0 0 1 190 353 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="251" cy="309" rx="61" ry="7"/>
+<path class="concept-db" d="M190 309 A61 7 0 0 1 312 309 V353 A61 7 0 0 1 190 353 Z"/>
+<ellipse class="concept-db" cx="251" cy="309" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M184 315 A61 7 0 0 1 306 315 V359 A61 7 0 0 1 184 359 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="315" rx="61" ry="7"/>
+<path class="concept-db" d="M184 315 A61 7 0 0 1 306 315 V359 A61 7 0 0 1 184 359 Z"/>
+<ellipse class="concept-db" cx="245" cy="315" rx="61" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 321 A61 7 0 0 1 300 321 V365 A61 7 0 0 1 178 365 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="239" cy="321" rx="61" ry="7"/>
+<path class="concept-db" d="M178 321 A61 7 0 0 1 300 321 V365 A61 7 0 0 1 178 365 Z"/>
+<ellipse class="concept-db" cx="239" cy="321" rx="61" ry="7"/>
+<text x="239" y="343" text-anchor="middle">Реплики</text>
+<text x="239" y="360" text-anchor="middle">чтения</text>
 <rect class="concept-node plain" x="40" y="450" width="240" height="56" rx="9"/>
 <text x="160" y="482" text-anchor="middle">Объектное хранилище</text>
 <text class="concept-label" x="275" y="278" text-anchor="middle">промах</text>
@@ -11877,21 +12385,39 @@ outbox
 <rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
 <rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
 <text x="74" y="94" text-anchor="middle">Async API</text>
-<rect class="concept-node plain" x="8" y="190" width="132" height="52" rx="9"/>
-<text x="74" y="211.5" text-anchor="middle">БД заданий</text>
-<text x="74" y="228.5" text-anchor="middle">+ outbox</text>
-<rect class="concept-node plain" x="178" y="190" width="134" height="52" rx="9"/>
-<text x="245" y="220" text-anchor="middle">Очередь</text>
+<path fill="var(--bg)" stroke="none" d="M8 197 A66 7 0 0 1 140 197 V235 A66 7 0 0 1 8 235 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="74" cy="197" rx="66" ry="7"/>
+<path class="concept-db" d="M8 197 A66 7 0 0 1 140 197 V235 A66 7 0 0 1 8 235 Z"/>
+<ellipse class="concept-db" cx="74" cy="197" rx="66" ry="7"/>
+<text x="74" y="219" text-anchor="middle">БД заданий</text>
+<text x="74" y="236" text-anchor="middle">+ outbox</text>
+<path fill="var(--bg)" stroke="none" d="M186 190 H304 A8 26 0 0 1 304 242 H186 A8 26 0 0 1 186 190 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="186" cy="216" rx="8" ry="26"/>
+<path class="concept-broker" d="M186 190 H304 A8 26 0 0 1 304 242 H186 A8 26 0 0 1 186 190 Z"/>
+<ellipse class="concept-broker" cx="186" cy="216" rx="8" ry="26"/>
+<text x="249" y="220" text-anchor="middle">Очередь</text>
+
 <rect fill="var(--bg)" stroke="none" x="190" y="302" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="302" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="190" y="302" width="122" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="184" y="308" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="308" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="184" y="308" width="122" height="58" rx="9"/>
+
 <rect fill="var(--bg)" stroke="none" x="178" y="314" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="314" width="122" height="58" rx="9"/>
+<rect class="concept-node warning" x="178" y="314" width="122" height="58" rx="9"/>
 <text x="239" y="347" text-anchor="middle">Воркеры</text>
-<rect class="concept-node plain" x="20" y="426" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="14" y="432" width="132" height="58" rx="9"/>
-<rect class="concept-node plain" x="8" y="438" width="132" height="58" rx="9"/>
+<path fill="var(--bg)" stroke="none" d="M20 433 A66 7 0 0 1 152 433 V477 A66 7 0 0 1 20 477 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="86" cy="433" rx="66" ry="7"/>
+<path class="concept-db" d="M20 433 A66 7 0 0 1 152 433 V477 A66 7 0 0 1 20 477 Z"/>
+<ellipse class="concept-db" cx="86" cy="433" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M14 439 A66 7 0 0 1 146 439 V483 A66 7 0 0 1 14 483 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="80" cy="439" rx="66" ry="7"/>
+<path class="concept-db" d="M14 439 A66 7 0 0 1 146 439 V483 A66 7 0 0 1 14 483 Z"/>
+<ellipse class="concept-db" cx="80" cy="439" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M8 445 A66 7 0 0 1 140 445 V489 A66 7 0 0 1 8 489 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="74" cy="445" rx="66" ry="7"/>
+<path class="concept-db" d="M8 445 A66 7 0 0 1 140 445 V489 A66 7 0 0 1 8 489 Z"/>
+<ellipse class="concept-db" cx="74" cy="445" rx="66" ry="7"/>
 <text x="74" y="471" text-anchor="middle">SQL-БД</text>
 <rect class="concept-node plain" x="178" y="438" width="134" height="58" rx="9"/>
 <text x="245" y="462.5" text-anchor="middle">Объектное</text>
@@ -11900,15 +12426,26 @@ outbox
 <text x="74" y="569.5" text-anchor="middle">Другое</text>
 <text x="74" y="586.5" text-anchor="middle">хранилище</text>
 <text class="concept-label" x="160" y="642" text-anchor="middle">Варианты масштабирования SQL</text>
-<rect class="concept-node plain" x="8" y="662" width="132" height="52" rx="9"/>
-<text x="74" y="683.5" text-anchor="middle">Шарды</text>
-<text x="74" y="700.5" text-anchor="middle">по user_id</text>
-<rect class="concept-node plain" x="178" y="662" width="134" height="52" rx="9"/>
-<text x="245" y="683.5" text-anchor="middle">БД по доменам</text>
-<text x="245" y="700.5" text-anchor="middle">Клиенты / товары</text>
+<path fill="var(--bg)" stroke="none" d="M8 669 A66 7 0 0 1 140 669 V707 A66 7 0 0 1 8 707 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="74" cy="669" rx="66" ry="7"/>
+<path class="concept-db" d="M8 669 A66 7 0 0 1 140 669 V707 A66 7 0 0 1 8 707 Z"/>
+<ellipse class="concept-db" cx="74" cy="669" rx="66" ry="7"/>
+<text x="74" y="691" text-anchor="middle">Шарды</text>
+<text x="74" y="708" text-anchor="middle">по user_id</text>
+<path fill="var(--bg)" stroke="none" d="M178 669 A67 7 0 0 1 312 669 V707 A67 7 0 0 1 178 707 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="245" cy="669" rx="67" ry="7"/>
+<path class="concept-db" d="M178 669 A67 7 0 0 1 312 669 V707 A67 7 0 0 1 178 707 Z"/>
+<ellipse class="concept-db" cx="245" cy="669" rx="67" ry="7"/>
+<text x="245" y="691" text-anchor="middle">БД по доменам</text>
+<text x="245" y="708" text-anchor="middle">Клиенты / товары</text>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="300" cy="314" r="9" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="300" cy="314" r="9"/>
+<text x="300" y="318" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
 </svg>
 </div>
-<figcaption id="sd-scaling-scaled-caption">Три части одной системы: входные маршруты, Read/Write API и фоновая обработка. Клиент запрашивает адрес у DNS; файлы получает через CDN, API вызывает напрямую через API Gateway. CDN читает объектное хранилище, а не передаёт API-запросы API Gateway. Повторённые API и хранилища обозначают те же компоненты. Другое хранилище, шарды и разделение БД по доменам — варианты по результатам измерений, их не требуется вводить одновременно. Стопки — несколько экземпляров; пунктир — DNS, репликация, outbox и варианты эволюции.</figcaption></figure>
+<figcaption id="sd-scaling-scaled-caption">Три части одной системы: входные маршруты, Read/Write API и фоновая обработка. Клиент запрашивает адрес у DNS; файлы получает через CDN, API вызывает напрямую через API Gateway. CDN читает объектное хранилище, а не передаёт API-запросы API Gateway. Повторённые API и хранилища обозначают те же компоненты. Другое хранилище, шарды и разделение БД по доменам — варианты по результатам измерений, их не требуется вводить одновременно. Стопки — несколько экземпляров; пунктир — DNS, репликация, outbox и варианты эволюции. Обозначения: зелёный цилиндр — БД или поисковый индекс, фиолетовый блок — кеш, бирюзовый горизонтальный цилиндр — очередь или поток событий, янтарный блок с W — фоновый обработчик.</figcaption></figure>
 <p><b>Допущение.</b> Даже после предыдущих мер отдельные записи, обслуживание большой истории или длительные вычисления выходят за бюджет задержки и ресурсов.</p>
 <p><b>Цель.</b> Отделить интерактивный путь от тяжёлой работы, затем распределить данные, если один узел действительно исчерпан.</p>
 <p><b>Изменения.</b> Долгие задачи, например создание превью загруженного файла, поступают в надёжную очередь. Задание в БД и outbox фиксируются одной транзакцией, публикатор передаёт его в очередь, воркер читает объект из хранилища, вычисляет результат и сохраняет итог. Для долгой операции API Gateway направляет запрос в Async API. Клиент получает 202 с идентификатором и проверяет статус. Async API, обычные Read/Write API и воркеры имеют разные группы масштабирования.</p>
