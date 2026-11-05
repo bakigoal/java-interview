@@ -766,8 +766,8 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
 <a href="#q278" data-k="e4d6b12c8b" data-ci="10"><span class="num">278</span><span class="q">Спроектируйте сокращатель ссылок</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q279" data-k="84777d3397" data-ci="10"><span class="num">279</span><span class="q">Спроектируйте сервис уведомлений на десятки миллионов сообщений в сутки</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q280" data-k="d46bbc17f9" data-ci="10"><span class="num">280</span><span class="q">Спроектируйте ленту новостей и поиск Facebook</span><i class="st ico none"></i><span class="sr st-t"></span></a>
-<a href="#q281" data-k="afc13b50fb" data-ci="10"><span class="num">281</span><span class="q">Спроектируйте систему, которая масштабируется до миллионов пользователей</span><i class="st ico none"></i><span class="sr st-t"></span></a>
-<a href="#q282" data-k="387d3e8caf" data-ci="10"><span class="num">282</span><span class="q">Спроектируйте сервис продажи билетов в кино</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q281" data-k="387d3e8caf" data-ci="10"><span class="num">281</span><span class="q">Спроектируйте сервис продажи билетов в кино</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q282" data-k="afc13b50fb" data-ci="10"><span class="num">282</span><span class="q">Спроектируйте систему, которая масштабируется до миллионов пользователей</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 </details>
 <details class="chap"><summary><span class="ct">Kubernetes и эксплуатация</span><span class="count">14</span><span class="mini" role="img"></span></summary>
 <a href="#q283" data-k="be1dcbd33a" data-ci="11"><span class="num">283</span><span class="q">Docker-образ для Java-сервиса</span><i class="st ico none"></i><span class="sr st-t"></span></a>
@@ -11032,7 +11032,321 @@ outbox
 <p class="follow"><b>Почему нельзя всегда рассылать пост всем подписчикам?</b> Стоимость публикации растёт с числом получателей: пост автора с 10 млн подписчиков создаёт до 10 млн обновлений кандидатов. Гибрид переносит часть этой работы на чтение, когда пост нужен конкретному активному пользователю.</p>
 <p><b>Источники:</b> <a href="https://engineering.fb.com/2021/01/26/core-infra/news-feed-ranking/">Meta: многоэтапное ранжирование ленты</a>; <a href="https://engineering.fb.com/2013/10/24/core-infra/under-the-hood-building-posts-search/">Meta: построение и обновление индекса постов</a>. Это материалы о механизмах в разные годы; приведённая выше архитектура — самостоятельное решение для собеседования.</p>
     </div></div></article>
-<article id="q281" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">281. Спроектируйте систему, которая масштабируется до миллионов пользователей <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
+<article id="q281" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">281. Спроектируйте сервис продажи билетов в кино <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
+<p><b>Каталог и карта зала читаются из кеша, а место продаётся только через транзакционный источник истины.</b> У каждого места конкретного сеанса есть один текущий владелец. Выбранные места резервируются вместе на ограниченное время; устаревшая карта не гарантирует их доступность.</p>
+<figure class="concept" aria-labelledby="sd-cinema-scaled-summary-caption">
+<svg id="sd-cinema-scaled-summary" viewBox="0 0 328 732" role="img" aria-labelledby="sd-cinema-scaled-summary-title sd-cinema-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-cinema-scaled-summary-title">Кинобилеты: поиск и оформление масштабируются независимо</title><desc id="sd-cinema-scaled-summary-desc">Зритель и сканер вызывают API Gateway; проверку билета выполняет Booking API. Read API отдельно читает БД каталога сеансов PostgreSQL и кеш доступности мест, Booking API сохраняет резервы в основной БД. Outbox передаёт команды и события через очередь фоновым обработчикам оформления заказа и отправки билетов, а также обновляет кеш доступности мест. Обработчики оформления выполняют сагу: сохраняют прогресс в БД, вызывают платёжного провайдера и создают билеты. Янтарные блоки с W обозначают фоновых обработчиков — workers. Стопки обозначают несколько экземпляров, у БД — primary и standby.</desc>
+<defs><marker id="sd-cinema-scaled-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M160 44 V74" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M160 130 V158 H74 V184" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M160 130 V158 H238 V184" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M74 260 H160 V383 H152" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M74 246 V282" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M238 246 V276" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M238 342 V448 H160 V480" marker-end="url(#sd-cinema-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<text class="concept-label" x="258" y="466" text-anchor="middle">outbox</text>
+<path class="concept-edge" d="M88 502 H74 V410" marker-end="url(#sd-cinema-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<text class="concept-label" x="34" y="450" text-anchor="middle">обновить</text>
+<path class="concept-edge" d="M116 526 V550 H74 V570" marker-end="url(#sd-cinema-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M204 526 V550 H238 V570" marker-end="url(#sd-cinema-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M304 607 H318 V315 H316" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M238 632 V672" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
+<rect fill="var(--bg)" stroke="none" x="88" y="8" width="144" height="36" rx="8"/>
+<rect class="concept-node plain" x="88" y="8" width="144" height="36" rx="8"/>
+<text x="160" y="31" text-anchor="middle">Зритель / сканер</text>
+<rect fill="var(--bg)" stroke="none" x="90" y="74" width="164" height="44" rx="8"/>
+<rect class="concept-node accent" x="90" y="74" width="164" height="44" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="84" y="80" width="164" height="44" rx="8"/>
+<rect class="concept-node accent" x="84" y="80" width="164" height="44" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="78" y="86" width="164" height="44" rx="8"/>
+<rect class="concept-node accent" x="78" y="86" width="164" height="44" rx="8"/>
+<text x="160" y="113" text-anchor="middle">API Gateway</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="184" width="132" height="50" rx="8"/>
+<rect class="concept-node accent" x="20" y="184" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="190" width="132" height="50" rx="8"/>
+<rect class="concept-node accent" x="14" y="190" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="196" width="132" height="50" rx="8"/>
+<rect class="concept-node accent" x="8" y="196" width="132" height="50" rx="8"/>
+<text x="74" y="217.5" text-anchor="middle">Read API</text>
+<text x="74" y="234.5" text-anchor="middle">каталог / места</text>
+<rect fill="var(--bg)" stroke="none" x="184" y="184" width="132" height="50" rx="8"/>
+<rect class="concept-node accent" x="184" y="184" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="190" width="132" height="50" rx="8"/>
+<rect class="concept-node accent" x="178" y="190" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="172" y="196" width="132" height="50" rx="8"/>
+<rect class="concept-node accent" x="172" y="196" width="132" height="50" rx="8"/>
+<text x="238" y="217.5" text-anchor="middle">Booking API</text>
+<text x="238" y="234.5" text-anchor="middle">бронь / вход</text>
+<path fill="var(--bg)" stroke="none" d="M8 289 A72 7 0 0 1 152 289 V339 A72 7 0 0 1 8 339 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="80" cy="289" rx="72" ry="7"/>
+<path class="concept-db" d="M8 289 A72 7 0 0 1 152 289 V339 A72 7 0 0 1 8 339 Z"/>
+<ellipse class="concept-db" cx="80" cy="289" rx="72" ry="7"/>
+<text x="80" y="316" text-anchor="middle">БД каталога</text>
+<text x="80" y="333" text-anchor="middle">сеансов</text>
+<path class="concept-cache" d="M16 356 H144 L152 364 V402 L144 410 H16 L8 402 V364 Z"/>
+<text x="80" y="379.5" text-anchor="middle">Кеш доступности</text>
+<text x="80" y="396.5" text-anchor="middle">мест</text>
+<path fill="var(--bg)" stroke="none" d="M184 283 A66 7 0 0 1 316 283 V323 A66 7 0 0 1 184 323 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="250" cy="283" rx="66" ry="7"/>
+<path class="concept-db" d="M184 283 A66 7 0 0 1 316 283 V323 A66 7 0 0 1 184 323 Z"/>
+<ellipse class="concept-db" cx="250" cy="283" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 289 A66 7 0 0 1 310 289 V329 A66 7 0 0 1 178 329 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="244" cy="289" rx="66" ry="7"/>
+<path class="concept-db" d="M178 289 A66 7 0 0 1 310 289 V329 A66 7 0 0 1 178 329 Z"/>
+<ellipse class="concept-db" cx="244" cy="289" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M172 295 A66 7 0 0 1 304 295 V335 A66 7 0 0 1 172 335 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="238" cy="295" rx="66" ry="7"/>
+<path class="concept-db" d="M172 295 A66 7 0 0 1 304 295 V335 A66 7 0 0 1 172 335 Z"/>
+<ellipse class="concept-db" cx="238" cy="295" rx="66" ry="7"/>
+<text x="238" y="317.5" text-anchor="middle">БД продаж</text>
+<text x="238" y="334.5" text-anchor="middle">primary / standby</text>
+<path fill="var(--bg)" stroke="none" d="M96 480 H224 A8 23 0 0 1 224 526 H96 A8 23 0 0 1 96 480 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="96" cy="503" rx="8" ry="23"/>
+<path class="concept-broker" d="M96 480 H224 A8 23 0 0 1 224 526 H96 A8 23 0 0 1 96 480 Z"/>
+<ellipse class="concept-broker" cx="96" cy="503" rx="8" ry="23"/>
+<text x="168" y="499.5" text-anchor="middle">Очереди и</text>
+<text x="168" y="516.5" text-anchor="middle">потоки событий</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="570" width="132" height="50" rx="8"/>
+<rect class="concept-node warning" x="20" y="570" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="576" width="132" height="50" rx="8"/>
+<rect class="concept-node warning" x="14" y="576" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="582" width="132" height="50" rx="8"/>
+<rect class="concept-node warning" x="8" y="582" width="132" height="50" rx="8"/>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="594" r="10" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="594" r="10"/>
+<text x="140" y="598" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<text x="74" y="603.5" text-anchor="middle">Отправка</text>
+<text x="74" y="620.5" text-anchor="middle">билетов</text>
+<rect fill="var(--bg)" stroke="none" x="184" y="570" width="132" height="50" rx="8"/>
+<rect class="concept-node warning" x="184" y="570" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="576" width="132" height="50" rx="8"/>
+<rect class="concept-node warning" x="178" y="576" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="172" y="582" width="132" height="50" rx="8"/>
+<rect class="concept-node warning" x="172" y="582" width="132" height="50" rx="8"/>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="304" cy="594" r="10" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="304" cy="594" r="10"/>
+<text x="304" y="598" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<text x="238" y="596" text-anchor="middle">Оформление</text>
+<text x="238" y="612" text-anchor="middle">заказа</text>
+<text x="238" y="627" text-anchor="middle" style="font-size:12px">Сага</text>
+<rect fill="var(--bg)" stroke="none" x="172" y="672" width="140" height="48" rx="8"/>
+<rect class="concept-node plain" x="172" y="672" width="140" height="48" rx="8"/>
+<text x="242" y="692.5" text-anchor="middle">Платёжный</text>
+<text x="242" y="709.5" text-anchor="middle">провайдер</text>
+</svg>
+<figcaption id="sd-cinema-scaled-summary-caption">Read API читает БД каталога сеансов (PostgreSQL) и кеш доступности мест по отдельным маршрутам. Каталог и продажи — логические группы таблиц; на старте они могут находиться в одной физической БД. События продаж обновляют кеш мест. Read API и Booking API масштабируются отдельно. БД — источник истины по местам сеансов, заказам и состоянию процесса; standby не становится независимым центром записи. Outbox доставляет команды и события в отдельные очереди или топики. Пунктир — фоновая доставка, стопки — несколько экземпляров. Янтарные блоки с W — фоновые обработчики (workers): «Оформление заказа» выполняет сагу оплаты и выпуска билетов, «Отправка билетов» доставляет их пользователю; сканер проверяет вход через API Gateway и Booking API. Ответы вызовов опущены. Зелёный цилиндр — БД. Фиолетовый блок со срезанными углами — кеш. Бирюзовый горизонтальный цилиндр — очередь или поток событий (например, топик Kafka).</figcaption></figure>
+<p><b>Оплата идемпотентна:</b> после подтверждённого списания одна транзакция переводит места в проданные и создаёт билеты. Истечение резерва согласуется с оплатой через состояние заказа. QR-код идентифицирует билет; онлайн-проверка атомарно отмечает вход и защищает от повторного использования.</p>
+    </div>
+    <div class="more">
+<h4>Шаг 1 — Требования и ограничения</h4>
+<p>Основные сценарии: выбрать фильм, кинотеатр и сеанс; открыть схему зала; выбрать несколько мест; удержать их на время оплаты; получить электронные билеты; вернуть их по правилам; проверить билет на входе. Основной вариант — <b>платформа сети кинотеатров со своим инвентарём и онлайн-проверкой билетов</b>. Кассы и другие каналы используют тот же источник истины или выделенную им квоту. Продажа чужих сеансов требует отдельной интеграции. Рекомендации фильмов и продажа еды вне задачи.</p>
+<p><b>Инварианты:</b> одно место одного сеанса не принадлежит двум активным заказам; группа выбранных мест резервируется целиком; один платёж не списывается повторно; подтверждённый заказ имеет билеты на все оплаченные места. Нельзя принять копию уже использованного или отменённого билета. Нужно уточнить правила возврата, лимит мест в заказе, время завершения продаж и возможность частичного возврата.</p>
+<p><b>Допущения:</b> 20 млн запросов каталога и карты мест, 100 тыс. заказов в сутки, в среднем 2 места в заказе; пик в 10 раз выше среднего. Резерв — 5 минут; цель чтения — p95 до 200 мс на стороне сервиса, создания резерва — до 500 мс без времени оплаты. Отставание карты до 2 секунд допустимо: при конфликте пользователь выбирает другие места. Это параметры примера.</p>
+<div class="table-wrap"><table><tr><th>Величина</th><th>Оценка и следствие</th></tr>
+<tr><td>Чтения</td><td>20 млн / 86 400 ≈ 230 RPS; пик ≈ 2 300. Кеш нужен прежде всего для горячих сеансов и повторных просмотров.</td></tr>
+<tr><td>Заказы</td><td>≈ 1,2 в секунду; пик ≈ 12. Попыток удержания может быть больше, чем покупок: брошенные резервы оцениваются отдельно.</td></tr>
+<tr><td>Места сеансов</td><td>10 тыс. сеансов в сутки × 200 кресел × 30 дней продажи ≈ 60 млн строк. При условных 100 Б на строку — 6 ГБ без индексов, реплик и истории.</td></tr>
+<tr><td>Скрытая нагрузка</td><td>10 тыс. зрителей, обновляющих карту раз в 2 секунды, добавят 5 тыс. RPS. Опрос и SSE/WebSocket-соединения имеют отдельный бюджет.</td></tr></table></div>
+<p><b>Главный перекос:</b> общая запись невелика, но премьера может собрать тысячи запросов на один сеанс. Масштабирование должно защищать конкретный горячий инвентарь, а не только распределять средний RPS.</p>
+<h4>Шаг 2 — Общая архитектура</h4>
+<figure class="concept" aria-labelledby="sd-cinema-base-caption">
+<svg id="sd-cinema-base" viewBox="0 0 320 286" role="img" aria-labelledby="sd-cinema-base-title sd-cinema-base-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-cinema-base-title">Кинобилеты: базовая архитектура</title><desc id="sd-cinema-base-desc">Клиент вызывает одно приложение с модулями поиска, бронирования и фонового оформления. Приложение использует PostgreSQL и вызывает платёжного провайдера. Состояние саги хранится в БД.</desc>
+<defs><marker id="sd-cinema-base-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M160 46 V88" marker-end="url(#sd-cinema-base-arrow)"/>
+<path class="concept-edge" d="M118 156 V186 H78 V216" marker-end="url(#sd-cinema-base-arrow)"/>
+<path class="concept-edge" d="M202 156 V186 H246 V216" marker-end="url(#sd-cinema-base-arrow)"/>
+<rect fill="var(--bg)" stroke="none" x="88" y="8" width="144" height="38" rx="8"/>
+<rect class="concept-node plain" x="88" y="8" width="144" height="38" rx="8"/>
+<text x="160" y="32" text-anchor="middle">Зритель / сканер</text>
+<rect fill="var(--bg)" stroke="none" x="38" y="88" width="244" height="68" rx="8"/>
+<rect class="concept-node accent" x="38" y="88" width="244" height="68" rx="8"/>
+<text x="160" y="118.5" text-anchor="middle">Приложение</text>
+<text x="160" y="135.5" text-anchor="middle">поиск / бронь / сага</text>
+<path fill="var(--bg)" stroke="none" d="M8 223 A70 7 0 0 1 148 223 V263 A70 7 0 0 1 8 263 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="78" cy="223" rx="70" ry="7"/>
+<path class="concept-db" d="M8 223 A70 7 0 0 1 148 223 V263 A70 7 0 0 1 8 263 Z"/>
+<ellipse class="concept-db" cx="78" cy="223" rx="70" ry="7"/>
+<text x="78" y="245.5" text-anchor="middle">PostgreSQL</text>
+<text x="78" y="262.5" text-anchor="middle">места / резервы</text>
+<rect fill="var(--bg)" stroke="none" x="172" y="216" width="140" height="54" rx="8"/>
+<rect class="concept-node plain" x="172" y="216" width="140" height="54" rx="8"/>
+<text x="242" y="245.5" text-anchor="middle">Платёжный</text>
+<text x="242" y="262.5" text-anchor="middle">провайдер</text>
+</svg>
+<figcaption id="sd-cinema-base-caption">Сначала достаточно модульного приложения и одной БД. Фоновый обработчик продолжает оформление по сохранённому состоянию. Внешний платёж выполняется между короткими транзакциями БД. Зелёный цилиндр — БД.</figcaption></figure>
+<p><b>Начать с модульного приложения и PostgreSQL.</b> Модули каталога, сеансов, резервирования, оплаты и билетов используют общую транзакционную БД. Фоновый обработчик продолжает оплату по сохранённому состоянию; внешние вызовы не удерживают блокировки мест. Outbox позволяет надёжно передать события и команды после фиксации заказа.</p>
+<p><b>Путь пользователя:</b> каталог → сеанс и схема зала → резерв мест → оплата → подтверждение заказа и билеты → вход в зал. Пока результат платежа выясняется, API возвращает состояние оформления. Письмо с QR — способ доставки уже созданного билета, поэтому сбой почты не отменяет покупку.</p>
+<h4>Шаг 3 — Детали ключевых компонентов</h4>
+<p><b>API.</b> Изменяющие операции защищаются <code><span class="t">Idempotency</span>-<span class="t">Key</span></code>, связанным с пользователем, типом операции и хешем тела. Уникальное ограничение сериализует одновременные повторы, а повтор ключа с другим содержимым отклоняется. Просмотр и возврат заказа требуют проверки владельца. Сканирование доступно только авторизованным устройствам кинотеатра.</p>
+<pre><span class="t">GET</span> /movies
+<span class="t">GET</span> /showings?cinema=…&amp;date=…
+<span class="t">GET</span> /showings/{id}/seats
+<span class="t">POST</span> /orders
+<span class="t">POST</span> /orders/{id}/checkout
+<span class="t">GET</span> /orders/{id}
+<span class="t">POST</span> /orders/{id}/refund
+<span class="t">POST</span> /tickets/validate</pre>
+<div class="table-wrap"><table><tr><th>Сущность</th><th>Модель и ограничение</th></tr>
+<tr><td>cinema / hall / seat</td><td>Кинотеатр, зал, кресло с рядом, номером и категорией. У сеанса фиксируется версия схемы, чтобы изменение зала не меняло уже проданные места.</td></tr>
+<tr><td>showing</td><td>Конкретный сеанс: фильм, зал, начало и завершение продаж, состояние. Время однозначно хранится и отображается в зоне кинотеатра.</td></tr>
+<tr><td>showing_seat</td><td>Первичный ключ — сеанс и кресло. Статус FREE/HELD/SOLD/BLOCKED, текущий order_id. Одно физическое кресло продаётся отдельно на каждый сеанс.</td></tr>
+<tr><td>order / order_item</td><td>Владелец, статус, срок удержания, версия; выбранные места, снимок цен, валюта, сборы, скидки и условия возврата.</td></tr>
+<tr><td>payment_attempt / ticket / outbox</td><td>Стабильные ID операций и результаты; билет на место с непрогнозируемым токеном и статусом; надёжная доставка команд и событий.</td></tr></table></div>
+<p><b>Цена вычисляется сервером.</b> Места разных рядов, детские билеты и скидки могут иметь разные цены. Клиент передаёт выбранные места и допустимые параметры, но не доверенную сумму. Предложение имеет срок; при резервировании сервер фиксирует цену и условия. После принятия предложения сумма не меняется незаметно в середине оплаты.</p>
+<p><b>Как два покупателя выбирают одно кресло.</b> Карта зала — только отображение. При создании заказа сервер удаляет дубликаты ID, проверяет принадлежность одному сеансу и лимит количества, затем в одной транзакции блокирует выбранные строки:</p>
+<pre><span class="k">SELECT</span> seat_id, status
+<span class="k">FROM</span> showing_seat
+<span class="k">WHERE</span> showing_id = :showing
+  <span class="k">AND</span> seat_id <span class="k">IN</span> (:seat_ids)
+<span class="k">ORDER</span> <span class="k">BY</span> seat_id
+<span class="k">FOR</span> <span class="k">UPDATE</span>;</pre>
+<p>Вернуться должны все запрошенные места; каждое должно быть <code><span class="t">FREE</span></code>, а сеанс — открыт для продажи. Если хотя бы одно занято или отсутствует, откатывается весь заказ. Иначе создаётся <code><span class="t">HELD</span></code> с дедлайном, строки мест получают владельца, сохраняются позиции заказа и outbox. Связанные изменения статуса сеанса, включая закрытие продаж, должны согласовываться с этим протоколом.</p>
+<pre><span class="k">UPDATE</span> showing_seat
+<span class="k">SET</span> status = <span class="s">'HELD'</span>, order_id = :<span class="k">order</span>
+<span class="k">WHERE</span> showing_id = :showing
+  <span class="k">AND</span> seat_id <span class="k">IN</span> (:seat_ids)
+  <span class="k">AND</span> status = <span class="s">'FREE'</span>;</pre>
+<p>Число обновлённых строк проверяется и должно совпасть с количеством уникальных выбранных мест. Проверка и UPDATE выполняются <b>в той же транзакции</b>. У мест заранее есть строки и уникальный ключ, поэтому невозможно создать второй текущий слот для того же кресла сеанса. Блокировки берутся в едином порядке во всех сценариях; <a href="https://www.postgresql.org/docs/17/explicit-locking.html">дедлоки обрабатываются повтором всей транзакции</a>. Ждать ввода карты или ответа банка с открытой транзакцией нельзя.</p>
+<p><b>Резерв истёк одновременно с оплатой.</b> Checkout и таймер блокируют одну строку заказа, затем проверяют его статус и актуальное время БД. Checkout переводит действующий <code><span class="t">HELD</span></code> в <code><span class="t">PROCESSING</span></code> и сохраняет команду платежа. Таймер переводит только истёкший <code><span class="t">HELD</span></code> в <code><span class="t">EXPIRED</span></code> и освобождает его места в одной транзакции. Освобождение проверяет прежнего владельца и статус места; повторная команда не снимает новый резерв.</p>
+<p><b>PROCESSING нельзя освобождать обычным таймером.</b> Для него заданы срок восстановления и отдельная проверка платёжного состояния. Ответ мог потеряться после фактического списания. Место освобождается только после установления безопасного исхода и согласованного перехода. Дедлайн оплаты учитывает начало сеанса: зависший процесс нельзя бесконечно подтверждать после завершения продаж.</p>
+<p><b>Оплата и выпуск билетов.</b> Работник сохраняет попытку, выполняет предусмотренные провайдером авторизацию и capture со стабильными ключами по шагам. После подтверждённого списания короткая транзакция проверяет владельца мест и статус заказа, переводит их в <code><span class="t">SOLD</span></code>, создаёт билеты, ставит <code><span class="t">CONFIRMED</span></code> и сохраняет события outbox. Уникальность пары «заказ + место» защищает повтор выпуска; история старых билетов не мешает перепродаже после разрешённого возврата, потому что текущая занятость хранится в <code>showing_seat</code>.</p>
+<div class="table-wrap"><table><tr><th>Сбой</th><th>Действие</th></tr>
+<tr><td>Платёж окончательно отклонён</td><td>Отменить заказ и освободить его места ровно один раз. Если осталось удержание денег, выполнить void по контракту провайдера.</td></tr>
+<tr><td>Таймаут capture</td><td>Проверить статус по сохранённому ID или безопасно повторить с тем же ключом. Не создавать новый платёж и не возвращать места в продажу вслепую.</td></tr>
+<tr><td>Деньги списаны, фиксация в БД не прошла</td><td>После восстановления повторить транзакцию подтверждения. Если покупку уже нельзя завершить, сохранить команду возврата и согласованно освободить места.</td></tr>
+<tr><td>Билет создан, письмо не дошло</td><td>Повторить доставку того же билета. Он доступен в личном кабинете; новый билет и платёж не создаются.</td></tr>
+<tr><td>Возврат или отмена сеанса</td><td>Транзакционно сделать билеты недействительными и согласовать состояние мест. Возврат денег идёт отдельным отслеживаемым процессом; частичный возврат учитывается по позициям.</td></tr></table></div>
+<p><b>QR и вход в зал.</b> QR содержит непрогнозируемый токен без персональных данных; в БД хранится его хеш. Валидатор проверяет сеанс, время и статус, затем атомарно переводит билет из <code><span class="t">VALID</span></code> в <code><span class="t">USED</span></code>. Параллельные сканеры не должны оба получить успешный первый вход:</p>
+<pre><span class="k">UPDATE</span> ticket
+<span class="k">SET</span> status = <span class="s">'USED'</span>, used_at = now()
+<span class="k">WHERE</span> token_hash = :hash
+  <span class="k">AND</span> status = <span class="s">'VALID'</span>
+<span class="k">RETURNING</span> id;</pre>
+<p>Одна строка — вход разрешён, ноль — использованный, отменённый или неизвестный билет. Валидация контекста и переход составляют согласованную транзакционную операцию; возврат также блокирует и изменяет билет по общему порядку. Повтор сетевого запроса сканера имеет свой ID, чтобы восстановить прежний ответ. QR можно скопировать: подпись или случайный токен сами по себе не предотвращают повторный проход. <b>При офлайн-сканировании независимыми устройствами строгую защиту от двойного входа гарантировать нельзя</b> без дополнительной координации.</p>
+<h4>Шаг 4 — Масштабирование и узкие места</h4>
+<figure class="concept" aria-labelledby="sd-cinema-scaled-caption">
+<svg id="sd-cinema-scaled" viewBox="0 0 328 732" role="img" aria-labelledby="sd-cinema-scaled-title sd-cinema-scaled-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-cinema-scaled-title">Кинобилеты: поиск и оформление масштабируются независимо</title><desc id="sd-cinema-scaled-desc">Зритель и сканер вызывают API Gateway; проверку билета выполняет Booking API. Read API отдельно читает БД каталога сеансов PostgreSQL и кеш доступности мест, Booking API сохраняет резервы в основной БД. Outbox передаёт команды и события через очередь фоновым обработчикам оформления заказа и отправки билетов, а также обновляет кеш доступности мест. Обработчики оформления выполняют сагу: сохраняют прогресс в БД, вызывают платёжного провайдера и создают билеты. Янтарные блоки с W обозначают фоновых обработчиков — workers. Стопки обозначают несколько экземпляров, у БД — primary и standby.</desc>
+<defs><marker id="sd-cinema-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M160 44 V74" marker-end="url(#sd-cinema-scaled-arrow)"/>
+<path class="concept-edge" d="M160 130 V158 H74 V184" marker-end="url(#sd-cinema-scaled-arrow)"/>
+<path class="concept-edge" d="M160 130 V158 H238 V184" marker-end="url(#sd-cinema-scaled-arrow)"/>
+<path class="concept-edge" d="M74 260 H160 V383 H152" marker-end="url(#sd-cinema-scaled-arrow)"/>
+<path class="concept-edge" d="M74 246 V282" marker-end="url(#sd-cinema-scaled-arrow)"/>
+<path class="concept-edge" d="M238 246 V276" marker-end="url(#sd-cinema-scaled-arrow)"/>
+<path class="concept-edge" d="M238 342 V448 H160 V480" marker-end="url(#sd-cinema-scaled-arrow)" stroke-dasharray="4 4"/>
+<text class="concept-label" x="258" y="466" text-anchor="middle">outbox</text>
+<path class="concept-edge" d="M88 502 H74 V410" marker-end="url(#sd-cinema-scaled-arrow)" stroke-dasharray="4 4"/>
+<text class="concept-label" x="34" y="450" text-anchor="middle">обновить</text>
+<path class="concept-edge" d="M116 526 V550 H74 V570" marker-end="url(#sd-cinema-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M204 526 V550 H238 V570" marker-end="url(#sd-cinema-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M304 607 H318 V315 H316" marker-end="url(#sd-cinema-scaled-arrow)"/>
+<path class="concept-edge" d="M238 632 V672" marker-end="url(#sd-cinema-scaled-arrow)"/>
+<rect fill="var(--bg)" stroke="none" x="88" y="8" width="144" height="36" rx="8"/>
+<rect class="concept-node plain" x="88" y="8" width="144" height="36" rx="8"/>
+<text x="160" y="31" text-anchor="middle">Зритель / сканер</text>
+<rect fill="var(--bg)" stroke="none" x="90" y="74" width="164" height="44" rx="8"/>
+<rect class="concept-node accent" x="90" y="74" width="164" height="44" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="84" y="80" width="164" height="44" rx="8"/>
+<rect class="concept-node accent" x="84" y="80" width="164" height="44" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="78" y="86" width="164" height="44" rx="8"/>
+<rect class="concept-node accent" x="78" y="86" width="164" height="44" rx="8"/>
+<text x="160" y="113" text-anchor="middle">API Gateway</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="184" width="132" height="50" rx="8"/>
+<rect class="concept-node accent" x="20" y="184" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="190" width="132" height="50" rx="8"/>
+<rect class="concept-node accent" x="14" y="190" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="196" width="132" height="50" rx="8"/>
+<rect class="concept-node accent" x="8" y="196" width="132" height="50" rx="8"/>
+<text x="74" y="217.5" text-anchor="middle">Read API</text>
+<text x="74" y="234.5" text-anchor="middle">каталог / места</text>
+<rect fill="var(--bg)" stroke="none" x="184" y="184" width="132" height="50" rx="8"/>
+<rect class="concept-node accent" x="184" y="184" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="190" width="132" height="50" rx="8"/>
+<rect class="concept-node accent" x="178" y="190" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="172" y="196" width="132" height="50" rx="8"/>
+<rect class="concept-node accent" x="172" y="196" width="132" height="50" rx="8"/>
+<text x="238" y="217.5" text-anchor="middle">Booking API</text>
+<text x="238" y="234.5" text-anchor="middle">бронь / вход</text>
+<path fill="var(--bg)" stroke="none" d="M8 289 A72 7 0 0 1 152 289 V339 A72 7 0 0 1 8 339 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="80" cy="289" rx="72" ry="7"/>
+<path class="concept-db" d="M8 289 A72 7 0 0 1 152 289 V339 A72 7 0 0 1 8 339 Z"/>
+<ellipse class="concept-db" cx="80" cy="289" rx="72" ry="7"/>
+<text x="80" y="316" text-anchor="middle">БД каталога</text>
+<text x="80" y="333" text-anchor="middle">сеансов</text>
+<path class="concept-cache" d="M16 356 H144 L152 364 V402 L144 410 H16 L8 402 V364 Z"/>
+<text x="80" y="379.5" text-anchor="middle">Кеш доступности</text>
+<text x="80" y="396.5" text-anchor="middle">мест</text>
+<path fill="var(--bg)" stroke="none" d="M184 283 A66 7 0 0 1 316 283 V323 A66 7 0 0 1 184 323 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="250" cy="283" rx="66" ry="7"/>
+<path class="concept-db" d="M184 283 A66 7 0 0 1 316 283 V323 A66 7 0 0 1 184 323 Z"/>
+<ellipse class="concept-db" cx="250" cy="283" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M178 289 A66 7 0 0 1 310 289 V329 A66 7 0 0 1 178 329 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="244" cy="289" rx="66" ry="7"/>
+<path class="concept-db" d="M178 289 A66 7 0 0 1 310 289 V329 A66 7 0 0 1 178 329 Z"/>
+<ellipse class="concept-db" cx="244" cy="289" rx="66" ry="7"/>
+<path fill="var(--bg)" stroke="none" d="M172 295 A66 7 0 0 1 304 295 V335 A66 7 0 0 1 172 335 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="238" cy="295" rx="66" ry="7"/>
+<path class="concept-db" d="M172 295 A66 7 0 0 1 304 295 V335 A66 7 0 0 1 172 335 Z"/>
+<ellipse class="concept-db" cx="238" cy="295" rx="66" ry="7"/>
+<text x="238" y="317.5" text-anchor="middle">БД продаж</text>
+<text x="238" y="334.5" text-anchor="middle">primary / standby</text>
+<path fill="var(--bg)" stroke="none" d="M96 480 H224 A8 23 0 0 1 224 526 H96 A8 23 0 0 1 96 480 Z"/>
+<ellipse fill="var(--bg)" stroke="none" cx="96" cy="503" rx="8" ry="23"/>
+<path class="concept-broker" d="M96 480 H224 A8 23 0 0 1 224 526 H96 A8 23 0 0 1 96 480 Z"/>
+<ellipse class="concept-broker" cx="96" cy="503" rx="8" ry="23"/>
+<text x="168" y="499.5" text-anchor="middle">Очереди и</text>
+<text x="168" y="516.5" text-anchor="middle">потоки событий</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="570" width="132" height="50" rx="8"/>
+<rect class="concept-node warning" x="20" y="570" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="576" width="132" height="50" rx="8"/>
+<rect class="concept-node warning" x="14" y="576" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="582" width="132" height="50" rx="8"/>
+<rect class="concept-node warning" x="8" y="582" width="132" height="50" rx="8"/>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="140" cy="594" r="10" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="140" cy="594" r="10"/>
+<text x="140" y="598" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<text x="74" y="603.5" text-anchor="middle">Отправка</text>
+<text x="74" y="620.5" text-anchor="middle">билетов</text>
+<rect fill="var(--bg)" stroke="none" x="184" y="570" width="132" height="50" rx="8"/>
+<rect class="concept-node warning" x="184" y="570" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="178" y="576" width="132" height="50" rx="8"/>
+<rect class="concept-node warning" x="178" y="576" width="132" height="50" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="172" y="582" width="132" height="50" rx="8"/>
+<rect class="concept-node warning" x="172" y="582" width="132" height="50" rx="8"/>
+<g role="img" aria-label="Фоновый обработчик — worker">
+<circle cx="304" cy="594" r="10" fill="var(--bg)"/>
+<circle class="concept-node warning" cx="304" cy="594" r="10"/>
+<text x="304" y="598" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
+</g>
+<text x="238" y="596" text-anchor="middle">Оформление</text>
+<text x="238" y="612" text-anchor="middle">заказа</text>
+<text x="238" y="627" text-anchor="middle" style="font-size:12px">Сага</text>
+<rect fill="var(--bg)" stroke="none" x="172" y="672" width="140" height="48" rx="8"/>
+<rect class="concept-node plain" x="172" y="672" width="140" height="48" rx="8"/>
+<text x="242" y="692.5" text-anchor="middle">Платёжный</text>
+<text x="242" y="709.5" text-anchor="middle">провайдер</text>
+</svg>
+<figcaption id="sd-cinema-scaled-caption">Read API читает БД каталога сеансов (PostgreSQL) и кеш доступности мест по отдельным маршрутам. Каталог и продажи — логические группы таблиц; на старте они могут находиться в одной физической БД. События продаж обновляют кеш мест. Read API и Booking API масштабируются отдельно. БД — источник истины по местам сеансов, заказам и состоянию процесса; standby не становится независимым центром записи. Outbox доставляет команды и события в отдельные очереди или топики. Пунктир — фоновая доставка, стопки — несколько экземпляров. Янтарные блоки с W — фоновые обработчики (workers): «Оформление заказа» выполняет сагу оплаты и выпуска билетов, «Отправка билетов» доставляет их пользователю; сканер проверяет вход через API Gateway и Booking API. Ответы вызовов опущены. Зелёный цилиндр — БД. Фиолетовый блок со срезанными углами — кеш. Бирюзовый горизонтальный цилиндр — очередь или поток событий (например, топик Kafka).</figcaption></figure>
+<p><b>Отделить чтение.</b> Read API масштабируется отдельно от Booking API. Каталог сеансов — таблицы PostgreSQL с фильмами, кинотеатрами, залами, расписанием и базовыми ценами. На старте они находятся в той же физической БД, что и продажи; при необходимости чтение каталога направляется на реплику. На схеме эти данные выделены логически, а не как обязательный отдельный кластер. Афиша, описание фильма и схема зала меняются редко; текущая занятость кресел хранится отдельным представлением. Кеш по сеансу и короткий TTL уменьшают нагрузку. События из outbox обновляют карту с версией: старое событие не должно показать проданное кресло свободным. Потерянные обновления восстанавливаются полным снимком.</p>
+<p><b>Доставлять изменения карты экономно.</b> Для большого числа зрителей доступны SSE/WebSocket или ограниченный опрос с jitter. Передаются изменения с номером версии; после разрыва или пропуска версии клиент запрашивает снимок. Рассылка, число соединений и частота обновлений ограничиваются отдельно. Это улучшает интерфейс, но успешную продажу по-прежнему решает транзакция бронирования.</p>
+<p><b>Защитить премьеры.</b> Rate limit, ограничения активных резервов и количества мест в заказе, короткий TTL и при необходимости очередь допуска уменьшают захват мест ботами и очередь блокировок. Целиком блокировать весь сеанс ради пары кресел не требуется: независимые места могут продаваться параллельно. На одно кресло всё равно приходится один победитель; увеличение числа экземпляров не меняет этот предел.</p>
+<p><b>Работники и очереди.</b> Оплата, обновления карты и доставка билетов имеют разные очереди и лимиты ресурсов. Доставка как минимум один раз требует дедупликации событий и идемпотентных эффектов. У платёжного провайдера — квоты, ограниченные ретраи с backoff/jitter и проверка результата. Подлинность callback и ID события проверяются, устаревшее уведомление не перезаписывает подтверждённый исход.</p>
+<p><b>Рост данных.</b> При заданной средней записи достаточно одной надёжной БД с резервным узлом; историю завершённых сеансов можно архивировать или партиционировать. Если действительно нужно шардирование, ключ сеанса сохраняет места и заказ одного сеанса вместе. Заказ нескольких сеансов потребует отдельного процесса согласования. Реплики и кеши помогают чтению, но не становятся независимыми центрами продажи.</p>
+<p><b>Все каналы продаж.</b> Если касса работает с независимой БД, локальная уникальность платформы не защищает от её продажи того же кресла. Нужен единый авторитетный инвентарь, протокол резервирования партнёра или непересекающиеся квоты. При разрыве связи нельзя одновременно гарантировать продажу любого общего места каждым каналом и отсутствие двойной продажи.</p>
+<p><b>Эксплуатация.</b> Сверка сопоставляет платёж, заказ, владельцев мест и билеты. Измеряются задержка карты, конфликты резервов, время блокировок, возраст PROCESSING/REFUND_PENDING, доля оплаченных заказов без билетов, задержка возвратов и повторные сканирования. Backup и проверяемое восстановление дополняют репликацию. Токены QR и платёжные секреты не попадают в логи.</p>
+<p><b>Компромисс:</b> кеш ускоряет карту, но допускает устаревшее отображение; короткий резерв уменьшает захват мест, но сокращает время оплаты; строгий источник истины ограничивает продажу при сбое, зато сохраняет эксклюзивность кресла. Онлайн-проверка билетов требует связи, но даёт согласованный результат прохода.</p>
+<p class="follow"><b>Можно хранить резерв только в Redis с TTL?</b> Можно спроектировать отдельный протокол, но один TTL не связывает резерв с оплатой, продажей и выпуском билета. В выбранном решении источник истины — БД: срок и условные переходы заказа определяют освобождение, а Redis ускоряет отображение. Истечение кеш-ключа не является разрешением перепродать место с неизвестным исходом платежа.</p>
+    </div></div></article>
+<article id="q282" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">282. Спроектируйте систему, которая масштабируется до миллионов пользователей <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
 <p><b>Архитектура растёт по результатам измерений:</b> один сервер → отдельные БД и объектное хранилище → API Gateway и несколько экземпляров в независимых зонах → кеш и реплики чтения → автомасштабирование и фоновая обработка. Каждый переход устраняет конкретное ограничение по ресурсам, задержке или доступности.</p>
 <figure class="concept" aria-labelledby="sd-scaling-scaled-summary-caption">
 <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
@@ -11815,320 +12129,6 @@ outbox
 <p>Специализированное хранилище — например, key-value или документное — выбирается под конкретный профиль доступа и модель согласованности. Число пользователей и несколько тысяч записей в секунду сами по себе не доказывают необходимость отказаться от SQL. Аналогично разделение Read/Write API оправдано разными требованиями к ресурсам и релизам, а не самим наличием двух HTTP-методов.</p>
 <p><b>Компромиссы.</b> Очередь добавляет задержку и требования к восстановлению, шардирование — сложность миграций и транзакций, отдельные хранилища — синхронизацию представлений. Выбирается минимальный набор изменений, который проверенно закрывает текущую нагрузку и требования доступности.</p>
 <p class="follow"><b>На каком количестве пользователей нужно добавлять кеш, реплики и шардинг?</b> Универсального порога нет. Решение определяется рабочим набором, стоимостью операций, пиковым RPS и результатами тестов. Миллионы редко активных пользователей могут нагружать систему меньше, чем небольшой сервис с частыми тяжёлыми запросами.</p>
-    </div></div></article>
-<article id="q282" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">282. Спроектируйте сервис продажи билетов в кино <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
-<p><b>Каталог и карта зала читаются из кеша, а место продаётся только через транзакционный источник истины.</b> У каждого места конкретного сеанса есть один текущий владелец. Выбранные места резервируются вместе на ограниченное время; устаревшая карта не гарантирует их доступность.</p>
-<figure class="concept" aria-labelledby="sd-cinema-scaled-summary-caption">
-<svg id="sd-cinema-scaled-summary" viewBox="0 0 328 732" role="img" aria-labelledby="sd-cinema-scaled-summary-title sd-cinema-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-cinema-scaled-summary-title">Кинобилеты: поиск и оформление масштабируются независимо</title><desc id="sd-cinema-scaled-summary-desc">Зритель и сканер вызывают API Gateway; проверку билета выполняет Booking API. Read API отдельно читает БД каталога сеансов PostgreSQL и кеш доступности мест, Booking API сохраняет резервы в основной БД. Outbox передаёт команды и события через очередь фоновым обработчикам оформления заказа и отправки билетов, а также обновляет кеш доступности мест. Обработчики оформления выполняют сагу: сохраняют прогресс в БД, вызывают платёжного провайдера и создают билеты. Янтарные блоки с W обозначают фоновых обработчиков — workers. Стопки обозначают несколько экземпляров, у БД — primary и standby.</desc>
-<defs><marker id="sd-cinema-scaled-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 44 V74" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M160 130 V158 H74 V184" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M160 130 V158 H238 V184" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M74 260 H160 V383 H152" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M74 246 V282" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M238 246 V276" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M238 342 V448 H160 V480" marker-end="url(#sd-cinema-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<text class="concept-label" x="258" y="466" text-anchor="middle">outbox</text>
-<path class="concept-edge" d="M88 502 H74 V410" marker-end="url(#sd-cinema-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<text class="concept-label" x="34" y="450" text-anchor="middle">обновить</text>
-<path class="concept-edge" d="M116 526 V550 H74 V570" marker-end="url(#sd-cinema-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M204 526 V550 H238 V570" marker-end="url(#sd-cinema-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M304 607 H318 V315 H316" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M238 632 V672" marker-end="url(#sd-cinema-scaled-summary-arrow)"/>
-<rect fill="var(--bg)" stroke="none" x="88" y="8" width="144" height="36" rx="8"/>
-<rect class="concept-node plain" x="88" y="8" width="144" height="36" rx="8"/>
-<text x="160" y="31" text-anchor="middle">Зритель / сканер</text>
-<rect fill="var(--bg)" stroke="none" x="90" y="74" width="164" height="44" rx="8"/>
-<rect class="concept-node accent" x="90" y="74" width="164" height="44" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="84" y="80" width="164" height="44" rx="8"/>
-<rect class="concept-node accent" x="84" y="80" width="164" height="44" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="78" y="86" width="164" height="44" rx="8"/>
-<rect class="concept-node accent" x="78" y="86" width="164" height="44" rx="8"/>
-<text x="160" y="113" text-anchor="middle">API Gateway</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="184" width="132" height="50" rx="8"/>
-<rect class="concept-node accent" x="20" y="184" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="190" width="132" height="50" rx="8"/>
-<rect class="concept-node accent" x="14" y="190" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="196" width="132" height="50" rx="8"/>
-<rect class="concept-node accent" x="8" y="196" width="132" height="50" rx="8"/>
-<text x="74" y="217.5" text-anchor="middle">Read API</text>
-<text x="74" y="234.5" text-anchor="middle">каталог / места</text>
-<rect fill="var(--bg)" stroke="none" x="184" y="184" width="132" height="50" rx="8"/>
-<rect class="concept-node accent" x="184" y="184" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="190" width="132" height="50" rx="8"/>
-<rect class="concept-node accent" x="178" y="190" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="172" y="196" width="132" height="50" rx="8"/>
-<rect class="concept-node accent" x="172" y="196" width="132" height="50" rx="8"/>
-<text x="238" y="217.5" text-anchor="middle">Booking API</text>
-<text x="238" y="234.5" text-anchor="middle">бронь / вход</text>
-<path fill="var(--bg)" stroke="none" d="M8 289 A72 7 0 0 1 152 289 V339 A72 7 0 0 1 8 339 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="80" cy="289" rx="72" ry="7"/>
-<path class="concept-db" d="M8 289 A72 7 0 0 1 152 289 V339 A72 7 0 0 1 8 339 Z"/>
-<ellipse class="concept-db" cx="80" cy="289" rx="72" ry="7"/>
-<text x="80" y="316" text-anchor="middle">БД каталога</text>
-<text x="80" y="333" text-anchor="middle">сеансов</text>
-<path class="concept-cache" d="M16 356 H144 L152 364 V402 L144 410 H16 L8 402 V364 Z"/>
-<text x="80" y="379.5" text-anchor="middle">Кеш доступности</text>
-<text x="80" y="396.5" text-anchor="middle">мест</text>
-<path fill="var(--bg)" stroke="none" d="M184 283 A66 7 0 0 1 316 283 V323 A66 7 0 0 1 184 323 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="250" cy="283" rx="66" ry="7"/>
-<path class="concept-db" d="M184 283 A66 7 0 0 1 316 283 V323 A66 7 0 0 1 184 323 Z"/>
-<ellipse class="concept-db" cx="250" cy="283" rx="66" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M178 289 A66 7 0 0 1 310 289 V329 A66 7 0 0 1 178 329 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="244" cy="289" rx="66" ry="7"/>
-<path class="concept-db" d="M178 289 A66 7 0 0 1 310 289 V329 A66 7 0 0 1 178 329 Z"/>
-<ellipse class="concept-db" cx="244" cy="289" rx="66" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M172 295 A66 7 0 0 1 304 295 V335 A66 7 0 0 1 172 335 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="238" cy="295" rx="66" ry="7"/>
-<path class="concept-db" d="M172 295 A66 7 0 0 1 304 295 V335 A66 7 0 0 1 172 335 Z"/>
-<ellipse class="concept-db" cx="238" cy="295" rx="66" ry="7"/>
-<text x="238" y="317.5" text-anchor="middle">БД продаж</text>
-<text x="238" y="334.5" text-anchor="middle">primary / standby</text>
-<path fill="var(--bg)" stroke="none" d="M96 480 H224 A8 23 0 0 1 224 526 H96 A8 23 0 0 1 96 480 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="96" cy="503" rx="8" ry="23"/>
-<path class="concept-broker" d="M96 480 H224 A8 23 0 0 1 224 526 H96 A8 23 0 0 1 96 480 Z"/>
-<ellipse class="concept-broker" cx="96" cy="503" rx="8" ry="23"/>
-<text x="168" y="499.5" text-anchor="middle">Очереди и</text>
-<text x="168" y="516.5" text-anchor="middle">потоки событий</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="570" width="132" height="50" rx="8"/>
-<rect class="concept-node warning" x="20" y="570" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="576" width="132" height="50" rx="8"/>
-<rect class="concept-node warning" x="14" y="576" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="582" width="132" height="50" rx="8"/>
-<rect class="concept-node warning" x="8" y="582" width="132" height="50" rx="8"/>
-<g role="img" aria-label="Фоновый обработчик — worker">
-<circle cx="140" cy="594" r="10" fill="var(--bg)"/>
-<circle class="concept-node warning" cx="140" cy="594" r="10"/>
-<text x="140" y="598" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
-</g>
-<text x="74" y="603.5" text-anchor="middle">Отправка</text>
-<text x="74" y="620.5" text-anchor="middle">билетов</text>
-<rect fill="var(--bg)" stroke="none" x="184" y="570" width="132" height="50" rx="8"/>
-<rect class="concept-node warning" x="184" y="570" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="576" width="132" height="50" rx="8"/>
-<rect class="concept-node warning" x="178" y="576" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="172" y="582" width="132" height="50" rx="8"/>
-<rect class="concept-node warning" x="172" y="582" width="132" height="50" rx="8"/>
-<g role="img" aria-label="Фоновый обработчик — worker">
-<circle cx="304" cy="594" r="10" fill="var(--bg)"/>
-<circle class="concept-node warning" cx="304" cy="594" r="10"/>
-<text x="304" y="598" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
-</g>
-<text x="238" y="596" text-anchor="middle">Оформление</text>
-<text x="238" y="612" text-anchor="middle">заказа</text>
-<text x="238" y="627" text-anchor="middle" style="font-size:12px">Сага</text>
-<rect fill="var(--bg)" stroke="none" x="172" y="672" width="140" height="48" rx="8"/>
-<rect class="concept-node plain" x="172" y="672" width="140" height="48" rx="8"/>
-<text x="242" y="692.5" text-anchor="middle">Платёжный</text>
-<text x="242" y="709.5" text-anchor="middle">провайдер</text>
-</svg>
-<figcaption id="sd-cinema-scaled-summary-caption">Read API читает БД каталога сеансов (PostgreSQL) и кеш доступности мест по отдельным маршрутам. Каталог и продажи — логические группы таблиц; на старте они могут находиться в одной физической БД. События продаж обновляют кеш мест. Read API и Booking API масштабируются отдельно. БД — источник истины по местам сеансов, заказам и состоянию процесса; standby не становится независимым центром записи. Outbox доставляет команды и события в отдельные очереди или топики. Пунктир — фоновая доставка, стопки — несколько экземпляров. Янтарные блоки с W — фоновые обработчики (workers): «Оформление заказа» выполняет сагу оплаты и выпуска билетов, «Отправка билетов» доставляет их пользователю; сканер проверяет вход через API Gateway и Booking API. Ответы вызовов опущены. Зелёный цилиндр — БД. Фиолетовый блок со срезанными углами — кеш. Бирюзовый горизонтальный цилиндр — очередь или поток событий (например, топик Kafka).</figcaption></figure>
-<p><b>Оплата идемпотентна:</b> после подтверждённого списания одна транзакция переводит места в проданные и создаёт билеты. Истечение резерва согласуется с оплатой через состояние заказа. QR-код идентифицирует билет; онлайн-проверка атомарно отмечает вход и защищает от повторного использования.</p>
-    </div>
-    <div class="more">
-<h4>Шаг 1 — Требования и ограничения</h4>
-<p>Основные сценарии: выбрать фильм, кинотеатр и сеанс; открыть схему зала; выбрать несколько мест; удержать их на время оплаты; получить электронные билеты; вернуть их по правилам; проверить билет на входе. Основной вариант — <b>платформа сети кинотеатров со своим инвентарём и онлайн-проверкой билетов</b>. Кассы и другие каналы используют тот же источник истины или выделенную им квоту. Продажа чужих сеансов требует отдельной интеграции. Рекомендации фильмов и продажа еды вне задачи.</p>
-<p><b>Инварианты:</b> одно место одного сеанса не принадлежит двум активным заказам; группа выбранных мест резервируется целиком; один платёж не списывается повторно; подтверждённый заказ имеет билеты на все оплаченные места. Нельзя принять копию уже использованного или отменённого билета. Нужно уточнить правила возврата, лимит мест в заказе, время завершения продаж и возможность частичного возврата.</p>
-<p><b>Допущения:</b> 20 млн запросов каталога и карты мест, 100 тыс. заказов в сутки, в среднем 2 места в заказе; пик в 10 раз выше среднего. Резерв — 5 минут; цель чтения — p95 до 200 мс на стороне сервиса, создания резерва — до 500 мс без времени оплаты. Отставание карты до 2 секунд допустимо: при конфликте пользователь выбирает другие места. Это параметры примера.</p>
-<div class="table-wrap"><table><tr><th>Величина</th><th>Оценка и следствие</th></tr>
-<tr><td>Чтения</td><td>20 млн / 86 400 ≈ 230 RPS; пик ≈ 2 300. Кеш нужен прежде всего для горячих сеансов и повторных просмотров.</td></tr>
-<tr><td>Заказы</td><td>≈ 1,2 в секунду; пик ≈ 12. Попыток удержания может быть больше, чем покупок: брошенные резервы оцениваются отдельно.</td></tr>
-<tr><td>Места сеансов</td><td>10 тыс. сеансов в сутки × 200 кресел × 30 дней продажи ≈ 60 млн строк. При условных 100 Б на строку — 6 ГБ без индексов, реплик и истории.</td></tr>
-<tr><td>Скрытая нагрузка</td><td>10 тыс. зрителей, обновляющих карту раз в 2 секунды, добавят 5 тыс. RPS. Опрос и SSE/WebSocket-соединения имеют отдельный бюджет.</td></tr></table></div>
-<p><b>Главный перекос:</b> общая запись невелика, но премьера может собрать тысячи запросов на один сеанс. Масштабирование должно защищать конкретный горячий инвентарь, а не только распределять средний RPS.</p>
-<h4>Шаг 2 — Общая архитектура</h4>
-<figure class="concept" aria-labelledby="sd-cinema-base-caption">
-<svg id="sd-cinema-base" viewBox="0 0 320 286" role="img" aria-labelledby="sd-cinema-base-title sd-cinema-base-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-cinema-base-title">Кинобилеты: базовая архитектура</title><desc id="sd-cinema-base-desc">Клиент вызывает одно приложение с модулями поиска, бронирования и фонового оформления. Приложение использует PostgreSQL и вызывает платёжного провайдера. Состояние саги хранится в БД.</desc>
-<defs><marker id="sd-cinema-base-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 46 V88" marker-end="url(#sd-cinema-base-arrow)"/>
-<path class="concept-edge" d="M118 156 V186 H78 V216" marker-end="url(#sd-cinema-base-arrow)"/>
-<path class="concept-edge" d="M202 156 V186 H246 V216" marker-end="url(#sd-cinema-base-arrow)"/>
-<rect fill="var(--bg)" stroke="none" x="88" y="8" width="144" height="38" rx="8"/>
-<rect class="concept-node plain" x="88" y="8" width="144" height="38" rx="8"/>
-<text x="160" y="32" text-anchor="middle">Зритель / сканер</text>
-<rect fill="var(--bg)" stroke="none" x="38" y="88" width="244" height="68" rx="8"/>
-<rect class="concept-node accent" x="38" y="88" width="244" height="68" rx="8"/>
-<text x="160" y="118.5" text-anchor="middle">Приложение</text>
-<text x="160" y="135.5" text-anchor="middle">поиск / бронь / сага</text>
-<path fill="var(--bg)" stroke="none" d="M8 223 A70 7 0 0 1 148 223 V263 A70 7 0 0 1 8 263 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="78" cy="223" rx="70" ry="7"/>
-<path class="concept-db" d="M8 223 A70 7 0 0 1 148 223 V263 A70 7 0 0 1 8 263 Z"/>
-<ellipse class="concept-db" cx="78" cy="223" rx="70" ry="7"/>
-<text x="78" y="245.5" text-anchor="middle">PostgreSQL</text>
-<text x="78" y="262.5" text-anchor="middle">места / резервы</text>
-<rect fill="var(--bg)" stroke="none" x="172" y="216" width="140" height="54" rx="8"/>
-<rect class="concept-node plain" x="172" y="216" width="140" height="54" rx="8"/>
-<text x="242" y="245.5" text-anchor="middle">Платёжный</text>
-<text x="242" y="262.5" text-anchor="middle">провайдер</text>
-</svg>
-<figcaption id="sd-cinema-base-caption">Сначала достаточно модульного приложения и одной БД. Фоновый обработчик продолжает оформление по сохранённому состоянию. Внешний платёж выполняется между короткими транзакциями БД. Зелёный цилиндр — БД.</figcaption></figure>
-<p><b>Начать с модульного приложения и PostgreSQL.</b> Модули каталога, сеансов, резервирования, оплаты и билетов используют общую транзакционную БД. Фоновый обработчик продолжает оплату по сохранённому состоянию; внешние вызовы не удерживают блокировки мест. Outbox позволяет надёжно передать события и команды после фиксации заказа.</p>
-<p><b>Путь пользователя:</b> каталог → сеанс и схема зала → резерв мест → оплата → подтверждение заказа и билеты → вход в зал. Пока результат платежа выясняется, API возвращает состояние оформления. Письмо с QR — способ доставки уже созданного билета, поэтому сбой почты не отменяет покупку.</p>
-<h4>Шаг 3 — Детали ключевых компонентов</h4>
-<p><b>API.</b> Изменяющие операции защищаются <code><span class="t">Idempotency</span>-<span class="t">Key</span></code>, связанным с пользователем, типом операции и хешем тела. Уникальное ограничение сериализует одновременные повторы, а повтор ключа с другим содержимым отклоняется. Просмотр и возврат заказа требуют проверки владельца. Сканирование доступно только авторизованным устройствам кинотеатра.</p>
-<pre><span class="t">GET</span> /movies
-<span class="t">GET</span> /showings?cinema=…&amp;date=…
-<span class="t">GET</span> /showings/{id}/seats
-<span class="t">POST</span> /orders
-<span class="t">POST</span> /orders/{id}/checkout
-<span class="t">GET</span> /orders/{id}
-<span class="t">POST</span> /orders/{id}/refund
-<span class="t">POST</span> /tickets/validate</pre>
-<div class="table-wrap"><table><tr><th>Сущность</th><th>Модель и ограничение</th></tr>
-<tr><td>cinema / hall / seat</td><td>Кинотеатр, зал, кресло с рядом, номером и категорией. У сеанса фиксируется версия схемы, чтобы изменение зала не меняло уже проданные места.</td></tr>
-<tr><td>showing</td><td>Конкретный сеанс: фильм, зал, начало и завершение продаж, состояние. Время однозначно хранится и отображается в зоне кинотеатра.</td></tr>
-<tr><td>showing_seat</td><td>Первичный ключ — сеанс и кресло. Статус FREE/HELD/SOLD/BLOCKED, текущий order_id. Одно физическое кресло продаётся отдельно на каждый сеанс.</td></tr>
-<tr><td>order / order_item</td><td>Владелец, статус, срок удержания, версия; выбранные места, снимок цен, валюта, сборы, скидки и условия возврата.</td></tr>
-<tr><td>payment_attempt / ticket / outbox</td><td>Стабильные ID операций и результаты; билет на место с непрогнозируемым токеном и статусом; надёжная доставка команд и событий.</td></tr></table></div>
-<p><b>Цена вычисляется сервером.</b> Места разных рядов, детские билеты и скидки могут иметь разные цены. Клиент передаёт выбранные места и допустимые параметры, но не доверенную сумму. Предложение имеет срок; при резервировании сервер фиксирует цену и условия. После принятия предложения сумма не меняется незаметно в середине оплаты.</p>
-<p><b>Как два покупателя выбирают одно кресло.</b> Карта зала — только отображение. При создании заказа сервер удаляет дубликаты ID, проверяет принадлежность одному сеансу и лимит количества, затем в одной транзакции блокирует выбранные строки:</p>
-<pre><span class="k">SELECT</span> seat_id, status
-<span class="k">FROM</span> showing_seat
-<span class="k">WHERE</span> showing_id = :showing
-  <span class="k">AND</span> seat_id <span class="k">IN</span> (:seat_ids)
-<span class="k">ORDER</span> <span class="k">BY</span> seat_id
-<span class="k">FOR</span> <span class="k">UPDATE</span>;</pre>
-<p>Вернуться должны все запрошенные места; каждое должно быть <code><span class="t">FREE</span></code>, а сеанс — открыт для продажи. Если хотя бы одно занято или отсутствует, откатывается весь заказ. Иначе создаётся <code><span class="t">HELD</span></code> с дедлайном, строки мест получают владельца, сохраняются позиции заказа и outbox. Связанные изменения статуса сеанса, включая закрытие продаж, должны согласовываться с этим протоколом.</p>
-<pre><span class="k">UPDATE</span> showing_seat
-<span class="k">SET</span> status = <span class="s">'HELD'</span>, order_id = :<span class="k">order</span>
-<span class="k">WHERE</span> showing_id = :showing
-  <span class="k">AND</span> seat_id <span class="k">IN</span> (:seat_ids)
-  <span class="k">AND</span> status = <span class="s">'FREE'</span>;</pre>
-<p>Число обновлённых строк проверяется и должно совпасть с количеством уникальных выбранных мест. Проверка и UPDATE выполняются <b>в той же транзакции</b>. У мест заранее есть строки и уникальный ключ, поэтому невозможно создать второй текущий слот для того же кресла сеанса. Блокировки берутся в едином порядке во всех сценариях; <a href="https://www.postgresql.org/docs/17/explicit-locking.html">дедлоки обрабатываются повтором всей транзакции</a>. Ждать ввода карты или ответа банка с открытой транзакцией нельзя.</p>
-<p><b>Резерв истёк одновременно с оплатой.</b> Checkout и таймер блокируют одну строку заказа, затем проверяют его статус и актуальное время БД. Checkout переводит действующий <code><span class="t">HELD</span></code> в <code><span class="t">PROCESSING</span></code> и сохраняет команду платежа. Таймер переводит только истёкший <code><span class="t">HELD</span></code> в <code><span class="t">EXPIRED</span></code> и освобождает его места в одной транзакции. Освобождение проверяет прежнего владельца и статус места; повторная команда не снимает новый резерв.</p>
-<p><b>PROCESSING нельзя освобождать обычным таймером.</b> Для него заданы срок восстановления и отдельная проверка платёжного состояния. Ответ мог потеряться после фактического списания. Место освобождается только после установления безопасного исхода и согласованного перехода. Дедлайн оплаты учитывает начало сеанса: зависший процесс нельзя бесконечно подтверждать после завершения продаж.</p>
-<p><b>Оплата и выпуск билетов.</b> Работник сохраняет попытку, выполняет предусмотренные провайдером авторизацию и capture со стабильными ключами по шагам. После подтверждённого списания короткая транзакция проверяет владельца мест и статус заказа, переводит их в <code><span class="t">SOLD</span></code>, создаёт билеты, ставит <code><span class="t">CONFIRMED</span></code> и сохраняет события outbox. Уникальность пары «заказ + место» защищает повтор выпуска; история старых билетов не мешает перепродаже после разрешённого возврата, потому что текущая занятость хранится в <code>showing_seat</code>.</p>
-<div class="table-wrap"><table><tr><th>Сбой</th><th>Действие</th></tr>
-<tr><td>Платёж окончательно отклонён</td><td>Отменить заказ и освободить его места ровно один раз. Если осталось удержание денег, выполнить void по контракту провайдера.</td></tr>
-<tr><td>Таймаут capture</td><td>Проверить статус по сохранённому ID или безопасно повторить с тем же ключом. Не создавать новый платёж и не возвращать места в продажу вслепую.</td></tr>
-<tr><td>Деньги списаны, фиксация в БД не прошла</td><td>После восстановления повторить транзакцию подтверждения. Если покупку уже нельзя завершить, сохранить команду возврата и согласованно освободить места.</td></tr>
-<tr><td>Билет создан, письмо не дошло</td><td>Повторить доставку того же билета. Он доступен в личном кабинете; новый билет и платёж не создаются.</td></tr>
-<tr><td>Возврат или отмена сеанса</td><td>Транзакционно сделать билеты недействительными и согласовать состояние мест. Возврат денег идёт отдельным отслеживаемым процессом; частичный возврат учитывается по позициям.</td></tr></table></div>
-<p><b>QR и вход в зал.</b> QR содержит непрогнозируемый токен без персональных данных; в БД хранится его хеш. Валидатор проверяет сеанс, время и статус, затем атомарно переводит билет из <code><span class="t">VALID</span></code> в <code><span class="t">USED</span></code>. Параллельные сканеры не должны оба получить успешный первый вход:</p>
-<pre><span class="k">UPDATE</span> ticket
-<span class="k">SET</span> status = <span class="s">'USED'</span>, used_at = now()
-<span class="k">WHERE</span> token_hash = :hash
-  <span class="k">AND</span> status = <span class="s">'VALID'</span>
-<span class="k">RETURNING</span> id;</pre>
-<p>Одна строка — вход разрешён, ноль — использованный, отменённый или неизвестный билет. Валидация контекста и переход составляют согласованную транзакционную операцию; возврат также блокирует и изменяет билет по общему порядку. Повтор сетевого запроса сканера имеет свой ID, чтобы восстановить прежний ответ. QR можно скопировать: подпись или случайный токен сами по себе не предотвращают повторный проход. <b>При офлайн-сканировании независимыми устройствами строгую защиту от двойного входа гарантировать нельзя</b> без дополнительной координации.</p>
-<h4>Шаг 4 — Масштабирование и узкие места</h4>
-<figure class="concept" aria-labelledby="sd-cinema-scaled-caption">
-<svg id="sd-cinema-scaled" viewBox="0 0 328 732" role="img" aria-labelledby="sd-cinema-scaled-title sd-cinema-scaled-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-cinema-scaled-title">Кинобилеты: поиск и оформление масштабируются независимо</title><desc id="sd-cinema-scaled-desc">Зритель и сканер вызывают API Gateway; проверку билета выполняет Booking API. Read API отдельно читает БД каталога сеансов PostgreSQL и кеш доступности мест, Booking API сохраняет резервы в основной БД. Outbox передаёт команды и события через очередь фоновым обработчикам оформления заказа и отправки билетов, а также обновляет кеш доступности мест. Обработчики оформления выполняют сагу: сохраняют прогресс в БД, вызывают платёжного провайдера и создают билеты. Янтарные блоки с W обозначают фоновых обработчиков — workers. Стопки обозначают несколько экземпляров, у БД — primary и standby.</desc>
-<defs><marker id="sd-cinema-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M160 44 V74" marker-end="url(#sd-cinema-scaled-arrow)"/>
-<path class="concept-edge" d="M160 130 V158 H74 V184" marker-end="url(#sd-cinema-scaled-arrow)"/>
-<path class="concept-edge" d="M160 130 V158 H238 V184" marker-end="url(#sd-cinema-scaled-arrow)"/>
-<path class="concept-edge" d="M74 260 H160 V383 H152" marker-end="url(#sd-cinema-scaled-arrow)"/>
-<path class="concept-edge" d="M74 246 V282" marker-end="url(#sd-cinema-scaled-arrow)"/>
-<path class="concept-edge" d="M238 246 V276" marker-end="url(#sd-cinema-scaled-arrow)"/>
-<path class="concept-edge" d="M238 342 V448 H160 V480" marker-end="url(#sd-cinema-scaled-arrow)" stroke-dasharray="4 4"/>
-<text class="concept-label" x="258" y="466" text-anchor="middle">outbox</text>
-<path class="concept-edge" d="M88 502 H74 V410" marker-end="url(#sd-cinema-scaled-arrow)" stroke-dasharray="4 4"/>
-<text class="concept-label" x="34" y="450" text-anchor="middle">обновить</text>
-<path class="concept-edge" d="M116 526 V550 H74 V570" marker-end="url(#sd-cinema-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M204 526 V550 H238 V570" marker-end="url(#sd-cinema-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M304 607 H318 V315 H316" marker-end="url(#sd-cinema-scaled-arrow)"/>
-<path class="concept-edge" d="M238 632 V672" marker-end="url(#sd-cinema-scaled-arrow)"/>
-<rect fill="var(--bg)" stroke="none" x="88" y="8" width="144" height="36" rx="8"/>
-<rect class="concept-node plain" x="88" y="8" width="144" height="36" rx="8"/>
-<text x="160" y="31" text-anchor="middle">Зритель / сканер</text>
-<rect fill="var(--bg)" stroke="none" x="90" y="74" width="164" height="44" rx="8"/>
-<rect class="concept-node accent" x="90" y="74" width="164" height="44" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="84" y="80" width="164" height="44" rx="8"/>
-<rect class="concept-node accent" x="84" y="80" width="164" height="44" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="78" y="86" width="164" height="44" rx="8"/>
-<rect class="concept-node accent" x="78" y="86" width="164" height="44" rx="8"/>
-<text x="160" y="113" text-anchor="middle">API Gateway</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="184" width="132" height="50" rx="8"/>
-<rect class="concept-node accent" x="20" y="184" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="190" width="132" height="50" rx="8"/>
-<rect class="concept-node accent" x="14" y="190" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="196" width="132" height="50" rx="8"/>
-<rect class="concept-node accent" x="8" y="196" width="132" height="50" rx="8"/>
-<text x="74" y="217.5" text-anchor="middle">Read API</text>
-<text x="74" y="234.5" text-anchor="middle">каталог / места</text>
-<rect fill="var(--bg)" stroke="none" x="184" y="184" width="132" height="50" rx="8"/>
-<rect class="concept-node accent" x="184" y="184" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="190" width="132" height="50" rx="8"/>
-<rect class="concept-node accent" x="178" y="190" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="172" y="196" width="132" height="50" rx="8"/>
-<rect class="concept-node accent" x="172" y="196" width="132" height="50" rx="8"/>
-<text x="238" y="217.5" text-anchor="middle">Booking API</text>
-<text x="238" y="234.5" text-anchor="middle">бронь / вход</text>
-<path fill="var(--bg)" stroke="none" d="M8 289 A72 7 0 0 1 152 289 V339 A72 7 0 0 1 8 339 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="80" cy="289" rx="72" ry="7"/>
-<path class="concept-db" d="M8 289 A72 7 0 0 1 152 289 V339 A72 7 0 0 1 8 339 Z"/>
-<ellipse class="concept-db" cx="80" cy="289" rx="72" ry="7"/>
-<text x="80" y="316" text-anchor="middle">БД каталога</text>
-<text x="80" y="333" text-anchor="middle">сеансов</text>
-<path class="concept-cache" d="M16 356 H144 L152 364 V402 L144 410 H16 L8 402 V364 Z"/>
-<text x="80" y="379.5" text-anchor="middle">Кеш доступности</text>
-<text x="80" y="396.5" text-anchor="middle">мест</text>
-<path fill="var(--bg)" stroke="none" d="M184 283 A66 7 0 0 1 316 283 V323 A66 7 0 0 1 184 323 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="250" cy="283" rx="66" ry="7"/>
-<path class="concept-db" d="M184 283 A66 7 0 0 1 316 283 V323 A66 7 0 0 1 184 323 Z"/>
-<ellipse class="concept-db" cx="250" cy="283" rx="66" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M178 289 A66 7 0 0 1 310 289 V329 A66 7 0 0 1 178 329 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="244" cy="289" rx="66" ry="7"/>
-<path class="concept-db" d="M178 289 A66 7 0 0 1 310 289 V329 A66 7 0 0 1 178 329 Z"/>
-<ellipse class="concept-db" cx="244" cy="289" rx="66" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M172 295 A66 7 0 0 1 304 295 V335 A66 7 0 0 1 172 335 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="238" cy="295" rx="66" ry="7"/>
-<path class="concept-db" d="M172 295 A66 7 0 0 1 304 295 V335 A66 7 0 0 1 172 335 Z"/>
-<ellipse class="concept-db" cx="238" cy="295" rx="66" ry="7"/>
-<text x="238" y="317.5" text-anchor="middle">БД продаж</text>
-<text x="238" y="334.5" text-anchor="middle">primary / standby</text>
-<path fill="var(--bg)" stroke="none" d="M96 480 H224 A8 23 0 0 1 224 526 H96 A8 23 0 0 1 96 480 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="96" cy="503" rx="8" ry="23"/>
-<path class="concept-broker" d="M96 480 H224 A8 23 0 0 1 224 526 H96 A8 23 0 0 1 96 480 Z"/>
-<ellipse class="concept-broker" cx="96" cy="503" rx="8" ry="23"/>
-<text x="168" y="499.5" text-anchor="middle">Очереди и</text>
-<text x="168" y="516.5" text-anchor="middle">потоки событий</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="570" width="132" height="50" rx="8"/>
-<rect class="concept-node warning" x="20" y="570" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="576" width="132" height="50" rx="8"/>
-<rect class="concept-node warning" x="14" y="576" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="582" width="132" height="50" rx="8"/>
-<rect class="concept-node warning" x="8" y="582" width="132" height="50" rx="8"/>
-<g role="img" aria-label="Фоновый обработчик — worker">
-<circle cx="140" cy="594" r="10" fill="var(--bg)"/>
-<circle class="concept-node warning" cx="140" cy="594" r="10"/>
-<text x="140" y="598" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
-</g>
-<text x="74" y="603.5" text-anchor="middle">Отправка</text>
-<text x="74" y="620.5" text-anchor="middle">билетов</text>
-<rect fill="var(--bg)" stroke="none" x="184" y="570" width="132" height="50" rx="8"/>
-<rect class="concept-node warning" x="184" y="570" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="576" width="132" height="50" rx="8"/>
-<rect class="concept-node warning" x="178" y="576" width="132" height="50" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="172" y="582" width="132" height="50" rx="8"/>
-<rect class="concept-node warning" x="172" y="582" width="132" height="50" rx="8"/>
-<g role="img" aria-label="Фоновый обработчик — worker">
-<circle cx="304" cy="594" r="10" fill="var(--bg)"/>
-<circle class="concept-node warning" cx="304" cy="594" r="10"/>
-<text x="304" y="598" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
-</g>
-<text x="238" y="596" text-anchor="middle">Оформление</text>
-<text x="238" y="612" text-anchor="middle">заказа</text>
-<text x="238" y="627" text-anchor="middle" style="font-size:12px">Сага</text>
-<rect fill="var(--bg)" stroke="none" x="172" y="672" width="140" height="48" rx="8"/>
-<rect class="concept-node plain" x="172" y="672" width="140" height="48" rx="8"/>
-<text x="242" y="692.5" text-anchor="middle">Платёжный</text>
-<text x="242" y="709.5" text-anchor="middle">провайдер</text>
-</svg>
-<figcaption id="sd-cinema-scaled-caption">Read API читает БД каталога сеансов (PostgreSQL) и кеш доступности мест по отдельным маршрутам. Каталог и продажи — логические группы таблиц; на старте они могут находиться в одной физической БД. События продаж обновляют кеш мест. Read API и Booking API масштабируются отдельно. БД — источник истины по местам сеансов, заказам и состоянию процесса; standby не становится независимым центром записи. Outbox доставляет команды и события в отдельные очереди или топики. Пунктир — фоновая доставка, стопки — несколько экземпляров. Янтарные блоки с W — фоновые обработчики (workers): «Оформление заказа» выполняет сагу оплаты и выпуска билетов, «Отправка билетов» доставляет их пользователю; сканер проверяет вход через API Gateway и Booking API. Ответы вызовов опущены. Зелёный цилиндр — БД. Фиолетовый блок со срезанными углами — кеш. Бирюзовый горизонтальный цилиндр — очередь или поток событий (например, топик Kafka).</figcaption></figure>
-<p><b>Отделить чтение.</b> Read API масштабируется отдельно от Booking API. Каталог сеансов — таблицы PostgreSQL с фильмами, кинотеатрами, залами, расписанием и базовыми ценами. На старте они находятся в той же физической БД, что и продажи; при необходимости чтение каталога направляется на реплику. На схеме эти данные выделены логически, а не как обязательный отдельный кластер. Афиша, описание фильма и схема зала меняются редко; текущая занятость кресел хранится отдельным представлением. Кеш по сеансу и короткий TTL уменьшают нагрузку. События из outbox обновляют карту с версией: старое событие не должно показать проданное кресло свободным. Потерянные обновления восстанавливаются полным снимком.</p>
-<p><b>Доставлять изменения карты экономно.</b> Для большого числа зрителей доступны SSE/WebSocket или ограниченный опрос с jitter. Передаются изменения с номером версии; после разрыва или пропуска версии клиент запрашивает снимок. Рассылка, число соединений и частота обновлений ограничиваются отдельно. Это улучшает интерфейс, но успешную продажу по-прежнему решает транзакция бронирования.</p>
-<p><b>Защитить премьеры.</b> Rate limit, ограничения активных резервов и количества мест в заказе, короткий TTL и при необходимости очередь допуска уменьшают захват мест ботами и очередь блокировок. Целиком блокировать весь сеанс ради пары кресел не требуется: независимые места могут продаваться параллельно. На одно кресло всё равно приходится один победитель; увеличение числа экземпляров не меняет этот предел.</p>
-<p><b>Работники и очереди.</b> Оплата, обновления карты и доставка билетов имеют разные очереди и лимиты ресурсов. Доставка как минимум один раз требует дедупликации событий и идемпотентных эффектов. У платёжного провайдера — квоты, ограниченные ретраи с backoff/jitter и проверка результата. Подлинность callback и ID события проверяются, устаревшее уведомление не перезаписывает подтверждённый исход.</p>
-<p><b>Рост данных.</b> При заданной средней записи достаточно одной надёжной БД с резервным узлом; историю завершённых сеансов можно архивировать или партиционировать. Если действительно нужно шардирование, ключ сеанса сохраняет места и заказ одного сеанса вместе. Заказ нескольких сеансов потребует отдельного процесса согласования. Реплики и кеши помогают чтению, но не становятся независимыми центрами продажи.</p>
-<p><b>Все каналы продаж.</b> Если касса работает с независимой БД, локальная уникальность платформы не защищает от её продажи того же кресла. Нужен единый авторитетный инвентарь, протокол резервирования партнёра или непересекающиеся квоты. При разрыве связи нельзя одновременно гарантировать продажу любого общего места каждым каналом и отсутствие двойной продажи.</p>
-<p><b>Эксплуатация.</b> Сверка сопоставляет платёж, заказ, владельцев мест и билеты. Измеряются задержка карты, конфликты резервов, время блокировок, возраст PROCESSING/REFUND_PENDING, доля оплаченных заказов без билетов, задержка возвратов и повторные сканирования. Backup и проверяемое восстановление дополняют репликацию. Токены QR и платёжные секреты не попадают в логи.</p>
-<p><b>Компромисс:</b> кеш ускоряет карту, но допускает устаревшее отображение; короткий резерв уменьшает захват мест, но сокращает время оплаты; строгий источник истины ограничивает продажу при сбое, зато сохраняет эксклюзивность кресла. Онлайн-проверка билетов требует связи, но даёт согласованный результат прохода.</p>
-<p class="follow"><b>Можно хранить резерв только в Redis с TTL?</b> Можно спроектировать отдельный протокол, но один TTL не связывает резерв с оплатой, продажей и выпуском билета. В выбранном решении источник истины — БД: срок и условные переходы заказа определяют освобождение, а Redis ускоряет отображение. Истечение кеш-ключа не является разрешением перепродать место с неизвестным исходом платежа.</p>
     </div></div></article>
 <article id="q283" hidden><div class="crumbs">Kubernetes и эксплуатация</div><h2 tabindex="-1">283. Docker-образ для Java-сервиса</h2><div class="answer" hidden><div class="short"><ul><li><b>Multi-stage</b>: собрать в образе с JDK, в итоговый взять только JRE и приложение.</li><li><b>Слои</b> от редко меняющихся к частым: зависимости отдельно от своего кода — правка кода выкачивает только тонкий слой (Spring Boot раскладывает jar на слои сам).</li><li><b>Не от root</b>, фиксированные теги базовых образов.</li><li>ENTRYPOINT в <b>exec-форме</b>, чтобы java получала SIGTERM.</li></ul>
 <p>Без Dockerfile — <b>Buildpacks</b> или Jib.</p></div>
