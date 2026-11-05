@@ -9326,10 +9326,38 @@ log.error(<span class="s">"partner failed, paymentId={}"</span>,
 <tr><td><b>29. Rate limiting</b></td><td>Ограничить поток запросов по клиенту или ресурсу; определить квоты и поведение при превышении.</td></tr>
 <tr><td><b>30. API gateway</b></td><td>Вход для маршрутизации и общих политик; бизнес-инварианты остаются ответственностью сервисов.</td></tr>
 </table></div>
-<h4>Обозначения на схемах главы</h4>
-<p>Стопки одинаковых фигур — несколько экземпляров. Зелёный вертикальный цилиндр — БД или поисковый индекс; фиолетовый блок со срезанными углами — кеш; бирюзовый горизонтальный цилиндр — очередь или журнал событий; янтарный прямоугольник с меткой W — фоновый обработчик. Пунктир обозначает фоновые потоки, репликацию или отдельное взаимодействие, указанное подписью. Повторённые названия в частях одной схемы обозначают те же компоненты.</p>
 <h4>Как понятия работают вместе</h4>
 <p><b>Пример — загрузка документа:</b> API выдаёт разрешение на загрузку в объектное хранилище. После её завершения сохраняет метаданные и задачу обработки через outbox. Работник извлекает текст; повтор задачи не создаёт вторую запись благодаря идентификатору операции. Клиент получает статус через запрос API или уведомление.</p>
+<figure class="concept" aria-labelledby="document-upload-flow-caption">
+<svg viewBox="0 0 320 510" role="img" aria-labelledby="document-upload-flow-title document-upload-flow-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="document-upload-flow-title">Загрузка документа и фоновое извлечение текста</title>
+<desc id="document-upload-flow-desc">Клиент запрашивает у API разрешение, загружает файл в объектное хранилище и подтверждает завершение. API проверяет загрузку и фиксирует метаданные с outbox одной транзакцией. Публикатор отправляет задание в очередь. Worker читает файл, извлекает текст и идемпотентно сохраняет результат и статус в БД. Клиент проверяет статус через API.</desc>
+<defs><marker id="document-upload-flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M140 32 H174" marker-end="url(#document-upload-flow-arrow)"/>
+<text x="158" y="20" text-anchor="middle" class="concept-label">1, 3</text>
+<path class="concept-edge" d="M74 52 V120" marker-end="url(#document-upload-flow-arrow)"/><text x="88" y="92" class="concept-label">2. файл</text>
+<path class="concept-edge" d="M245 52 V120" marker-end="url(#document-upload-flow-arrow)"/><text x="257" y="92" class="concept-label">3. commit</text>
+<path class="concept-edge" d="M245 180 V234" marker-end="url(#document-upload-flow-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M241 286 V324" marker-end="url(#document-upload-flow-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M160 372 V418" marker-end="url(#document-upload-flow-arrow)"/>
+<path class="concept-edge" d="M80 448 H16 V184" marker-end="url(#document-upload-flow-arrow)"/>
+<text x="28" y="254" class="concept-label">читать файл</text>
+<path class="concept-edge" d="M240 448 H318 V204 H278 V184" marker-end="url(#document-upload-flow-arrow)" stroke-dasharray="4 4"/>
+<text x="258" y="399" text-anchor="middle" class="concept-label">результат</text>
+<rect class="concept-node plain" x="8" y="10" width="132" height="42" rx="9"/><text x="74" y="36" text-anchor="middle">Клиент</text>
+<rect class="concept-node accent" x="178" y="10" width="134" height="42" rx="9"/><text x="245" y="36" text-anchor="middle">API</text>
+<rect fill="var(--bg)" stroke="none" x="8" y="124" width="132" height="56" rx="9"/><rect class="concept-node plain" x="8" y="124" width="132" height="56" rx="9"/><text x="74" y="147" text-anchor="middle">Объектное</text><text x="74" y="168" text-anchor="middle">хранилище</text>
+<path fill="var(--bg)" stroke="none" d="M178 131 A67 7 0 0 1 312 131 V173 A67 7 0 0 1 178 173 Z"/><path class="concept-db" d="M178 131 A67 7 0 0 1 312 131 V173 A67 7 0 0 1 178 173 Z"/><ellipse class="concept-db" cx="245" cy="131" rx="67" ry="7"/>
+<text x="245" y="153" text-anchor="middle">Метаданные</text><text x="245" y="171" text-anchor="middle">+ outbox</text>
+<rect fill="var(--bg)" stroke="none" x="178" y="238" width="126" height="48" rx="9"/><rect class="concept-node warning" x="178" y="238" width="126" height="48" rx="9"/>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="304" cy="250" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="304" cy="250" r="10"/><text x="304" y="254" text-anchor="middle" style="font-size:12px;font-weight:700">W</text></g>
+<text x="241" y="259" text-anchor="middle">Публикатор</text><text x="241" y="277" text-anchor="middle">outbox</text>
+<path fill="var(--bg)" stroke="none" d="M38 328 H282 A8 22 0 0 1 282 372 H38 A8 22 0 0 1 38 328 Z"/><path class="concept-broker" d="M38 328 H282 A8 22 0 0 1 282 372 H38 A8 22 0 0 1 38 328 Z"/><ellipse class="concept-broker" cx="38" cy="350" rx="8" ry="22"/><text x="160" y="355" text-anchor="middle">Очередь задач</text>
+<rect fill="var(--bg)" stroke="none" x="80" y="422" width="160" height="52" rx="9"/><rect class="concept-node warning" x="80" y="422" width="160" height="52" rx="9"/>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="240" cy="434" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="240" cy="434" r="10"/><text x="240" y="438" text-anchor="middle" style="font-size:12px;font-weight:700">W</text></g>
+<text x="160" y="444" text-anchor="middle">Извлечение текста</text><text x="160" y="463" text-anchor="middle" class="concept-label">дедупликация по job_id</text>
+<text x="160" y="501" text-anchor="middle" class="concept-label">Статус обработки клиент читает через API</text>
+</svg><figcaption id="document-upload-flow-caption">1 — получить разрешение; 2 — загрузить файл; 3 — подтвердить загрузку. Метаданные и outbox фиксируются вместе; результат обработки сохраняется без повторного эффекта.</figcaption></figure>
 <p class="follow"><b>Нужно ли включать все компоненты в каждое решение?</b> Нет. Сначала определяют требования и простой рабочий путь запроса, затем добавляют компонент для измеренного ограничения или необходимой гарантии.</p>
 <p>Дополнительно: <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview">MDN — HTTP</a>, <a href="https://learn.microsoft.com/en-us/azure/architecture/guide/design-principles/partition">Azure — разделение данных и нагрузки</a>, <a href="https://learn.microsoft.com/en-us/azure/architecture/guide/architecture-styles/">Azure — архитектурные стили</a>.</p>
     </div></div></article>
