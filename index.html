@@ -10147,76 +10147,39 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
     </div></div></article>
 <article id="q277" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">277. Спроектируйте сокращатель ссылок <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
 <p>Сокращатель хранит <code>short_code → original_url</code>. Случайный Base62-код сохраняется с уникальным ограничением и повтором при коллизии. Переход проверяет срок и статус ссылки, затем возвращает <code><span class="n">302</span> + <span class="t">Location</span></code>.</p>
-<p><b>Write Service и Redirect Service масштабируются независимо:</b> запись идёт в primary, переходы используют Redis и реплики с проверкой primary при отсутствии кода. Аналитика асинхронна; свежесть деактивации задаётся отдельно.</p>
-<figure class="concept" aria-labelledby="sd-url-scaled-summary-caption">
-<svg id="sd-url-scaled-summary" viewBox="0 0 320 492" role="img" aria-labelledby="sd-url-scaled-summary-title sd-url-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-url-scaled-summary-title">Сокращатель: независимое масштабирование сервисов</title><desc id="sd-url-scaled-summary-desc">Клиент обращается к Redirect Service для перехода и к Write Service для создания ссылки. Стопки смещённых прямоугольников обозначают несколько экземпляров сервиса или реплик БД. Redirect Service читает Redis и реплики, Write Service пишет в primary. Очередь отделяет аналитику.</desc>
-<defs><marker id="sd-url-scaled-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<p><b>Write Service и Redirect Service масштабируются независимо:</b> запись идёт в primary, переходы используют Redis и синхронные реплики; чтения из primary нет. Аналитика асинхронна; свежесть деактивации задаётся отдельно.</p>
+<figure class="concept">
+<svg id="sd-url-scaled-summary" viewBox="0 0 320 606" role="img" aria-labelledby="sd-url-scaled-summary-title sd-url-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-url-scaled-summary-title">Сокращатель: независимое масштабирование записи и чтения</title>
+<desc id="sd-url-scaled-summary-desc">Write Service слева создаёт ссылки и пишет в PostgreSQL primary. Read Service справа обслуживает переходы, читает Redis, при промахе — реплики. Primary и реплики расположены на одном уровне, пунктир между ними обозначает репликацию. Read Service асинхронно отправляет события переходов в очередь аналитики.</desc>
+<defs><marker id="sd-url-scaled-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M112 48 V68 H74 V70 M74 92 V96" marker-end="url(#sd-url-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M208 48 V68 H238 V70 M238 92 V96" marker-end="url(#sd-url-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M74 170 V336" marker-end="url(#sd-url-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M238 170 V216" marker-end="url(#sd-url-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M238 270 V278 M238 310 V324" marker-end="url(#sd-url-scaled-summary-arrow)"/>
+<path class="concept-edge" d="M140 374 H168" marker-end="url(#sd-url-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M304 141 H316 V485 H248" marker-end="url(#sd-url-scaled-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M160 510 V546" marker-end="url(#sd-url-scaled-summary-arrow)"/>
+<rect fill="var(--bg)" x="64" y="8" width="192" height="40" rx="8"/><rect class="concept-node plain" x="64" y="8" width="192" height="40" rx="8"/><text x="160" y="33" text-anchor="middle">Клиент</text>
+<rect fill="var(--bg)" x="20" y="100" width="132" height="58" rx="8"/><rect class="concept-node accent" x="20" y="100" width="132" height="58" rx="8"/><rect fill="var(--bg)" x="14" y="106" width="132" height="58" rx="8"/><rect class="concept-node accent" x="14" y="106" width="132" height="58" rx="8"/><rect fill="var(--bg)" x="8" y="112" width="132" height="58" rx="8"/><rect class="concept-node accent" x="8" y="112" width="132" height="58" rx="8"/><text x="74" y="137" text-anchor="middle">Write Service</text><text x="74" y="155" text-anchor="middle">Создание</text>
+<rect fill="var(--bg)" x="184" y="100" width="132" height="58" rx="8"/><rect class="concept-node accent" x="184" y="100" width="132" height="58" rx="8"/><rect fill="var(--bg)" x="178" y="106" width="132" height="58" rx="8"/><rect class="concept-node accent" x="178" y="106" width="132" height="58" rx="8"/><rect fill="var(--bg)" x="172" y="112" width="132" height="58" rx="8"/><rect class="concept-node accent" x="172" y="112" width="132" height="58" rx="8"/><text x="238" y="137" text-anchor="middle">Read Service</text><text x="238" y="155" text-anchor="middle">Переходы</text>
+<text x="74" y="84" text-anchor="middle" class="concept-label">POST /urls</text><text x="238" y="84" text-anchor="middle" class="concept-label">GET /{code}</text>
+<text x="100" y="250" text-anchor="middle" class="concept-label">INSERT</text>
+<path class="concept-cache" d="M180 220 H296 L304 228 V262 L296 270 H180 L172 262 V228 Z"/>
+<text x="238" y="240" text-anchor="middle">Redis</text><text x="238" y="258" text-anchor="middle">кеш ссылок</text>
+<text x="238" y="298" text-anchor="middle" class="concept-label">Промах кеша</text>
+<path fill="var(--bg)" d="M8 348 A66.0 8 0 0 1 140 348 V392 A66.0 8 0 0 1 8 392 Z"/><ellipse fill="var(--bg)" cx="74.0" cy="348" rx="66.0" ry="8"/><path class="concept-db" d="M8 348 A66.0 8 0 0 1 140 348 V392 A66.0 8 0 0 1 8 392 Z"/><ellipse class="concept-db" cx="74.0" cy="348" rx="66.0" ry="8"/><text x="74" y="373" text-anchor="middle">PostgreSQL</text><text x="74" y="390" text-anchor="middle">primary</text>
+<path fill="var(--bg)" d="M184 336 A66.0 8 0 0 1 316 336 V380 A66.0 8 0 0 1 184 380 Z"/><ellipse fill="var(--bg)" cx="250.0" cy="336" rx="66.0" ry="8"/><path class="concept-db" d="M184 336 A66.0 8 0 0 1 316 336 V380 A66.0 8 0 0 1 184 380 Z"/><ellipse class="concept-db" cx="250.0" cy="336" rx="66.0" ry="8"/><path fill="var(--bg)" d="M178 342 A66.0 8 0 0 1 310 342 V386 A66.0 8 0 0 1 178 386 Z"/><ellipse fill="var(--bg)" cx="244.0" cy="342" rx="66.0" ry="8"/><path class="concept-db" d="M178 342 A66.0 8 0 0 1 310 342 V386 A66.0 8 0 0 1 178 386 Z"/><ellipse class="concept-db" cx="244.0" cy="342" rx="66.0" ry="8"/><path fill="var(--bg)" d="M172 348 A66.0 8 0 0 1 304 348 V392 A66.0 8 0 0 1 172 392 Z"/><ellipse fill="var(--bg)" cx="238.0" cy="348" rx="66.0" ry="8"/><path class="concept-db" d="M172 348 A66.0 8 0 0 1 304 348 V392 A66.0 8 0 0 1 172 392 Z"/><ellipse class="concept-db" cx="238.0" cy="348" rx="66.0" ry="8"/><text x="238" y="378" text-anchor="middle">Реплики БД</text>
 
-<path class="concept-edge" d="M112 48 V74 H74 V108" marker-end="url(#sd-url-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M212 48 V74 H236 V108" marker-end="url(#sd-url-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M74 182 V238" marker-end="url(#sd-url-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M236 182 V238" marker-end="url(#sd-url-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M152 267 H162 V383 H174" marker-end="url(#sd-url-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M242 292 V310 M242 334 V342" marker-end="url(#sd-url-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M8 153 H2 V383 H4" marker-end="url(#sd-url-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M80 408 V434" marker-end="url(#sd-url-scaled-summary-arrow)"/>
-<rect class="concept-node plain" x="64" y="8" width="192" height="40" rx="9"/>
-<text x="160" y="32" text-anchor="middle">Клиент</text>
-
-
-<rect fill="var(--bg)" stroke="none" x="20" y="112" width="132" height="58" rx="7"/><rect class="concept-node accent" x="20" y="112" width="132" height="58" rx="7"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="118" width="132" height="58" rx="7"/><rect class="concept-node accent" x="14" y="118" width="132" height="58" rx="7"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="124" width="132" height="58" rx="9"/><rect class="concept-node accent" x="8" y="124" width="132" height="58" rx="9"/>
-<text x="74" y="148.5" text-anchor="middle">Redirect Service</text>
-<text x="74" y="165.5" text-anchor="middle">Переходы</text>
-<rect fill="var(--bg)" stroke="none" x="184" y="112" width="128" height="58" rx="7"/><rect class="concept-node accent" x="184" y="112" width="128" height="58" rx="7"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="118" width="128" height="58" rx="7"/><rect class="concept-node accent" x="178" y="118" width="128" height="58" rx="7"/>
-<rect fill="var(--bg)" stroke="none" x="172" y="124" width="128" height="58" rx="9"/><rect class="concept-node accent" x="172" y="124" width="128" height="58" rx="9"/>
-<text x="236" y="148.5" text-anchor="middle">Write Service</text>
-<text x="236" y="165.5" text-anchor="middle">Создание</text>
-<path fill="var(--bg)" stroke="none" d="M16 242 H144 L152 250 V284 L144 292 H16 L8 284 V250 Z"/>
-<path class="concept-cache" d="M16 242 H144 L152 250 V284 L144 292 H16 L8 284 V250 Z"/>
-<text x="80" y="262.5" text-anchor="middle">Redis</text>
-<text x="80" y="279.5" text-anchor="middle">кеш ссылок</text>
-<path fill="var(--bg)" stroke="none" d="M172 249 A70 7 0 0 1 312 249 V285 A70 7 0 0 1 172 285 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="242" cy="249" rx="70" ry="7"/>
-<path class="concept-db" d="M172 249 A70 7 0 0 1 312 249 V285 A70 7 0 0 1 172 285 Z"/>
-<ellipse class="concept-db" cx="242" cy="249" rx="70" ry="7"/>
-<text x="242" y="271" text-anchor="middle">PostgreSQL</text>
-<text x="242" y="288" text-anchor="middle">primary</text>
-<path fill="var(--bg)" stroke="none" d="M16 358 H144 A8 25 0 0 1 144 408 H16 A8 25 0 0 1 16 358 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="16" cy="383" rx="8" ry="25"/>
-<path class="concept-broker" d="M16 358 H144 A8 25 0 0 1 144 408 H16 A8 25 0 0 1 16 358 Z"/>
-<ellipse class="concept-broker" cx="16" cy="383" rx="8" ry="25"/>
-<text x="84" y="378.5" text-anchor="middle">Очередь</text>
-<text x="84" y="395.5" text-anchor="middle">переходов</text>
-<path fill="var(--bg)" stroke="none" d="M190 353 A61 7 0 0 1 312 353 V389 A61 7 0 0 1 190 389 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="251" cy="353" rx="61" ry="7"/>
-<path class="concept-db" d="M190 353 A61 7 0 0 1 312 353 V389 A61 7 0 0 1 190 389 Z"/>
-<ellipse class="concept-db" cx="251" cy="353" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M184 359 A61 7 0 0 1 306 359 V395 A61 7 0 0 1 184 395 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="245" cy="359" rx="61" ry="7"/>
-<path class="concept-db" d="M184 359 A61 7 0 0 1 306 359 V395 A61 7 0 0 1 184 395 Z"/>
-<ellipse class="concept-db" cx="245" cy="359" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M178 365 A61 7 0 0 1 300 365 V401 A61 7 0 0 1 178 401 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="239" cy="365" rx="61" ry="7"/>
-<path class="concept-db" d="M178 365 A61 7 0 0 1 300 365 V401 A61 7 0 0 1 178 401 Z"/>
-<ellipse class="concept-db" cx="239" cy="365" rx="61" ry="7"/>
-<text x="239" y="387" text-anchor="middle">Реплики БД</text>
-<rect fill="var(--bg)" stroke="none" x="8" y="438" width="144" height="44" rx="9"/>
-<rect class="concept-node warning" x="8" y="438" width="144" height="44" rx="9"/>
-<text x="80" y="464" text-anchor="middle">Аналитика</text>
-<text class="concept-label" x="39" y="101" text-anchor="middle">GET /{code}</text>
-<text class="concept-label" x="276" y="101" text-anchor="middle">POST /urls</text>
-<text class="concept-label" x="103" y="320" text-anchor="middle">Промах кеша</text>
-<text class="concept-label" x="242" y="326" text-anchor="middle">репликация</text>
-<g role="img" aria-label="Фоновый обработчик — worker">
-<circle cx="152" cy="450" r="10" fill="var(--bg)"/>
-<circle class="concept-node warning" cx="152" cy="450" r="10"/>
-<text x="152" y="454" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
-</g>
-</svg><figcaption id="sd-url-scaled-summary-caption">Итог: независимые группы записи и переходов, общий источник истины.</figcaption></figure>
+<text x="264" y="449" text-anchor="middle" class="concept-label">события</text>
+<path fill="var(--bg)" d="M85 460 H235 A10 25 0 0 1 235 510 H85 A10 25 0 0 1 85 460 Z"/>
+<path class="concept-broker" d="M85 460 H235 A10 25 0 0 1 235 510 H85 A10 25 0 0 1 85 460 Z"/>
+<ellipse fill="var(--bg)" cx="85" cy="485" rx="10" ry="25"/><ellipse class="concept-broker" cx="85" cy="485" rx="10" ry="25"/>
+<text x="164" y="481" text-anchor="middle">Очередь</text><text x="164" y="499" text-anchor="middle">переходов</text>
+<rect fill="var(--bg)" x="96" y="550" width="128" height="44" rx="8"/><rect class="concept-node warning" x="96" y="550" width="128" height="44" rx="8"/><text x="160" y="578" text-anchor="middle">Аналитика</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="224" cy="556" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="224" cy="556" r="10"/><text x="224" y="560" text-anchor="middle">W</text></g>
+</svg></figure>
     </div>
     <div class="more">
 <p><b>Шаг 1 — Требования и ограничения</b></p>
@@ -10276,13 +10239,7 @@ owner_id</pre>
 <p>Диапазон ID — <code><span class="n">0</span> … 62⁷ − <span class="n">1</span></code> (около 3,52 трлн значений). Все экземпляры приложения используют одинаковые ключ и параметры. <b>Заранее хранить пул кодов и флаги занятости не нужно</b>: сохраняются только созданные ссылки. Если поддерживаются пользовательские alias, уникальность общего пространства по-прежнему проверяет БД.</p>
 <p><b>Путь создания:</b> проверить авторизацию, лимит запросов, схему URL (http/https) и длину → получить код → атомарно сохранить запись → после commit вернуть ссылку. Скачивать целевую страницу для создания ссылки не требуется; если нужны preview или проверка содержимого, исходящие запросы требуют защиты от SSRF.</p>
 <p><b>Путь перехода:</b> <code><span class="t">GET</span> /{code}</code> → поиск записи → проверка срока и статуса → redirect. При наличии кеша используется cache-aside: сначала кеш, при промахе — БД с последующим заполнением кеша.</p>
-<figure class="concept" aria-labelledby="sd-short-read-caption">
-<svg id="sd-short-read" viewBox="0 0 320 500" role="img" aria-labelledby="sd-short-read-title sd-short-read-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-short-read-title">Переход: попадание и промах кеша</title><desc id="sd-short-read-desc">Попадание в кеш обходит БД. Для успешного перехода сервис отправляет событие, не ожидая обработки аналитикой.</desc>
-<defs><marker id="sd-short-read-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<style>#sd-short-read .label { font-size: 12px; } #sd-short-read .small { font-size: 11px; fill: var(--muted); } #sd-short-read .strong { font-weight: 600; } #sd-short-read .lane { stroke: var(--line); stroke-dasharray: 4 5; } #sd-short-read .return { stroke-dasharray: 4 4; }</style>
-<rect class="concept-node plain" x="62" y="8" width="196" height="42" rx="10"/><text class="label strong" x="160" y="34" text-anchor="middle">GET /{code}</text><path class="concept-edge " d="M160 50 V74" marker-end="url(#sd-short-read-arrow)"/><rect class="concept-node accent" x="62" y="78" width="196" height="48" rx="10"/><text class="label strong" x="160" y="99" text-anchor="middle">Сервис → кеш</text><text class="small" x="160" y="116" text-anchor="middle">Поиск записи по code</text><path class="concept-edge " d="M160 126 V148" marker-end="url(#sd-short-read-arrow)"/><path class="concept-node accent" d="M160 152 L226 190 L160 228 L94 190 Z"/><text class="label strong" x="160" y="188" text-anchor="middle">Запись</text><text class="label strong" x="160" y="205" text-anchor="middle">найдена?</text><path class="concept-edge " d="M94 190 H35 V310 H76" marker-end="url(#sd-short-read-arrow)"/><text class="label strong" x="54" y="180" text-anchor="middle">Да</text><path class="concept-edge " d="M226 190 H280 V230" marker-end="url(#sd-short-read-arrow)"/><text class="label strong" x="263" y="180" text-anchor="middle">Нет</text><rect class="concept-node plain" x="202" y="234" width="112" height="46" rx="10"/><text class="label strong" x="258" y="254" text-anchor="middle">Чтение БД</text><text class="small" x="258" y="270" text-anchor="middle">→ в кеш</text><path class="concept-edge " d="M258 280 V310 H244" marker-end="url(#sd-short-read-arrow)"/><rect class="concept-node accent" x="80" y="288" width="160" height="48" rx="10"/><text class="label strong" x="160" y="309" text-anchor="middle">Срок и статус</text><text class="small" x="160" y="326" text-anchor="middle">Проверка записи</text><path class="concept-edge " d="M160 336 V362" marker-end="url(#sd-short-read-arrow)"/><rect class="concept-node plain" x="62" y="366" width="196" height="46" rx="10"/><text class="label strong" x="160" y="386" text-anchor="middle">302 + Location</text><text class="small" x="160" y="402" text-anchor="middle">или 404 / 410 / блокировка</text><path class="concept-edge return" d="M160 412 V443" marker-end="url(#sd-short-read-arrow)"/><rect class="concept-node plain" x="62" y="447" width="196" height="42" rx="10"/><text class="label" x="160" y="473" text-anchor="middle">Событие → аналитика</text><text class="small" x="234" y="436" text-anchor="middle">при успехе</text>
-</svg><figcaption id="sd-short-read-caption">Промах кеша ведёт в БД; аналитика выполняется асинхронно.</figcaption></figure>
+
 <p>Для неизвестного кода возвращается <code><span class="n">404</span></code>, для истёкшей ссылки допустим <code><span class="n">410</span></code>, пока информация о ней сохранена. У отключённой ссылки переход запрещён. TTL записи кеша не должен превышать оставшийся срок ссылки; срок и статус проверяются и при попадании в кеш.</p>
 <pre><span class="t">HTTP</span>/<span class="n">1.1</span> <span class="n">302</span> <span class="t">Found</span>
 <span class="t">Location</span>: https:<span class="c">//example.com/path</span>
@@ -10290,87 +10247,51 @@ owner_id</pre>
 <p><b>Почему 302 с no-store:</b> сервис должен получать повторные запросы и иметь возможность прекратить перенаправление. Сам статус 302 не запрещает кеширование. Для постоянного адреса возможен 301 или 308, но закешированный redirect может обходить сервис и мешать блокировке и учёту переходов. См. <a href="https://www.rfc-editor.org/rfc/rfc9110.html#section-15.4">HTTP Semantics</a> и <a href="https://www.rfc-editor.org/rfc/rfc9111.html#section-5.2.2.5">директиву no-store</a>.</p>
 <p><b>Шаг 4 — Масштабирование и узкие места</b></p>
 <figure class="concept" aria-labelledby="sd-url-scaled-caption">
-<svg id="sd-url-scaled" viewBox="0 0 320 492" role="img" aria-labelledby="sd-url-scaled-title sd-url-scaled-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-url-scaled-title">Сокращатель: независимое масштабирование сервисов</title><desc id="sd-url-scaled-desc">Клиент обращается к Redirect Service для перехода и к Write Service для создания ссылки. Стопки смещённых прямоугольников обозначают несколько экземпляров сервиса или реплик БД. Redirect Service читает Redis и реплики, Write Service пишет в primary. Очередь отделяет аналитику.</desc>
-<defs><marker id="sd-url-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<svg id="sd-url-scaled" viewBox="0 0 320 606" role="img" aria-labelledby="sd-url-scaled-title sd-url-scaled-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-url-scaled-title">Сокращатель: независимое масштабирование записи и чтения</title>
+<desc id="sd-url-scaled-desc">Write Service слева создаёт ссылки и пишет в PostgreSQL primary. Read Service справа обслуживает переходы, читает Redis, при промахе — реплики. Primary и реплики расположены на одном уровне, пунктир между ними обозначает репликацию. Read Service асинхронно отправляет события переходов в очередь аналитики.</desc>
+<defs><marker id="sd-url-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M112 48 V68 H74 V70 M74 92 V96" marker-end="url(#sd-url-scaled-arrow)"/>
+<path class="concept-edge" d="M208 48 V68 H238 V70 M238 92 V96" marker-end="url(#sd-url-scaled-arrow)"/>
+<path class="concept-edge" d="M74 170 V336" marker-end="url(#sd-url-scaled-arrow)"/>
+<path class="concept-edge" d="M238 170 V216" marker-end="url(#sd-url-scaled-arrow)"/>
+<path class="concept-edge" d="M238 270 V278 M238 310 V324" marker-end="url(#sd-url-scaled-arrow)"/>
+<path class="concept-edge" d="M140 374 H168" marker-end="url(#sd-url-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M304 141 H316 V485 H248" marker-end="url(#sd-url-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M160 510 V546" marker-end="url(#sd-url-scaled-arrow)"/>
+<rect fill="var(--bg)" x="64" y="8" width="192" height="40" rx="8"/><rect class="concept-node plain" x="64" y="8" width="192" height="40" rx="8"/><text x="160" y="33" text-anchor="middle">Клиент</text>
+<rect fill="var(--bg)" x="20" y="100" width="132" height="58" rx="8"/><rect class="concept-node accent" x="20" y="100" width="132" height="58" rx="8"/><rect fill="var(--bg)" x="14" y="106" width="132" height="58" rx="8"/><rect class="concept-node accent" x="14" y="106" width="132" height="58" rx="8"/><rect fill="var(--bg)" x="8" y="112" width="132" height="58" rx="8"/><rect class="concept-node accent" x="8" y="112" width="132" height="58" rx="8"/><text x="74" y="137" text-anchor="middle">Write Service</text><text x="74" y="155" text-anchor="middle">Создание</text>
+<rect fill="var(--bg)" x="184" y="100" width="132" height="58" rx="8"/><rect class="concept-node accent" x="184" y="100" width="132" height="58" rx="8"/><rect fill="var(--bg)" x="178" y="106" width="132" height="58" rx="8"/><rect class="concept-node accent" x="178" y="106" width="132" height="58" rx="8"/><rect fill="var(--bg)" x="172" y="112" width="132" height="58" rx="8"/><rect class="concept-node accent" x="172" y="112" width="132" height="58" rx="8"/><text x="238" y="137" text-anchor="middle">Read Service</text><text x="238" y="155" text-anchor="middle">Переходы</text>
+<text x="74" y="84" text-anchor="middle" class="concept-label">POST /urls</text><text x="238" y="84" text-anchor="middle" class="concept-label">GET /{code}</text>
+<text x="100" y="250" text-anchor="middle" class="concept-label">INSERT</text>
+<path class="concept-cache" d="M180 220 H296 L304 228 V262 L296 270 H180 L172 262 V228 Z"/>
+<text x="238" y="240" text-anchor="middle">Redis</text><text x="238" y="258" text-anchor="middle">кеш ссылок</text>
+<text x="238" y="298" text-anchor="middle" class="concept-label">Промах кеша</text>
+<path fill="var(--bg)" d="M8 348 A66.0 8 0 0 1 140 348 V392 A66.0 8 0 0 1 8 392 Z"/><ellipse fill="var(--bg)" cx="74.0" cy="348" rx="66.0" ry="8"/><path class="concept-db" d="M8 348 A66.0 8 0 0 1 140 348 V392 A66.0 8 0 0 1 8 392 Z"/><ellipse class="concept-db" cx="74.0" cy="348" rx="66.0" ry="8"/><text x="74" y="373" text-anchor="middle">PostgreSQL</text><text x="74" y="390" text-anchor="middle">primary</text>
+<path fill="var(--bg)" d="M184 336 A66.0 8 0 0 1 316 336 V380 A66.0 8 0 0 1 184 380 Z"/><ellipse fill="var(--bg)" cx="250.0" cy="336" rx="66.0" ry="8"/><path class="concept-db" d="M184 336 A66.0 8 0 0 1 316 336 V380 A66.0 8 0 0 1 184 380 Z"/><ellipse class="concept-db" cx="250.0" cy="336" rx="66.0" ry="8"/><path fill="var(--bg)" d="M178 342 A66.0 8 0 0 1 310 342 V386 A66.0 8 0 0 1 178 386 Z"/><ellipse fill="var(--bg)" cx="244.0" cy="342" rx="66.0" ry="8"/><path class="concept-db" d="M178 342 A66.0 8 0 0 1 310 342 V386 A66.0 8 0 0 1 178 386 Z"/><ellipse class="concept-db" cx="244.0" cy="342" rx="66.0" ry="8"/><path fill="var(--bg)" d="M172 348 A66.0 8 0 0 1 304 348 V392 A66.0 8 0 0 1 172 392 Z"/><ellipse fill="var(--bg)" cx="238.0" cy="348" rx="66.0" ry="8"/><path class="concept-db" d="M172 348 A66.0 8 0 0 1 304 348 V392 A66.0 8 0 0 1 172 392 Z"/><ellipse class="concept-db" cx="238.0" cy="348" rx="66.0" ry="8"/><text x="238" y="378" text-anchor="middle">Реплики БД</text>
 
-<path class="concept-edge" d="M112 48 V74 H74 V108" marker-end="url(#sd-url-scaled-arrow)"/>
-<path class="concept-edge" d="M212 48 V74 H236 V108" marker-end="url(#sd-url-scaled-arrow)"/>
-<path class="concept-edge" d="M74 182 V238" marker-end="url(#sd-url-scaled-arrow)"/>
-<path class="concept-edge" d="M236 182 V238" marker-end="url(#sd-url-scaled-arrow)"/>
-<path class="concept-edge" d="M152 267 H162 V383 H174" marker-end="url(#sd-url-scaled-arrow)"/>
-<path class="concept-edge" d="M242 292 V310 M242 334 V342" marker-end="url(#sd-url-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M8 153 H2 V383 H4" marker-end="url(#sd-url-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M80 408 V434" marker-end="url(#sd-url-scaled-arrow)"/>
-<rect class="concept-node plain" x="64" y="8" width="192" height="40" rx="9"/>
-<text x="160" y="32" text-anchor="middle">Клиент</text>
-
-
-<rect fill="var(--bg)" stroke="none" x="20" y="112" width="132" height="58" rx="7"/><rect class="concept-node accent" x="20" y="112" width="132" height="58" rx="7"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="118" width="132" height="58" rx="7"/><rect class="concept-node accent" x="14" y="118" width="132" height="58" rx="7"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="124" width="132" height="58" rx="9"/><rect class="concept-node accent" x="8" y="124" width="132" height="58" rx="9"/>
-<text x="74" y="148.5" text-anchor="middle">Redirect Service</text>
-<text x="74" y="165.5" text-anchor="middle">Переходы</text>
-<rect fill="var(--bg)" stroke="none" x="184" y="112" width="128" height="58" rx="7"/><rect class="concept-node accent" x="184" y="112" width="128" height="58" rx="7"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="118" width="128" height="58" rx="7"/><rect class="concept-node accent" x="178" y="118" width="128" height="58" rx="7"/>
-<rect fill="var(--bg)" stroke="none" x="172" y="124" width="128" height="58" rx="9"/><rect class="concept-node accent" x="172" y="124" width="128" height="58" rx="9"/>
-<text x="236" y="148.5" text-anchor="middle">Write Service</text>
-<text x="236" y="165.5" text-anchor="middle">Создание</text>
-<path fill="var(--bg)" stroke="none" d="M16 242 H144 L152 250 V284 L144 292 H16 L8 284 V250 Z"/>
-<path class="concept-cache" d="M16 242 H144 L152 250 V284 L144 292 H16 L8 284 V250 Z"/>
-<text x="80" y="262.5" text-anchor="middle">Redis</text>
-<text x="80" y="279.5" text-anchor="middle">кеш ссылок</text>
-<path fill="var(--bg)" stroke="none" d="M172 249 A70 7 0 0 1 312 249 V285 A70 7 0 0 1 172 285 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="242" cy="249" rx="70" ry="7"/>
-<path class="concept-db" d="M172 249 A70 7 0 0 1 312 249 V285 A70 7 0 0 1 172 285 Z"/>
-<ellipse class="concept-db" cx="242" cy="249" rx="70" ry="7"/>
-<text x="242" y="271" text-anchor="middle">PostgreSQL</text>
-<text x="242" y="288" text-anchor="middle">primary</text>
-<path fill="var(--bg)" stroke="none" d="M16 358 H144 A8 25 0 0 1 144 408 H16 A8 25 0 0 1 16 358 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="16" cy="383" rx="8" ry="25"/>
-<path class="concept-broker" d="M16 358 H144 A8 25 0 0 1 144 408 H16 A8 25 0 0 1 16 358 Z"/>
-<ellipse class="concept-broker" cx="16" cy="383" rx="8" ry="25"/>
-<text x="84" y="378.5" text-anchor="middle">Очередь</text>
-<text x="84" y="395.5" text-anchor="middle">переходов</text>
-<path fill="var(--bg)" stroke="none" d="M190 353 A61 7 0 0 1 312 353 V389 A61 7 0 0 1 190 389 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="251" cy="353" rx="61" ry="7"/>
-<path class="concept-db" d="M190 353 A61 7 0 0 1 312 353 V389 A61 7 0 0 1 190 389 Z"/>
-<ellipse class="concept-db" cx="251" cy="353" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M184 359 A61 7 0 0 1 306 359 V395 A61 7 0 0 1 184 395 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="245" cy="359" rx="61" ry="7"/>
-<path class="concept-db" d="M184 359 A61 7 0 0 1 306 359 V395 A61 7 0 0 1 184 395 Z"/>
-<ellipse class="concept-db" cx="245" cy="359" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M178 365 A61 7 0 0 1 300 365 V401 A61 7 0 0 1 178 401 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="239" cy="365" rx="61" ry="7"/>
-<path class="concept-db" d="M178 365 A61 7 0 0 1 300 365 V401 A61 7 0 0 1 178 401 Z"/>
-<ellipse class="concept-db" cx="239" cy="365" rx="61" ry="7"/>
-<text x="239" y="387" text-anchor="middle">Реплики БД</text>
-<rect fill="var(--bg)" stroke="none" x="8" y="438" width="144" height="44" rx="9"/>
-<rect class="concept-node warning" x="8" y="438" width="144" height="44" rx="9"/>
-<text x="80" y="464" text-anchor="middle">Аналитика</text>
-<text class="concept-label" x="39" y="101" text-anchor="middle">GET /{code}</text>
-<text class="concept-label" x="276" y="101" text-anchor="middle">POST /urls</text>
-<text class="concept-label" x="103" y="320" text-anchor="middle">Промах кеша</text>
-<text class="concept-label" x="242" y="326" text-anchor="middle">репликация</text>
-<g role="img" aria-label="Фоновый обработчик — worker">
-<circle cx="152" cy="450" r="10" fill="var(--bg)"/>
-<circle class="concept-node warning" cx="152" cy="450" r="10"/>
-<text x="152" y="454" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
-</g>
-</svg><figcaption id="sd-url-scaled-caption">Write Service пишет в primary; Redirect Service читает кеш и реплики.</figcaption></figure>
+<text x="264" y="449" text-anchor="middle" class="concept-label">события</text>
+<path fill="var(--bg)" d="M85 460 H235 A10 25 0 0 1 235 510 H85 A10 25 0 0 1 85 460 Z"/>
+<path class="concept-broker" d="M85 460 H235 A10 25 0 0 1 235 510 H85 A10 25 0 0 1 85 460 Z"/>
+<ellipse fill="var(--bg)" cx="85" cy="485" rx="10" ry="25"/><ellipse class="concept-broker" cx="85" cy="485" rx="10" ry="25"/>
+<text x="164" y="481" text-anchor="middle">Очередь</text><text x="164" y="499" text-anchor="middle">переходов</text>
+<rect fill="var(--bg)" x="96" y="550" width="128" height="44" rx="8"/><rect class="concept-node warning" x="96" y="550" width="128" height="44" rx="8"/><text x="160" y="578" text-anchor="middle">Аналитика</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="224" cy="556" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="224" cy="556" r="10"/><text x="224" y="560" text-anchor="middle">W</text></g>
+</svg><figcaption id="sd-url-scaled-caption">Write Service пишет в primary; Read Service обслуживает переходы через кеш и реплики.</figcaption></figure>
 <p><b>Разделение по нагрузке.</b> POST и управление обслуживает Write Service, GET — Redirect Service. Независимые группы экземпляров, пулы и лимиты позволяют наращивать переходы без увеличения мощности записи; синхронный вызов Write Service для перехода не нужен.</p>
-<p><b>Данные пока общие:</b> Write Service пишет в primary, Redirect Service читает Redis → реплику → primary при отсутствии кода. Доставка отдельной read-модели здесь не нужна; общие схема БД и ресурсы требуют лимитов соединений для каждой группы.</p>
+<p><b>Данные пока общие:</b> Write Service пишет в primary, Redirect Service читает Redis → синхронную реплику. Если кода нет на реплике, возвращается <code><span class="n">404</span></code>. Доставка отдельной read-модели здесь не нужна; общие схема БД и ресурсы требуют лимитов соединений для каждой группы.</p>
+<p><b>Свежесть чтения:</b> настроены синхронные реплики и <code>synchronous_commit = remote_apply</code>. Commit ждёт применения записи на всех репликах, на которые направляются переходы. Поэтому после успешного создания новая ссылка доступна без чтения primary. Цена — дополнительная задержка commit; недоступность необходимой синхронной реплики заставляет запись ждать. При недоступности read-реплик переход возвращает ошибку доступности, а не <code><span class="n">404</span></code>.</p>
 <p>При 38 600 пиковых RPS и hit rate 95% БД получает около 1 930 чтений/с. Это оценка для прогретого кеша, а не гарантия при холодном старте.</p>
 <div class="table-wrap"><table><tr><th>Узкое место или сбой</th><th>Решение и ограничение</th></tr>
 <tr><td>Много промахов кеша</td><td>Объединять параллельные загрузки одного ключа, ограничивать обращения к БД</td></tr>
 <tr><td>Один вирусный код</td><td>Короткий локальный кеш разгружает Redis, но добавляет ещё одно место с устаревшими данными</td></tr>
-<tr><td>Redis недоступен</td><td>Короткий таймаут и ограниченный fallback в БД; при исчерпании лимита — отказ вместо перегрузки БД</td></tr>
-<tr><td>БД не выдерживает чтение</td><td>Реплики, с учётом задержки репликации</td></tr>
-<tr><td>Новая ссылка ещё не видна на реплике</td><td>При отсутствии кода перепроверить primary перед 404; такие проверки тоже ограничить</td></tr>
+<tr><td>Redis недоступен</td><td>Короткий таймаут и ограниченный fallback в read-реплики; при исчерпании лимита — отказ вместо перегрузки БД</td></tr>
+<tr><td>БД не выдерживает чтение</td><td>Добавить read-реплики; все реплики, обслуживающие переходы, должны участвовать в ожидании применения записи</td></tr>
+<tr><td>Новая ссылка должна открываться сразу</td><td>Синхронная репликация с remote_apply: успешное создание подтверждается после применения записи на read-репликах</td></tr>
 <tr><td>Хранение или запись превысили возможности одного узла</td><td>Шардирование по hash(short_code), с усложнением маршрутизации и переноса данных</td></tr>
 <tr><td>Сбой primary</td><td>Переключение на реплику; допустимая потеря подтверждённых записей определяет требования к репликации</td></tr>
 <tr><td>Аналитика недоступна</td><td>Ограниченный буфер и согласованная политика потерь; переходы продолжаются</td></tr></table></div>
-<p><b>Деактивация требует отдельной гарантии свежести.</b> После изменения БД кеш инвалидируется, но параллельный запрос может снова положить старое значение. Простой DELETE не гарантирует немедленной блокировки. TTL ограничивает срок устаревания, а для строгого немедленного запрета нужен согласованный механизм проверки статуса. Отставание реплик также влияет на эту гарантию.</p>
+<p><b>Деактивация требует отдельной гарантии свежести.</b> После изменения БД кеш инвалидируется, но параллельный запрос может снова положить старое значение. Простой DELETE не гарантирует немедленной блокировки. TTL ограничивает срок устаревания, а для строгого немедленного запрета нужен согласованный механизм проверки статуса. Даже при синхронных read-репликах устаревшая запись в кеше остаётся отдельной проблемой.</p>
 <p><b>Статистика — вне критического пути.</b> Для приблизительных счётчиков допустима асинхронная доставка с небольшими потерями. Строгий учёт потребует надёжной фиксации событий и дедупликации. Запрос перехода не равен гарантированному просмотру целевой страницы.</p>
 <p class="follow"><b>Какие ограничения важно не потерять при масштабировании?</b> Новая ссылка должна открываться после создания, отключённая — переставать работать в согласованный срок. Коды нельзя переиспользовать: старая ссылка иначе начнёт вести на чужой ресурс. Случайный код не заменяет авторизацию. Контролировать нужно p99, ошибки, hit rate кеша, нагрузку БД и задержку репликации.</p>
     </div></div></article>
