@@ -9642,8 +9642,9 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p class="follow"><b>Равное число соединений означает равную нагрузку?</b> Нет. Одно HTTP/2-соединение может нести сотни параллельных запросов, другое — простаивать. Например, один gRPC-канал через L4 может закрепить большой поток вызовов за одним сервером; метрика балансировки должна отражать реальную работу.</p>
     </div></div></article>
 <article id="q269" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">269. Consistent hashing</h2><div class="answer" hidden><div class="short">
-<p><b>Consistent hashing</b> распределяет ключи по кольцу хешей: ключ принадлежит первому узлу по часовой стрелке. При добавлении или удалении узла меняются владельцы только части ключей.</p>
-<p><b>Virtual nodes — дополнение к этому алгоритму:</b> один физический сервер получает несколько позиций на кольце. Его данные распределены по нескольким диапазонам, поэтому нагрузка обычно ровнее, а перенос данных можно распределить между несколькими серверами.</p>
+<p><b>Consistent hashing</b> определяет, на каком сервере хранить ключ. Хеши ключей и позиции серверов размещают на одном кольце: от хеша ключа идут по часовой стрелке до первой позиции сервера — он и будет владельцем.</p>
+<p><b>При добавлении сервера</b> ему переходит часть ключей соседнего узла; <b>при удалении</b> его ключи переходят следующему узлу на кольце. Владельцы остальных ключей сохраняются — в отличие от <code>hash(key) % <span class="t">N</span></code>, где изменение числа серверов переназначает большинство ключей.</p>
+<p><b>Virtual nodes</b> дают каждому серверу много позиций на кольце, чтобы равномернее распределить данные и их перенос между серверами. Горячий ключ это не устраняет.</p>
     </div>
     <div class="more">
 <h4>Задача — найти сервер по ключу</h4>
@@ -9784,13 +9785,68 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <li><b>Очистка CDN не очищает браузерный кэш.</b> Для обновления долгоживущей статики удобны новые URL с версией.</li></ul>
 <p class="follow"><b>Можно ли кэшировать API?</b> Да. Например, публичный каталог с допустимым устареванием на минуту. Для баланса счёта и персонального профиля отдельно определяют требования к свежести и доступу.</p>
     </div></div></article>
-<article id="q271" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">271. SQL vs NoSQL</h2><div class="answer" hidden><div class="short"><p><b>Выбор хранилища начинается с запросов и гарантий.</b> Какие ключи чтения, транзакции, ограничения целостности, объёмы и требования к отказам нужны системе?</p><p>Реляционная БД часто даёт простую основу для связанных бизнес-данных. Документное, key-value, wide-column или аналитическое хранилище выбирают под конкретный профиль доступа, а не по слову «масштаб».</p><p><b>NoSQL не означает отсутствие транзакций, а SQL не означает отсутствие горизонтального масштабирования.</b> Возможности проверяют у конкретного продукта.</p></div>
+<article id="q271" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">271. SQL vs NoSQL</h2><div class="answer" hidden><div class="short">
+<p><b>SQL-базы используют реляционную модель:</b> таблицы с заданными типами, ограничениями и связями. Они удобны для связанных бизнес-данных, сложных запросов и транзакций между несколькими сущностями.</p>
+<p><b>NoSQL — семейство нереляционных подходов:</b> документы, ключ — значение, wide-column и графы. Их выбирают под конкретную структуру данных, запросы приложения и способ распределения нагрузки.</p>
+<p><b>Выбор зависит от необходимых гарантий и модели доступа.</b> NoSQL не означает отсутствие транзакций, а SQL не ограничивается вертикальным масштабированием.</p>
+    </div>
     <div class="more">
-<div class="table-wrap"><table><tr><th>Доступ</th><th>Кандидат и компромисс</th></tr><tr><td>Связанные операции, ограничения и JOIN</td><td>PostgreSQL: выразительная модель; распределение записи требует отдельного решения</td></tr><tr><td>Документ читается/меняется как целое</td><td>Документная БД; важны размер документа и междокументные операции</td></tr><tr><td>Чтение по заранее выбранному ключу при большом потоке</td><td>Wide-column/KV; модель запросов обычно проектируется заранее</td></tr><tr><td>Агрегаты по большим историческим наборам</td><td>Колоночная аналитическая БД; это другой профиль, чем точечный OLTP</td></tr><tr><td>Текстовый поиск</td><td>Поисковый индекс как отдельная read-модель</td></tr></table></div><p>Например, платежи хранятся в транзакционной БД, поиск — в индексе, отчётные агрегаты — в аналитическом хранилище. Каждая дополнительная копия требует доставки изменений, наблюдения за lag и восстановления; начинать с трёх баз только ради диаграммы не нужно.</p><p class="follow"><b>Когда добавить второе хранилище?</b> Когда измеренное требование плохо закрывается первым: например, поиск с ранжированием или тяжёлая аналитика мешают основному контуру. Сразу определяют владельца данных и способ пересборки копии.</p>
+<h4>SQL: реляционная модель</h4>
+<p><b>SQL (Structured Query Language)</b> — язык структурированных запросов. Под SQL-базами обычно понимают реляционные СУБД: <b>PostgreSQL, MySQL, Oracle Database</b>. Данные организованы в таблицы: схема задаёт столбцы, их типы и ограничения, а ключи связывают записи.</p>
+<p><b>Ключевые особенности:</b></p>
+<ul>
+<li><b>Явная схема и целостность.</b> Первичные и внешние ключи, UNIQUE, NOT NULL и CHECK позволяют проверять правила на стороне БД. Схему можно менять миграциями.</li>
+<li><b>Выразительные запросы.</b> JOIN объединяет связанные данные, фильтрация выбирает нужные записи, агрегации и оконные функции помогают строить отчёты.</li>
+<li><b>ACID-транзакции.</b> Атомарность — изменения фиксируются целиком или откатываются; согласованность — сохраняются заданные правила целостности; изоляция — ограничивается влияние параллельных транзакций; долговечность — подтверждённые изменения переживают предусмотренные системой сбои. Конкретные гарантии зависят от уровня изоляции и настроек надёжности.</li>
+<li><b>Общий язык с диалектами.</b> Базовый SQL похож между СУБД, но функции, типы данных и расширения различаются: переносимость запросов не абсолютна.</li>
+<li><b>Несколько способов масштабирования.</b> Можно увеличивать ресурсы сервера, распределять чтение по репликам, а запись — с помощью шардинга или распределённой SQL-системы. Распределение записи усложняет JOIN и транзакции между узлами.</li>
+</ul>
+<h4>NoSQL: модели под разные задачи</h4>
+<p><b>NoSQL (Not Only SQL)</b> — не одна технология и не единый набор гарантий. Это семейство СУБД с нереляционными моделями данных.</p>
+<ul>
+<li><b>Документы (MongoDB, CouchDB).</b> Данные хранятся в документах, например JSON/BSON, с вложенными объектами и массивами. Подход удобен для карточек товаров с разными характеристиками и агрегатов, которые читаются как целое.</li>
+<li><b>Ключ — значение (Redis, Amazon DynamoDB).</b> Основной доступ — по ключу: например, идентификатор сессии → её данные. Redis поддерживает также структуры данных, а DynamoDB — документную модель. Типичные задачи — кэш и сессии.</li>
+<li><b>Wide-column (Apache Cassandra, Apache HBase).</b> Данные организованы вокруг ключей строк/партиций и столбцов; модель проектируют под заранее известные запросы. Пример — события устройства с чтением по устройству и диапазону времени. Это не то же самое, что колоночное аналитическое хранение в ClickHouse.</li>
+<li><b>Графы (Neo4j).</b> Данные представлены вершинами и связями со свойствами. Подход полезен, когда основная операция — обход связей: поиск цепочек знакомств, зависимостей или связей между участниками подозрительных операций.</li>
+</ul>
+<p>У Cassandra типизированные таблицы и ключ партиции определяют организацию данных и эффективные запросы. Поэтому даже внутри NoSQL «гибкая схема» не означает отсутствие схемы. <a href="https://cassandra.apache.org/doc/latest/cassandra/architecture/overview.html" target="_blank" rel="noopener noreferrer">Архитектура Cassandra</a>.</p>
+<p><b>Ключевые особенности:</b></p>
+<ul>
+<li><b>Гибкость зависит от модели.</b> Документы могут иметь разные наборы полей, но приложение всё равно должно понимать их структуру, версии и правила проверки.</li>
+<li><b>Распределение данных часто встроено в архитектуру.</b> Добавление узлов помогает распределить нагрузку, если правильно выбраны ключи и нет горячих партиций. Масштабирование не сводится к простому добавлению серверов.</li>
+<li><b>Согласованность и транзакции различаются.</b> В одних системах или режимах чтение может вернуть устаревшую копию, в других доступны более строгие гарантии. Eventual consistency означает, что при прекращении обновлений реплики со временем сходятся. BASE описывает подход с базовой доступностью, изменяемым состоянием и eventual consistency, но не является обязательным свойством всех NoSQL-баз.</li>
+<li><b>Запросы привязаны к продукту.</b> Используются API или собственные языки: например, запросы MongoDB, CQL в Cassandra и Cypher в Neo4j. Поддержка JOIN и произвольных выборок отличается.</li>
+</ul>
+<p><b>NoSQL может поддерживать ACID:</b> MongoDB предоставляет транзакции между документами, в том числе в шардированном кластере; они дороже одиночной записи. DynamoDB также поддерживает ACID-транзакции. Гарантии нужно проверять для конкретной операции и конфигурации. <a href="https://www.mongodb.com/docs/manual/core/transactions/" target="_blank" rel="noopener noreferrer">Транзакции MongoDB</a>, <a href="https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html" target="_blank" rel="noopener noreferrer">Модели и возможности DynamoDB</a>.</p>
+<h4>Когда использовать</h4>
+<div class="table-wrap"><table>
+<tr><th>Подход</th><th>Когда подходит</th><th>Примеры задач</th></tr>
+<tr><td><b>SQL</b></td><td>Много связей, правил целостности и совместных изменений; сложные выборки и отчётность</td><td>Платежи и бухгалтерия, CRM, заказы и остатки. Для тяжёлой аналитики движок выбирают отдельно</td></tr>
+<tr><td><b>NoSQL: документы</b></td><td>Вложенные агрегаты, которые удобно читать как целое</td><td>Карточки товаров с разными характеристиками</td></tr>
+<tr><td><b>NoSQL: ключ — значение</b></td><td>Доступ по известному ключу</td><td>Кэш и сессии пользователей</td></tr>
+<tr><td><b>NoSQL: wide-column</b></td><td>Большие потоки записей с заранее известными ключами чтения</td><td>События устройства с чтением по устройству и диапазону времени</td></tr>
+<tr><td><b>NoSQL: графы</b></td><td>Основная операция — обход связей</td><td>Цепочки знакомств, зависимости, связи участников подозрительных операций</td></tr>
+</table></div>
+<p>Логи, метрики и IoT сами по себе не требуют NoSQL: выбор зависит от запросов, срока хранения и нагрузки.</p>
+<h4>Важные ограничения</h4>
+<p><b>Меняющаяся структура ещё не требует другой БД.</b> Например, PostgreSQL поддерживает <code>jsonb</code> и индексы по JSON: основные поля товара можно оставить в столбцах, дополнительные характеристики — в JSON. <a href="https://www.postgresql.org/docs/current/datatype-json.html" target="_blank" rel="noopener noreferrer">JSON в PostgreSQL</a>.</p>
+<p><b>Высокая нагрузка сама по себе не выбирает победителя.</b> Сравнивают конкретные запросы, индексы, задержки, объём данных и гарантии при одинаковой нагрузке.</p>
+<p><b>Репликация и шардирование решают разные задачи.</b> Реплики PostgreSQL могут обслуживать чтение и принимать роль primary при отказе, но не распределяют запись автоматически. При асинхронной репликации возможны устаревшие чтения и потеря последних подтверждённых изменений при переключении. Шардинг распределяет данные и запись по узлам, но требует продумать ключ разбиения и операции между партициями. <a href="https://www.postgresql.org/docs/current/high-availability.html" target="_blank" rel="noopener noreferrer">Репликация PostgreSQL</a>.</p>
+<p>Обзор для сравнения: <a href="https://habr.com/ru/companies/ruvds/articles/727474/" target="_blank" rel="noopener noreferrer">«Сравнение SQL- и NoSQL-баз данных», RUVDS / Хабр</a>. Гарантии и ограничения конкретных СУБД уточнены по документации выше.</p>
     </div></div></article>
 <article id="q272" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">272. CAP vs PACELC</h2><div class="answer" hidden><div class="short">
-<p><b>CAP:</b> при разрыве сети распределённая система не может одновременно гарантировать <b>линеаризуемость</b> и <b>результат каждого запроса к исправному узлу</b>. Изолированная реплика либо отвечает по локальным данным, рискуя вернуть старое значение, либо ждёт или отказывает.</p>
-<p><b>PACELC</b> дополняет CAP: при разрыве сети выбирают между доступностью и согласованностью, а <b>без разрыва — между задержкой и согласованностью</b>.</p>
+<p><b>CAP — теорема об ограничении распределённых систем:</b> при разрыве сети между узлами нельзя одновременно гарантировать:</p>
+<ul>
+<li><b>C — Consistency:</b> чтение видит последнюю завершённую запись.</li>
+<li><b>A — Availability:</b> каждый запрос к исправному узлу получает результат.</li>
+<li><b>P — Partition tolerance:</b> система учитывает разрыв связи между узлами.</li>
+</ul>
+<p><b>При разрыве сети приходится выбирать:</b> ждать или отклонять часть запросов ради согласованности (<b>CP</b>) либо отвечать, допуская устаревшие данные (<b>AP</b>).</p>
+<h4>PACELC — что происходит без аварии</h4>
+<pre><span class="k">if</span> <span class="t">Partition</span>:
+    <span class="t">Availability</span> ↔ <span class="t">Consistency</span>
+<span class="k">else</span>:
+    <span class="t">Latency</span> ↔ <span class="t">Consistency</span></pre>
     </div>
     <div class="more">
 <h4>Проблема — реплики работают, но не могут связаться</h4>
@@ -9814,8 +9870,8 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <rect class="concept-node plain" x="38" y="194" width="244" height="38" rx="8"/><text x="160" y="218" text-anchor="middle">Клиент читает цену с B</text>
 <path class="concept-edge" d="M160 232 V252 H80 V272" marker-end="url(#cap-partition-choice-arrow)"/>
 <path class="concept-edge" d="M160 252 H240 V272" marker-end="url(#cap-partition-choice-arrow)"/>
-<rect class="concept-node accent" x="8" y="276" width="144" height="68" rx="8"/><text x="80" y="298" text-anchor="middle">CP: сохранить C</text><text x="80" y="319" text-anchor="middle">ожидание / отказ</text><text x="80" y="336" text-anchor="middle" class="concept-label">нет старого ответа</text>
-<rect class="concept-node plain" x="168" y="276" width="144" height="68" rx="8"/><text x="240" y="298" text-anchor="middle">AP: сохранить A</text><text x="240" y="319" text-anchor="middle">ответ: 50</text><text x="240" y="336" text-anchor="middle" class="concept-label">C нарушена</text>
+<rect class="concept-node accent" x="8" y="276" width="144" height="68" rx="8"/><text x="80" y="298" text-anchor="middle">CP</text><text x="80" y="319" text-anchor="middle">ожидание / отказ</text><text x="80" y="336" text-anchor="middle" class="concept-label">нет старого ответа</text>
+<rect class="concept-node plain" x="168" y="276" width="144" height="68" rx="8"/><text x="240" y="298" text-anchor="middle">AP</text><text x="240" y="319" text-anchor="middle">ответ: 50</text><text x="240" y="336" text-anchor="middle" class="concept-label">C нарушена</text>
 <text x="160" y="379" text-anchor="middle" class="concept-label">A и C остаются доступны друг другу</text>
 </svg><figcaption id="cap-partition-choice-caption">Сравниваются два режима обслуживания изолированной B. Запись на A и C подтверждена раньше начала чтения; B не может узнать о ней во время разрыва.</figcaption></figure>
 <h4>C — Consistency: одна логическая копия данных</h4>
@@ -9962,28 +10018,129 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
     </div></div></article>
 <article id="q276" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">276. Какие компромиссы возникают при проектировании систем? Примеры <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
 <p><b>Компромисс (trade-off)</b> — выбор между решениями, которые по-разному влияют на задержку, пропускную способность, согласованность, доступность, стоимость и сложность системы.</p>
-<ul>
-<li><b>Кеш</b> сокращает задержку и нагрузку на БД, но требует управления свежестью данных.</li>
-<li><b>Очередь</b> сглаживает пики, но результат появляется позже, а обработка требует защиты от повторов.</li>
-<li><b>Шардинг</b> распределяет данные и нагрузку, но усложняет транзакции, запросы и миграции.</li>
-<li><b>Микросервисы</b> позволяют независимо выпускать и масштабировать части системы, но добавляют сетевые сбои и распределённые процессы.</li>
-</ul>
-<p>Обоснование выбора: <b>требование → решение → цена → способ удержать цену в допустимых пределах</b>. Решение проверяется измерениями и сценариями отказа.</p>
+<p>Например, <b>денормализация</b> упрощает чтение, но усложняет обновление копий; <b>микросервисы</b> дают независимые релизы, но добавляют сетевые сбои; <b>асинхронная обработка</b> позволяет вернуть управление раньше, но результат появляется позже.</p>
+<p>Обоснование: <b>требование → решение → выигрыш → цена</b>. Выбор проверяют измерениями и сценариями отказа.</p>
     </div>
     <div class="more">
-<h4>Семь показательных компромиссов</h4>
-<div class="table-wrap"><table><tr><th>Выбор</th><th>Выигрыш</th><th>Цена и способ её ограничить</th></tr>
-<tr><td><b>Кеш или чтение источника</b></td><td>Меньше задержка и нагрузка</td><td>Устаревание и холодный старт; определить TTL, инвалидацию и бюджет промахов</td></tr>
-<tr><td><b>Синхронная или асинхронная репликация</b></td><td>Синхронная уменьшает риск потери подтверждённых записей, асинхронная снижает ожидание</td><td>Выбрать допустимые потерю данных, задержку commit и поведение при отказе реплики</td></tr>
-<tr><td><b>Немедленный или фоновый результат</b></td><td>Фоновая обработка освобождает интерактивный путь</td><td>Результат появляется позже; нужны статус задания, deadline и идемпотентность</td></tr>
-<tr><td><b>Подготовка ленты при записи или чтении</b></td><td>Fanout-on-write ускоряет чтение, fanout-on-read экономит рассылку</td><td>У популярных авторов дорогая запись; гибрид переносит их посты на чтение</td></tr>
-<tr><td><b>Одна БД или шардинг</b></td><td>Шарды распределяют данные и нагрузку</td><td>Маршрутизация, перенос данных и межшардовые операции; ключ выбирается под основные запросы</td></tr>
-<tr><td><b>Повтор или немедленный отказ</b></td><td>Повтор помогает при временном сбое</td><td>Дополнительная нагрузка и дубли эффектов; ограничить попытки, общий срок и защитить идемпотентность</td></tr>
-<tr><td><b>Модульный монолит или микросервисы</b></td><td>Монолит проще эксплуатировать; сервисы можно независимо выпускать и масштабировать</td><td>Сетевые сбои и согласование данных; выделять сервис при конкретной потребности</td></tr></table></div>
-<h4>Как обосновать выбор</h4>
-<p><b>Требование → решение → цена → ограничение цены → проверка.</b> Отчёт строится две минуты, а API должен отвечать за секунду. Задание сохраняется надёжно и выполняется асинхронно. Цена — отсутствие немедленного результата и возможная повторная доставка. Статус задания, идемпотентная фиксация и срок ожидания делают её управляемой. Проверяются время ответа API, возраст очереди и срок готовности отчёта.</p>
-<p>Сначала фиксируются жёсткие ограничения: например, недопустимость повторного списания. Затем среди подходящих решений сравниваются задержка, стоимость и сложность.</p>
-<p class="follow"><b>Любое улучшение ухудшает другой параметр?</b> Нет. Удаление лишнего SQL-запроса может одновременно уменьшить задержку, нагрузку и стоимость. Компромисс возникает при выборе альтернатив, а не требует искусственно создавать недостаток.</p>
+<div class="table-wrap"><table>
+<tr><th>Компромисс</th><th>Варианты и цена выбора</th></tr>
+<tr><td>1. <b>Горизонтальное vs вертикальное масштабирование</b></td><td><p><b>Вертикальное:</b> мощнее сервер — проще эксплуатация, но есть предел ресурсов.</p>
+<p><b>Горизонтальное:</b> больше узлов — больше возможностей роста, но сложнее координация.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-1-title tradeoff-1-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-1-title">Масштабирование</title><desc id="tradeoff-1-desc">Слева один сервер с увеличением ресурсов, справа стопка экземпляров API.</desc>
+<defs><marker id="tradeoff-1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">Вертикальное</text><text x="244" y="20" text-anchor="middle">Горизонтальное</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<rect class="concept-node accent" x="35" y="44" width="82" height="72" rx="5"/><text x="76.0" y="85.0" text-anchor="middle">CPU ↑</text><text x="76" y="137" text-anchor="middle" class="concept-label">Один мощнее</text><rect fill="var(--bg)" x="218" y="56" width="68" height="42" rx="5"/><rect class="concept-node accent" x="218" y="56" width="68" height="42" rx="5"/><rect fill="var(--bg)" x="212" y="62" width="68" height="42" rx="5"/><rect class="concept-node accent" x="212" y="62" width="68" height="42" rx="5"/><rect fill="var(--bg)" x="206" y="68" width="68" height="42" rx="5"/><rect class="concept-node accent" x="206" y="68" width="68" height="42" rx="5"/><text x="240.0" y="94.0" text-anchor="middle">API</text><text x="244" y="137" text-anchor="middle" class="concept-label">Больше узлов</text>
+</svg></figure></td></tr>
+<tr><td>2. <b>Stateful vs stateless</b></td><td><p><b>Stateful:</b> локальное состояние между запросами привязывает клиента к экземпляру.</p>
+<p><b>Stateless:</b> экземпляры взаимозаменяемы, но состояние нужно передавать или хранить отдельно.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-2-title tradeoff-2-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-2-title">Состояние между запросами</title><desc id="tradeoff-2-desc">Состояние сессии закреплено за экземпляром слева. Справа запрос можно передать любому экземпляру API.</desc>
+<defs><marker id="tradeoff-2-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">Stateful</text><text x="244" y="20" text-anchor="middle">Stateless</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<rect class="concept-node plain" x="26" y="40" width="100" height="28" rx="5"/><text x="76.0" y="59.0" text-anchor="middle">Клиент</text><path class="concept-edge" d="M76 70 L76 88" marker-end="url(#tradeoff-2-arrow)"/><rect class="concept-node accent" x="26" y="92" width="100" height="30" rx="5"/><text x="76.0" y="112.0" text-anchor="middle">API + сессия</text><rect class="concept-node plain" x="194" y="40" width="100" height="28" rx="5"/><text x="244.0" y="59.0" text-anchor="middle">Клиент</text><path class="concept-edge" d="M244 70 L244 87" marker-end="url(#tradeoff-2-arrow)"/><rect fill="var(--bg)" x="216" y="89" width="68" height="28" rx="5"/><rect class="concept-node accent" x="216" y="89" width="68" height="28" rx="5"/><rect fill="var(--bg)" x="210" y="95" width="68" height="28" rx="5"/><rect class="concept-node accent" x="210" y="95" width="68" height="28" rx="5"/><rect fill="var(--bg)" x="204" y="101" width="68" height="28" rx="5"/><rect class="concept-node accent" x="204" y="101" width="68" height="28" rx="5"/><text x="238.0" y="120.0" text-anchor="middle">API</text>
+</svg></figure></td></tr>
+<tr><td>3. <b>Latency vs throughput</b></td><td><p><b>Latency</b> — время одной операции.</p>
+<p><b>throughput</b> — операций за единицу времени. Батчи повышают throughput, но ожидание заполнения батча увеличивает latency.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-3-title tradeoff-3-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-3-title">Задержка и пропускная способность</title><desc id="tradeoff-3-desc">Одна операция отправляется сразу или несколько операций накапливаются в батч.</desc>
+<defs><marker id="tradeoff-3-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">Latency</text><text x="244" y="20" text-anchor="middle">Throughput</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<circle cx="24" cy="60" r="4" fill="var(--accent)"/><path class="concept-edge" d="M40 60 L112 60" marker-end="url(#tradeoff-3-arrow)"/><text x="76" y="108" text-anchor="middle" class="concept-label">Ответ сразу</text><rect class="concept-node accent" x="188" y="40" width="112" height="43" rx="5"/><circle cx="205" cy="61" r="4" fill="var(--accent)"/><circle cx="221" cy="61" r="4" fill="var(--accent)"/><circle cx="237" cy="61" r="4" fill="var(--accent)"/><circle cx="253" cy="61" r="4" fill="var(--accent)"/><circle cx="269" cy="61" r="4" fill="var(--accent)"/><text x="244" y="108" text-anchor="middle" class="concept-label">Отправка батчем</text>
+</svg></figure></td></tr>
+<tr><td>4. <b>SQL vs NoSQL</b></td><td><p><b>SQL:</b> связи, ограничения и разнообразные запросы.</p>
+<p><b>NoSQL:</b> специализированная модель доступа. Выбор зависит от запросов и гарантий, а не обещания «быстрее».</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-4-title tradeoff-4-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-4-title">Модели хранения</title><desc id="tradeoff-4-desc">SQL показан таблицей, NoSQL — документом как одним из примеров нереляционной модели.</desc>
+<defs><marker id="tradeoff-4-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">SQL</text><text x="244" y="20" text-anchor="middle">NoSQL</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<path fill="var(--bg)" d="M18 48 A58.0 6 0 0 1 134 48 V108 A58.0 6 0 0 1 18 108 Z"/><path class="concept-db" d="M18 48 A58.0 6 0 0 1 134 48 V108 A58.0 6 0 0 1 18 108 Z"/><ellipse class="concept-db" cx="76.0" cy="48" rx="58.0" ry="6"/><text x="76.0" y="83.0" text-anchor="middle">Таблицы</text><path fill="var(--bg)" d="M186 48 A58.0 6 0 0 1 302 48 V108 A58.0 6 0 0 1 186 108 Z"/><path class="concept-db" d="M186 48 A58.0 6 0 0 1 302 48 V108 A58.0 6 0 0 1 186 108 Z"/><ellipse class="concept-db" cx="244.0" cy="48" rx="58.0" ry="6"/><text x="244.0" y="83.0" text-anchor="middle">{ документ }</text>
+</svg></figure></td></tr>
+<tr><td>5. <b>Согласованность vs доступность — CAP</b></td><td><p><b>При разрыве сети</b> изолированный узел либо ждёт/отказывает ради согласованности, либо отвечает, допуская устаревшие данные. Это ограничение при разделении сети, а не произвольный выбор двух свойств из трёх.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-5-title tradeoff-5-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-5-title">Выбор при разрыве сети</title><desc id="tradeoff-5-desc">При разрыве сети CP ждёт или отказывает, AP может отвечать по устаревшим данным.</desc>
+<defs><marker id="tradeoff-5-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">CP</text><text x="244" y="20" text-anchor="middle">AP</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<path class="concept-edge" d="M18 55 L135 55" stroke-dasharray="4 3"/><text x="76" y="61" text-anchor="middle">×</text><rect class="concept-node accent" x="20" y="86" width="112" height="32" rx="5"/><text x="76.0" y="107.0" text-anchor="middle">Ждать / отказ</text><path class="concept-edge" d="M186 55 L303 55" stroke-dasharray="4 3"/><text x="244" y="61" text-anchor="middle">×</text><rect class="concept-node accent" x="188" y="86" width="112" height="32" rx="5"/><text x="244.0" y="107.0" text-anchor="middle">Старые данные</text>
+</svg></figure></td></tr>
+<tr><td>6. <b>Strong vs eventual consistency</b></td><td><p><b>Strong consistency</b> в смысле линеаризуемости: чтение после завершённой записи видит её результат или более новую запись. Это требует координации, но не одновременного обновления всех реплик.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-6-title tradeoff-6-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-6-title">Видимость завершённой записи</title><desc id="tradeoff-6-desc">После завершённой записи strong-чтение видит новое значение, eventual-чтение может сначала видеть старое.</desc>
+<defs><marker id="tradeoff-6-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">Strong</text><text x="244" y="20" text-anchor="middle">Eventual</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<text x="76" y="51" text-anchor="middle">Запись: 2</text><path class="concept-edge" d="M76 59 L76 82" marker-end="url(#tradeoff-6-arrow)"/><text x="76" y="103" text-anchor="middle">Чтение: 2</text><text x="244" y="51" text-anchor="middle">Запись: 2</text><path class="concept-edge" d="M244 59 L244 82" marker-end="url(#tradeoff-6-arrow)"/><text x="244" y="103" text-anchor="middle">Чтение: 1 → 2</text>
+</svg></figure></td></tr>
+<tr><td>7. <b>Read-through vs write-through кеширование</b></td><td><p><b>Read-through:</b> при промахе кеш сам загружает данные из источника; первое чтение оплачивает эту задержку.</p>
+<p><b>Write-through:</b> запись через кеш синхронно передаётся в источник; запись ждёт сохранения.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-7-title tradeoff-7-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-7-title">Загрузка и запись через кеш</title><desc id="tradeoff-7-desc">При промахе данные загружаются из источника. При write-through запись синхронно передаётся в источник.</desc>
+<defs><marker id="tradeoff-7-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">Read-through</text><text x="244" y="20" text-anchor="middle">Write-through</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<path class="concept-cache" d="M26 39 H126 L133 46 V62 L126 69 H26 L19 62 V46 Z"/><text x="76.0" y="59.0" text-anchor="middle">Кеш: промах</text><path class="concept-edge" d="M76 71 L76 90" marker-end="url(#tradeoff-7-arrow)"/><path fill="var(--bg)" d="M34 102 A42.0 6 0 0 1 118 102 V130 A42.0 6 0 0 1 34 130 Z"/><path class="concept-db" d="M34 102 A42.0 6 0 0 1 118 102 V130 A42.0 6 0 0 1 34 130 Z"/><ellipse class="concept-db" cx="76.0" cy="102" rx="42.0" ry="6"/><text x="76.0" y="121.0" text-anchor="middle">Источник</text><path class="concept-cache" d="M194 39 H294 L301 46 V62 L294 69 H194 L187 62 V46 Z"/><text x="244.0" y="59.0" text-anchor="middle">Кеш: запись</text><path class="concept-edge" d="M244 71 L244 90" marker-end="url(#tradeoff-7-arrow)"/><path fill="var(--bg)" d="M202 102 A42.0 6 0 0 1 286 102 V130 A42.0 6 0 0 1 202 130 Z"/><path class="concept-db" d="M202 102 A42.0 6 0 0 1 286 102 V130 A42.0 6 0 0 1 202 130 Z"/><ellipse class="concept-db" cx="244.0" cy="102" rx="42.0" ry="6"/><text x="244.0" y="121.0" text-anchor="middle">Источник</text>
+</svg></figure></td></tr>
+<tr><td>8. <b>Синхронная vs асинхронная обработка</b></td><td><p><b>Синхронная:</b> вызывающий ждёт результат.</p>
+<p><b>Асинхронная:</b> управление возвращается раньше; нужны способ получить результат и обработка ошибок.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-8-title tradeoff-8-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-8-title">Ожидание результата</title><desc id="tradeoff-8-desc">Синхронный вызов возвращается с результатом, асинхронный может подтвердить приём до готовности результата.</desc>
+<defs><marker id="tradeoff-8-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">Синхронно</text><text x="244" y="20" text-anchor="middle">Асинхронно</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<rect class="concept-node plain" x="15" y="40" width="122" height="28" rx="5"/><text x="76.0" y="59.0" text-anchor="middle">Запрос</text><path class="concept-edge" d="M76 70 L76 94" marker-end="url(#tradeoff-8-arrow)"/><rect class="concept-node accent" x="15" y="100" width="122" height="28" rx="5"/><text x="76.0" y="119.0" text-anchor="middle">Результат</text><rect class="concept-node plain" x="183" y="40" width="122" height="28" rx="5"/><text x="244.0" y="59.0" text-anchor="middle">Запрос</text><path class="concept-edge" d="M244 70 L244 87" marker-end="url(#tradeoff-8-arrow)"/><text x="244" y="106" text-anchor="middle">Принято</text><text x="244" y="135" text-anchor="middle" class="concept-label">Результат позже</text>
+</svg></figure></td></tr>
+<tr><td>9. <b>Batch vs stream processing</b></td><td><p><b>Batch:</b> периодическая обработка наборов, например суточного отчёта.</p>
+<p><b>Stream:</b> непрерывная обработка событий — свежее результат, сложнее обработка опозданий и состояния.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-9-title tradeoff-9-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-9-title">Обработка наборов и потока</title><desc id="tradeoff-9-desc">Batch собирает данные в набор, stream обрабатывает непрерывный входящий поток.</desc>
+<defs><marker id="tradeoff-9-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">Batch</text><text x="244" y="20" text-anchor="middle">Stream</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<rect class="concept-node accent" x="17" y="40" width="118" height="44" rx="5"/><circle cx="32" cy="62" r="4" fill="var(--accent)"/><circle cx="48" cy="62" r="4" fill="var(--accent)"/><circle cx="64" cy="62" r="4" fill="var(--accent)"/><circle cx="80" cy="62" r="4" fill="var(--accent)"/><circle cx="96" cy="62" r="4" fill="var(--accent)"/><circle cx="112" cy="62" r="4" fill="var(--accent)"/><path class="concept-edge" d="M76 86 L76 110" marker-end="url(#tradeoff-9-arrow)"/><text x="76" y="137" text-anchor="middle" class="concept-label">Периодический запуск</text><circle cx="188" cy="60" r="4" fill="var(--accent)"/><circle cx="204" cy="60" r="4" fill="var(--accent)"/><circle cx="220" cy="60" r="4" fill="var(--accent)"/><path class="concept-edge" d="M240 60 L298 60" marker-end="url(#tradeoff-9-arrow)"/><text x="244" y="137" text-anchor="middle" class="concept-label">По мере входа</text>
+</svg></figure></td></tr>
+<tr><td>10. <b>Масштабируемость vs производительность</b></td><td><p><b>Масштабируемость:</b> рост нагрузки при добавлении ресурсов.</p>
+<p><b>Производительность:</b> задержки и throughput сейчас. Распределение добавляет сетевые накладные расходы.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-10-title tradeoff-10-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-10-title">Рост и скорость обработки</title><desc id="tradeoff-10-desc">Слева рост доступной мощности, справа измеряемые задержка и пропускная способность при текущей нагрузке.</desc>
+<defs><marker id="tradeoff-10-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">Масштабируемость</text><text x="244" y="20" text-anchor="middle">Производительность</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<path class="concept-edge" d="M20 117 L131 117"/><path class="concept-edge" d="M20 117 L20 44"/><path class="concept-edge" d="M26 109 L124 51" marker-end="url(#tradeoff-10-arrow)"/><text x="76" y="140" text-anchor="middle" class="concept-label">Больше ресурсов</text><path class="concept-edge" d="M190 117 L301 117"/><rect class="concept-node accent" x="199" y="48" width="90" height="28" rx="5"/><text x="244.0" y="67.0" text-anchor="middle">p99: 80 мс</text><rect class="concept-node accent" x="199" y="84" width="90" height="28" rx="5"/><text x="244.0" y="103.0" text-anchor="middle">10k req/s</text><text x="244" y="140" text-anchor="middle" class="concept-label">При текущей нагрузке</text>
+</svg></figure></td></tr>
+<tr><td>11. <b>Long polling vs WebSockets</b></td><td><p><b>Long polling:</b> сервер удерживает HTTP-запрос до события или таймаута, после ответа клиент отправляет новый.</p>
+<p><b>WebSocket:</b> после handshake используется постоянное двустороннее соединение без нового HTTP-запроса на каждое сообщение.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-11-title tradeoff-11-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-11-title">Получение событий</title><desc id="tradeoff-11-desc">Long polling повторяет HTTP-запрос после ответа. WebSocket передаёт сообщения в обе стороны по одному соединению.</desc>
+<defs><marker id="tradeoff-11-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">Long polling</text><text x="244" y="20" text-anchor="middle">WebSocket</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<text x="30" y="44" text-anchor="middle">К</text><text x="122" y="44" text-anchor="middle">С</text><path class="concept-edge" d="M30 59 L122 59" marker-end="url(#tradeoff-11-arrow)"/><path class="concept-edge" d="M122 79 L30 79" marker-end="url(#tradeoff-11-arrow)"/><path class="concept-edge" d="M30 99 L122 99" marker-end="url(#tradeoff-11-arrow)"/><path class="concept-edge" d="M122 119 L30 119" marker-end="url(#tradeoff-11-arrow)"/><text x="198" y="44" text-anchor="middle">К</text><text x="290" y="44" text-anchor="middle">С</text><path class="concept-edge" d="M198 70 L290 70" marker-end="url(#tradeoff-11-arrow)"/><path class="concept-edge" d="M290 98 L198 98" marker-end="url(#tradeoff-11-arrow)"/><text x="244" y="136" text-anchor="middle" class="concept-label">Одно соединение</text>
+</svg></figure></td></tr>
+<tr><td>12. <b>Нормализация vs денормализация</b></td><td><p><b>Нормализация</b> уменьшает дублирование и аномалии обновления: адрес клиента меняется в одном месте. При чтении связанных данных могут понадобиться JOIN.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-12-title tradeoff-12-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-12-title">Организация связанных данных</title><desc id="tradeoff-12-desc">Нормализация хранит адрес у клиента со ссылками из заказов, денормализация копирует адрес в заказы.</desc>
+<defs><marker id="tradeoff-12-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">Нормализация</text><text x="244" y="20" text-anchor="middle">Денормализация</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<path fill="var(--bg)" d="M17 43 A59.0 6 0 0 1 135 43 V68 A59.0 6 0 0 1 17 68 Z"/><path class="concept-db" d="M17 43 A59.0 6 0 0 1 135 43 V68 A59.0 6 0 0 1 17 68 Z"/><ellipse class="concept-db" cx="76.0" cy="43" rx="59.0" ry="6"/><text x="76.0" y="60.5" text-anchor="middle">Клиент</text><path class="concept-edge" d="M76 76 L76 90" marker-end="url(#tradeoff-12-arrow)"/><path fill="var(--bg)" d="M17 103 A59.0 6 0 0 1 135 103 V128 A59.0 6 0 0 1 17 128 Z"/><path class="concept-db" d="M17 103 A59.0 6 0 0 1 135 103 V128 A59.0 6 0 0 1 17 128 Z"/><ellipse class="concept-db" cx="76.0" cy="103" rx="59.0" ry="6"/><text x="76.0" y="120.5" text-anchor="middle">Заказ: clientId</text><path fill="var(--bg)" d="M185 43 A59.0 6 0 0 1 303 43 V68 A59.0 6 0 0 1 185 68 Z"/><path class="concept-db" d="M185 43 A59.0 6 0 0 1 303 43 V68 A59.0 6 0 0 1 185 68 Z"/><ellipse class="concept-db" cx="244.0" cy="43" rx="59.0" ry="6"/><text x="244.0" y="60.5" text-anchor="middle">Заказ + адрес</text><path fill="var(--bg)" d="M185 103 A59.0 6 0 0 1 303 103 V128 A59.0 6 0 0 1 185 128 Z"/><path class="concept-db" d="M185 103 A59.0 6 0 0 1 303 103 V128 A59.0 6 0 0 1 185 128 Z"/><ellipse class="concept-db" cx="244.0" cy="103" rx="59.0" ry="6"/><text x="244.0" y="120.5" text-anchor="middle">Заказ + адрес</text>
+</svg></figure></td></tr>
+<tr><td>13. <b>Монолит vs микросервисы</b></td><td><p><b>Монолит:</b> единый релиз и проще локальные транзакции, но части приложения выпускаются вместе.</p>
+<p><b>Микросервисы:</b> независимые релизы и масштабирование, но сетевые вызовы, распределённые данные и сложнее эксплуатация.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-13-title tradeoff-13-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-13-title">Границы развёртывания</title><desc id="tradeoff-13-desc">В монолите модули имеют общую границу развёртывания. Микросервисы развёртываются отдельно и взаимодействуют по сети.</desc>
+<defs><marker id="tradeoff-13-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">Монолит</text><text x="244" y="20" text-anchor="middle">Микросервисы</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<rect class="concept-node accent" x="16" y="42" width="120" height="79" rx="5"/><rect class="concept-node accent" x="27" y="51" width="98" height="26" rx="5"/><text x="76.0" y="69.0" text-anchor="middle">Заказы</text><rect class="concept-node accent" x="27" y="84" width="98" height="26" rx="5"/><text x="76.0" y="102.0" text-anchor="middle">Оплата</text><rect class="concept-node accent" x="190" y="44" width="108" height="30" rx="5"/><text x="244.0" y="64.0" text-anchor="middle">Заказы</text><path class="concept-edge" d="M244 76 L244 94" marker-end="url(#tradeoff-13-arrow)"/><rect class="concept-node accent" x="190" y="100" width="108" height="30" rx="5"/><text x="244.0" y="120.0" text-anchor="middle">Оплата</text>
+</svg></figure></td></tr>
+<tr><td>14. <b>TCP vs UDP</b></td><td><p><b>TCP</b> предоставляет надёжный упорядоченный поток байтов; потерянные данные передаются повторно, а последующие байты ждут восстановления порядка. Это удобно для передачи файлов.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-14-title tradeoff-14-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-14-title">Порядок и доставка</title><desc id="tradeoff-14-desc">TCP восстанавливает порядок байтов, UDP может доставлять датаграммы не по порядку или терять их.</desc>
+<defs><marker id="tradeoff-14-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">TCP</text><text x="244" y="20" text-anchor="middle">UDP</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<rect class="concept-node accent" x="17" y="48" width="33" height="29" rx="5"/><text x="33.5" y="67.5" text-anchor="middle">1</text><rect class="concept-node accent" x="59" y="48" width="33" height="29" rx="5"/><text x="75.5" y="67.5" text-anchor="middle">2</text><rect class="concept-node accent" x="101" y="48" width="33" height="29" rx="5"/><text x="117.5" y="67.5" text-anchor="middle">3</text><text x="76" y="112" text-anchor="middle" class="concept-label">Порядок восстановлен</text><rect class="concept-node accent" x="185" y="48" width="33" height="29" rx="5"/><text x="201.5" y="67.5" text-anchor="middle">3</text><rect class="concept-node accent" x="227" y="48" width="33" height="29" rx="5"/><text x="243.5" y="67.5" text-anchor="middle">1</text><text x="286" y="69" text-anchor="middle">× 2</text><text x="244" y="112" text-anchor="middle" class="concept-label">Потери и перестановки</text>
+</svg></figure></td></tr>
+<tr><td>15. <b>REST vs GraphQL</b></td><td><p><b>REST:</b> ресурсные endpoints, но состав ответа может не совпасть с потребностями клиента.</p>
+<p><b>GraphQL:</b> клиент выбирает поля, но серверу сложнее контролировать стоимость запросов.</p>
+<figure class="concept" style="min-width: 320px"><svg viewBox="0 0 320 150" role="img" aria-labelledby="tradeoff-15-title tradeoff-15-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="tradeoff-15-title">Выбор полей ответа</title><desc id="tradeoff-15-desc">В примере REST возвращает заданный набор полей, GraphQL позволяет клиенту выбрать id и name.</desc>
+<defs><marker id="tradeoff-15-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
+<text x="76" y="20" text-anchor="middle">REST</text><text x="244" y="20" text-anchor="middle">GraphQL</text><path d="M160 32 V142" stroke="var(--line)" stroke-dasharray="3 4"/>
+<rect class="concept-node accent" x="17" y="39" width="118" height="78" rx="5"/><text x="76" y="61" text-anchor="middle">id</text><text x="76" y="82" text-anchor="middle">name</text><text x="76" y="103" text-anchor="middle">details</text><rect class="concept-node accent" x="185" y="39" width="118" height="78" rx="5"/><text x="244" y="61" text-anchor="middle">id</text><text x="244" y="82" text-anchor="middle">name</text><text x="76" y="140" text-anchor="middle" class="concept-label">Заданный ответ</text><text x="244" y="140" text-anchor="middle" class="concept-label">Выбранные поля</text>
+</svg></figure></td></tr>
+</table></div>
     </div></div></article>
 <article id="q277" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">277. Спроектируйте сокращатель ссылок <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
 <p>Сокращатель хранит <code>short_code → original_url</code>. Случайный Base62-код сохраняется с уникальным ограничением и повтором при коллизии. Переход проверяет срок и статус ссылки, затем возвращает <code><span class="n">302</span> + <span class="t">Location</span></code>.</p>
