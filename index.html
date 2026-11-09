@@ -10149,215 +10149,10 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <article id="q277" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">277. Спроектируйте систему, которая масштабируется до миллионов пользователей <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
 <p><b>Архитектура растёт по измеренным ограничениям:</b> один сервер → отдельные БД и файлы → несколько экземпляров в независимых зонах → кеш и реплики → автомасштабирование и фоновая обработка.</p>
 <p>Переход определяется RPS, стоимостью операций, объёмом данных, p99 и требованиями доступности. <b>После каждого изменения нагрузочный тест проверяет выигрыш и новое узкое место.</b> Шардинг и специализированные хранилища добавляются при исчерпании более простых мер.</p>
-<figure class="concept" aria-labelledby="sd-scaling-scaled-summary-caption">
-<div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
-<svg style="flex:1 1 280px; min-width:0" id="sd-scaling-scaled-summary" viewBox="0 0 320 504" role="img" aria-labelledby="sd-scaling-scaled-summary-title sd-scaling-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-scaling-scaled-summary-title">Итоговые маршруты клиента</title><desc id="sd-scaling-scaled-summary-desc">Клиент отдельно обращается к DNS, CDN и API Gateway. CDN получает файлы из объектного хранилища. API-запросы клиента идут через API Gateway к группам API, минуя CDN.</desc>
-<defs><marker id="sd-scaling-scaled-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-scaling-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M110 56 V90 H245 V108" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M65 56 V180 H154 V204" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
 
-<path class="concept-edge" d="M100 268 V296 H51 V318" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M154 268 V318" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M220 268 V296 H263 V318" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M312 134 H318 V466 H316" marker-end="url(#sd-scaling-scaled-summary-arrow)"/>
-<rect class="concept-node plain" x="8" y="8" width="132" height="48" rx="9"/>
-<text x="74" y="36" text-anchor="middle">Клиент</text>
-<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
-<text x="245" y="36" text-anchor="middle">DNS</text>
-<rect class="concept-node plain" x="178" y="112" width="134" height="44" rx="9"/>
-<text x="245" y="138" text-anchor="middle">CDN</text>
-
-
-
-
-
-
-
-<rect fill="var(--bg)" stroke="none" x="52" y="208" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="52" y="208" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="214" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="46" y="214" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="220" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="40" y="220" width="228" height="48" rx="9"/>
-<text x="154" y="248" text-anchor="middle">API Gateway</text>
-<rect class="concept-node plain" x="178" y="438" width="134" height="56" rx="9"/>
-<text x="245" y="461.5" text-anchor="middle">Объектное</text>
-<text x="245" y="478.5" text-anchor="middle">хранилище</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="322" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="322" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="328" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="328" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="334" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="334" width="86" height="52" rx="9"/>
-<text x="51" y="364" text-anchor="middle">Async API</text>
-<rect fill="var(--bg)" stroke="none" x="126" y="322" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="126" y="322" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="120" y="328" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="120" y="328" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="114" y="334" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="114" y="334" width="86" height="52" rx="9"/>
-<text x="157" y="364" text-anchor="middle">Write API</text>
-<rect fill="var(--bg)" stroke="none" x="232" y="322" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="232" y="322" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="226" y="328" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="226" y="328" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="220" y="334" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="220" y="334" width="86" height="52" rx="9"/>
-<text x="263" y="364" text-anchor="middle">Read API</text>
-</svg>
-<svg style="flex:1 1 280px; min-width:0" id="sd-scaling-scaled-summary-data" viewBox="0 0 320 524" role="img" aria-labelledby="sd-scaling-scaled-summary-data-title sd-scaling-scaled-summary-data-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-scaling-scaled-summary-data-title">Потоки чтения и записи</title><desc id="sd-scaling-scaled-summary-data-desc">Write API пишет в SQL primary и объектное хранилище. Read API читает кеш, при промахе — реплики БД, а файлы получает из объектного хранилища. Между primary и репликами идёт репликация.</desc>
-<defs><marker id="sd-scaling-scaled-summary-data-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M74 116 V298" marker-end="url(#sd-scaling-scaled-summary-data-arrow)"/>
-<path class="concept-edge" d="M239 116 V186" marker-end="url(#sd-scaling-scaled-summary-data-arrow)"/>
-<path class="concept-edge" d="M300 90 H318 V343 H316" marker-end="url(#sd-scaling-scaled-summary-data-arrow)"/>
-<path class="concept-edge" d="M140 343 H174" marker-end="url(#sd-scaling-scaled-summary-data-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M8 90 H2 V478 H36" marker-end="url(#sd-scaling-scaled-summary-data-arrow)"/>
-<path class="concept-edge" d="M300 90 H318 V478 H284" marker-end="url(#sd-scaling-scaled-summary-data-arrow)"/>
-<text x="160" y="22" text-anchor="middle">Потоки чтения и записи</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
-<text x="74" y="94" text-anchor="middle">Write API</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="52" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="190" y="52" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="58" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="184" y="58" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="64" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
-<text x="239" y="94" text-anchor="middle">Read API</text>
-<path fill="var(--bg)" stroke="none" d="M186 190 H304 L312 198 V234 L304 242 H186 L178 234 V198 Z"/>
-<path class="concept-cache" d="M186 190 H304 L312 198 V234 L304 242 H186 L178 234 V198 Z"/>
-<text x="245" y="220" text-anchor="middle">Кеш в памяти</text>
-<path fill="var(--bg)" stroke="none" d="M20 309 A66 7 0 0 1 152 309 V353 A66 7 0 0 1 20 353 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="86" cy="309" rx="66" ry="7"/>
-<path class="concept-db" d="M20 309 A66 7 0 0 1 152 309 V353 A66 7 0 0 1 20 353 Z"/>
-<ellipse class="concept-db" cx="86" cy="309" rx="66" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M14 315 A66 7 0 0 1 146 315 V359 A66 7 0 0 1 14 359 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="80" cy="315" rx="66" ry="7"/>
-<path class="concept-db" d="M14 315 A66 7 0 0 1 146 315 V359 A66 7 0 0 1 14 359 Z"/>
-<ellipse class="concept-db" cx="80" cy="315" rx="66" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M8 321 A66 7 0 0 1 140 321 V365 A66 7 0 0 1 8 365 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="74" cy="321" rx="66" ry="7"/>
-<path class="concept-db" d="M8 321 A66 7 0 0 1 140 321 V365 A66 7 0 0 1 8 365 Z"/>
-<ellipse class="concept-db" cx="74" cy="321" rx="66" ry="7"/>
-<text x="74" y="343" text-anchor="middle">SQL primary</text>
-<text x="74" y="360" text-anchor="middle">и резерв</text>
-<path fill="var(--bg)" stroke="none" d="M190 309 A61 7 0 0 1 312 309 V353 A61 7 0 0 1 190 353 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="251" cy="309" rx="61" ry="7"/>
-<path class="concept-db" d="M190 309 A61 7 0 0 1 312 309 V353 A61 7 0 0 1 190 353 Z"/>
-<ellipse class="concept-db" cx="251" cy="309" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M184 315 A61 7 0 0 1 306 315 V359 A61 7 0 0 1 184 359 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="245" cy="315" rx="61" ry="7"/>
-<path class="concept-db" d="M184 315 A61 7 0 0 1 306 315 V359 A61 7 0 0 1 184 359 Z"/>
-<ellipse class="concept-db" cx="245" cy="315" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M178 321 A61 7 0 0 1 300 321 V365 A61 7 0 0 1 178 365 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="239" cy="321" rx="61" ry="7"/>
-<path class="concept-db" d="M178 321 A61 7 0 0 1 300 321 V365 A61 7 0 0 1 178 365 Z"/>
-<ellipse class="concept-db" cx="239" cy="321" rx="61" ry="7"/>
-<text x="239" y="343" text-anchor="middle">Реплики</text>
-<text x="239" y="360" text-anchor="middle">чтения</text>
-<rect class="concept-node plain" x="40" y="450" width="240" height="56" rx="9"/>
-<text x="160" y="482" text-anchor="middle">Объектное хранилище</text>
-<text class="concept-label" x="275" y="278" text-anchor="middle">промах</text>
-</svg>
-<svg style="flex:1 1 280px; min-width:0" id="sd-scaling-scaled-summary-jobs" viewBox="0 0 320 720" role="img" aria-labelledby="sd-scaling-scaled-summary-jobs-title sd-scaling-scaled-summary-jobs-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-scaling-scaled-summary-jobs-title">Фоновая обработка и варианты хранения</title><desc id="sd-scaling-scaled-summary-jobs-desc">Async API сохраняет задание и outbox в БД, публикатор передаёт задание в очередь. Воркеры обрабатывают его и сохраняют результаты в SQL-БД или объектном хранилище. Другое хранилище, шардирование и разделение БД по доменам показаны как варианты дальнейшей эволюции.</desc>
-<defs><marker id="sd-scaling-scaled-summary-jobs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M74 116 V186" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)"/>
-<path class="concept-edge" d="M140 216 H174" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M245 242 V298" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)"/>
-<path class="concept-edge" d="M239 372 V434" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)"/>
-<path class="concept-edge" d="M178 343 H78 V422" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)"/>
-<path class="concept-edge" d="M178 343 H162 V574 H144" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M8 467 H2 V650 H74 V658" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M2 650 H245 V658" marker-end="url(#sd-scaling-scaled-summary-jobs-arrow)" stroke-dasharray="4 4"/>
-<text x="160" y="22" text-anchor="middle">Фоновые задачи и хранение</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
-<text x="74" y="94" text-anchor="middle">Async API</text>
-<path fill="var(--bg)" stroke="none" d="M8 197 A66 7 0 0 1 140 197 V235 A66 7 0 0 1 8 235 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="74" cy="197" rx="66" ry="7"/>
-<path class="concept-db" d="M8 197 A66 7 0 0 1 140 197 V235 A66 7 0 0 1 8 235 Z"/>
-<ellipse class="concept-db" cx="74" cy="197" rx="66" ry="7"/>
-<text x="74" y="219" text-anchor="middle">БД заданий</text>
-<text x="74" y="236" text-anchor="middle">+ outbox</text>
-<path fill="var(--bg)" stroke="none" d="M186 190 H304 A8 26 0 0 1 304 242 H186 A8 26 0 0 1 186 190 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="186" cy="216" rx="8" ry="26"/>
-<path class="concept-broker" d="M186 190 H304 A8 26 0 0 1 304 242 H186 A8 26 0 0 1 186 190 Z"/>
-<ellipse class="concept-broker" cx="186" cy="216" rx="8" ry="26"/>
-<text x="249" y="220" text-anchor="middle">Очередь</text>
-
-<rect fill="var(--bg)" stroke="none" x="190" y="302" width="122" height="58" rx="9"/>
-<rect class="concept-node warning" x="190" y="302" width="122" height="58" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="184" y="308" width="122" height="58" rx="9"/>
-<rect class="concept-node warning" x="184" y="308" width="122" height="58" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="178" y="314" width="122" height="58" rx="9"/>
-<rect class="concept-node warning" x="178" y="314" width="122" height="58" rx="9"/>
-<text x="239" y="347" text-anchor="middle">Воркеры</text>
-<path fill="var(--bg)" stroke="none" d="M20 433 A66 7 0 0 1 152 433 V477 A66 7 0 0 1 20 477 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="86" cy="433" rx="66" ry="7"/>
-<path class="concept-db" d="M20 433 A66 7 0 0 1 152 433 V477 A66 7 0 0 1 20 477 Z"/>
-<ellipse class="concept-db" cx="86" cy="433" rx="66" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M14 439 A66 7 0 0 1 146 439 V483 A66 7 0 0 1 14 483 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="80" cy="439" rx="66" ry="7"/>
-<path class="concept-db" d="M14 439 A66 7 0 0 1 146 439 V483 A66 7 0 0 1 14 483 Z"/>
-<ellipse class="concept-db" cx="80" cy="439" rx="66" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M8 445 A66 7 0 0 1 140 445 V489 A66 7 0 0 1 8 489 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="74" cy="445" rx="66" ry="7"/>
-<path class="concept-db" d="M8 445 A66 7 0 0 1 140 445 V489 A66 7 0 0 1 8 489 Z"/>
-<ellipse class="concept-db" cx="74" cy="445" rx="66" ry="7"/>
-<text x="74" y="471" text-anchor="middle">SQL-БД</text>
-<rect class="concept-node plain" x="178" y="438" width="134" height="58" rx="9"/>
-<text x="245" y="462.5" text-anchor="middle">Объектное</text>
-<text x="245" y="479.5" text-anchor="middle">хранилище</text>
-<rect class="concept-node plain" x="8" y="548" width="132" height="52" rx="9"/>
-<text x="74" y="569.5" text-anchor="middle">Другое</text>
-<text x="74" y="586.5" text-anchor="middle">хранилище</text>
-<text class="concept-label" x="160" y="642" text-anchor="middle">Варианты масштабирования SQL</text>
-<path fill="var(--bg)" stroke="none" d="M8 669 A66 7 0 0 1 140 669 V707 A66 7 0 0 1 8 707 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="74" cy="669" rx="66" ry="7"/>
-<path class="concept-db" d="M8 669 A66 7 0 0 1 140 669 V707 A66 7 0 0 1 8 707 Z"/>
-<ellipse class="concept-db" cx="74" cy="669" rx="66" ry="7"/>
-<text x="74" y="691" text-anchor="middle">Шарды</text>
-<text x="74" y="708" text-anchor="middle">по user_id</text>
-<path fill="var(--bg)" stroke="none" d="M178 669 A67 7 0 0 1 312 669 V707 A67 7 0 0 1 178 707 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="245" cy="669" rx="67" ry="7"/>
-<path class="concept-db" d="M178 669 A67 7 0 0 1 312 669 V707 A67 7 0 0 1 178 707 Z"/>
-<ellipse class="concept-db" cx="245" cy="669" rx="67" ry="7"/>
-<text x="245" y="691" text-anchor="middle">БД по доменам</text>
-<text x="245" y="708" text-anchor="middle">Клиенты / товары</text>
-<g role="img" aria-label="Фоновый обработчик — worker">
-<circle cx="300" cy="326" r="10" fill="var(--bg)"/>
-<circle class="concept-node warning" cx="300" cy="326" r="10"/>
-<text x="300" y="330" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
-</g>
-</svg>
-</div>
-<figcaption id="sd-scaling-scaled-summary-caption">Итог эволюции: независимое масштабирование API, данных и фоновой работы.</figcaption></figure>
     </div>
     <div class="more">
-<p><b>Шаг 1 — Требования и ограничения</b></p>
-<p>Пользователь читает и записывает данные через API, приложение хранит реляционные записи и файлы. Нужно пройти путь от небольшого сервиса до миллионов пользователей, сохраняя предсказуемую задержку и повышая доступность. Это задача на <b>эволюцию архитектуры</b>: единственная «финальная схема» без объяснения переходов не раскрывает решение.</p>
-<p><b>Допущения для целевой нагрузки:</b> 10 млн пользователей, 100 млрд чтений и 1 млрд записей за 30 дней, 1 КБ новых данных на запись. Пиковый поток в 5 раз выше среднего. Предполагаются неравномерная популярность объектов и потребность в SQL-транзакциях. Миллионы зарегистрированных пользователей не означают миллионы одновременных запросов.</p>
-<div class="table-wrap"><table><tr><th>Показатель</th><th>Оценка</th></tr>
-<tr><td>Чтения</td><td>100 млрд / 2 592 000 с ≈ 38 600/с; пик ≈ 193 000/с</td></tr>
-<tr><td>Записи</td><td>1 млрд / 2 592 000 с ≈ 386/с; пик ≈ 1 930/с</td></tr>
-<tr><td>Соотношение</td><td>100 чтений на 1 запись</td></tr>
-<tr><td>Новые данные</td><td>≈ 1 ТБ/месяц и 36 ТБ за 3 года, без индексов, реплик и файлов</td></tr></table></div>
-<p><b>Учебные цели:</b> p99 интерактивного API до 300 мс, доступность API 99,9% за месяц. Для части чтений допустимо устаревание до 5 секунд, а подтверждённую собственную запись пользователь должен видеть сразу. Конкретный RPO/RTO и время фоновых операций согласуются отдельно. Исходная схема с одним сервером служит отправной точкой и сама по себе не обеспечивает целевую отказоустойчивость.</p>
-<p><b>Шаг 2 — Общая архитектура</b></p>
+<p><b>Этап 0 — Один сервер</b></p>
 <figure class="concept" aria-labelledby="sd-scaling-base-caption">
 <svg id="sd-scaling-base" viewBox="0 0 320 270" role="img" aria-labelledby="sd-scaling-base-title sd-scaling-base-desc" xmlns="http://www.w3.org/2000/svg">
 <title id="sd-scaling-base-title">Начальная схема: DNS отдельно от HTTP</title><desc id="sd-scaling-base-desc">Клиент запрашивает адрес у DNS, затем сам устанавливает HTTPS-соединение с сервером. DNS не пересылает запросы приложению.</desc>
@@ -10373,15 +10168,16 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <text x="160" y="206" text-anchor="middle">API + SQL-БД</text>
 <text x="160" y="223" text-anchor="middle">Локальные файлы</text>
 </svg><figcaption id="sd-scaling-base-caption">Старт: приложение, БД и файлы на одном сервере.</figcaption></figure>
-<p>Приложение, реляционная БД и файлы находятся на одном сервере. DNS-запись указывает на его доступный клиентам адрес. Это минимальный вариант для проверки продукта и первого измерения нагрузки; он одинаково применим к виртуальной машине, облачному экземпляру или физическому серверу.</p>
-<p>DNS разрешает имена; HTTP-запросы клиент отправляет отдельно. В этой схеме файлы идут через CDN, API — напрямую через API Gateway.</p>
-<p><b>Шаг 3 — Детали исходной системы</b></p>
-<p><b>Путь запроса:</b> клиент разрешает имя через DNS → устанавливает HTTPS-соединение → приложение проверяет запрос и права → выполняет SQL-транзакцию → возвращает результат. Файлы читаются с локального диска. API и модель данных определяются предметной областью; добавлять отдельные сервисы только из-за будущего числа пользователей пока не требуется.</p>
-<p><b>Первое ограничение проверяется измерениями:</b> RPS, p99, ошибки, CPU, память, диск, сеть и планы SQL. Индексы и устранение лишних запросов проверяются до смены архитектуры; затем можно увеличить ресурсы узла.</p>
-<p><b>С начала нужны</b> HTTPS, проверенное восстановление из резервных копий, наблюдаемость и контроль секретов. БД закрыта от внешнего доступа; сетевые правила разрешают необходимые соединения.</p>
-<p><b>Шаг 4 — Масштабирование по этапам</b></p>
-<p>Этапы обозначены Users+, Users++ и далее. <b>Это признаки роста, а не фиксированные пороги количества пользователей.</b> Переход запускается результатами тестов, требованиями доступности и стоимостью эксплуатации. Некоторые этапы могут потребоваться одновременно или в другом порядке.</p>
-<p><b>Users+ — Разделить приложение, БД и файлы</b></p>
+<p><b>Приложение, PostgreSQL и файлы находятся на одном сервере.</b> Клиент обращается к приложению по HTTPS; приложение выполняет SQL-запросы и читает файлы с локального диска. Это простой старт для проверки продукта, но сервер остаётся единой точкой отказа.</p>
+<p><b>Целевая нагрузка для примера:</b> 10 млн пользователей, 100 млрд чтений и 1 млрд записей за 30 дней, пик в 5 раз выше среднего. Чтений в 100 раз больше, чем записей; популярность объектов неравномерна.</p>
+<div class="table-wrap"><table><tr><th>Показатель</th><th>Среднее → пик</th></tr>
+<tr><td>Чтения</td><td>≈ 38 600 → 193 000/с</td></tr>
+<tr><td>Записи</td><td>≈ 386 → 1 930/с</td></tr>
+<tr><td>Новые данные при 1 КБ на запись</td><td>≈ 1 ТБ/месяц, без индексов, реплик и файлов</td></tr></table></div>
+<p><b>Цели:</b> p99 API до 300 мс, доступность 99,9%. Для части чтений допустимо устаревание до 5 секунд, собственная подтверждённая запись видна сразу. Исходный сервер ещё не обеспечивает эти цели.</p>
+<p><b>Первый шаг — измерения и простая оптимизация:</b> RPS, p99, ошибки, CPU, память, диск и планы SQL. Проверить индексы и лишние запросы, при необходимости увеличить ресурсы сервера. С начала нужны наблюдаемость и проверяемые резервные копии.</p>
+<p><b>Переходы между этапами определяются измеренными ограничениями, а не числом пользователей.</b> Некоторые изменения могут потребоваться одновременно или в другом порядке.</p>
+<p><b>Этап 1 — Разделить приложение, БД и файлы</b></p>
 <figure class="concept" aria-labelledby="sd-scaling-separated-caption">
 <svg id="sd-scaling-separated" viewBox="0 0 320 344" role="img" aria-labelledby="sd-scaling-separated-title sd-scaling-separated-desc" xmlns="http://www.w3.org/2000/svg">
 <title id="sd-scaling-separated-title">Приложение, БД и файлы</title><desc id="sd-scaling-separated-desc">Клиент получает адрес через DNS и обращается к приложению. Приложение работает с отдельной SQL-БД и объектным хранилищем.</desc>
@@ -10409,7 +10205,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p><b>Цель.</b> Масштабировать вычисления и хранение независимо.</p>
 <p><b>Изменения.</b> БД переносится на отдельный узел, файлы — в объектное хранилище. В БД остаются ключи объектов и метаданные. Доступ к файлам проверяется приложением, доступ к БД ограничивается нужными компонентами.</p>
 <p><b>Компромиссы.</b> Появляются сетевые задержки и отдельные режимы отказа. Запись объекта и SQL-запись не являются одной ACID-транзакцией: нужны состояние загрузки и очистка неиспользованных объектов. Резервирование БД, обновления и восстановление нужно обеспечить самостоятельно или поручить управляемому сервису; планы запросов и размер пула остаются ответственностью приложения.</p>
-<p><b>Users++ — Добавить горизонтальное масштабирование и несколько зон отказа</b></p>
+<p><b>Этап 2 — Добавить горизонтальное масштабирование и несколько зон отказа</b></p>
 <figure class="concept" aria-labelledby="sd-scaling-available-caption">
 <svg id="sd-scaling-available" viewBox="0 0 320 504" role="img" aria-labelledby="sd-scaling-available-title sd-scaling-available-desc" xmlns="http://www.w3.org/2000/svg">
 <title id="sd-scaling-available-title">Несколько зон: отдельные маршруты клиента</title><desc id="sd-scaling-available-desc">Клиент отдельно обращается к DNS, CDN и API Gateway. CDN получает файлы из объектного хранилища. API-запросы клиента идут через API Gateway к группам API, минуя CDN.</desc>
@@ -10482,7 +10278,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p><b>Изменения.</b> API Gateway распределяет запросы по экземплярам в независимых зонах отказа. Сессии не привязаны к памяти экземпляра; файлы отдаёт CDN из объектного хранилища. Read/Write API получают свои группы. Доступ к приватным объектам и ключ общего кеша учитывают авторизацию.</p>
 <p><b>Отказоустойчивость БД.</b> В этой схеме primary имеет синхронную резервную реплику в другой зоне. После отказа primary предусмотрены выбор нового ведущего, переподключение клиентов и защита от двух одновременно пишущих узлов. <b>Резервирование и масштабирование чтения — разные задачи:</b> резервный узел здесь не используется для пользовательских запросов. Возможность читать с него и протокол переключения зависят от выбранной СУБД и конфигурации.</p>
 <p><b>Компромиссы.</b> Резервные узлы и межзонное взаимодействие увеличивают стоимость, а синхронная репликация может увеличивать задержку commit. Переключение БД не мгновенно: соединения могут оборваться, а результат последнего запроса оказаться неизвестным. Запись с повтором требует идемпотентного ключа. Репликация не заменяет резервные копии: ошибочное удаление данных также может попасть на реплики.</p>
-<p><b>Users+++ — Разгрузить чтение БД</b></p>
+<p><b>Этап 3 — Разгрузить чтение БД</b></p>
 <figure class="concept" aria-labelledby="sd-scaling-read-scale-caption">
 <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
 <svg style="flex:1 1 280px; min-width:0" id="sd-scaling-read-scale" viewBox="0 0 320 504" role="img" aria-labelledby="sd-scaling-read-scale-title sd-scaling-read-scale-desc" xmlns="http://www.w3.org/2000/svg">
@@ -10600,7 +10396,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Например, при пике 193 000 чтений/с и hit rate 95% к БД попадёт около <b>9 650 чтений/с</b>. Это не доказательство достаточности одной реплики: результат зависит от цены запроса, размера ответа, рабочего набора и распределения ключей. Прогрев кеша и всплески промахов проверяются нагрузкой отдельно.</p>
 <p><b>Компромиссы.</b> Кеш и реплики могут отдавать старые данные. Чтение, которому нужна гарантия read-your-writes, направляется на primary или использует другой согласованный механизм; старый кеш при этом тоже нужно обойти. После изменения primary кеш инвалидируется, но гонки заполнения и replication lag требуют отдельной политики свежести. Если допустимо не более 5 секунд устаревания, нельзя просто заполнить кеш данными произвольно отставшей реплики и надеяться на TTL. Нужны контроль lag, подходящий источник чтения и отказ от небезопасного кеширования.</p>
 <p>Одновременные загрузки одного ключа объединяются, обращения к БД ограничиваются. При отказе кеша весь поток не должен бесконтрольно переключаться на primary. Несколько реплики чтения не устраняют предел записи и каждая хранит свою копию данных.</p>
-<p><b>Users++++ — Автоматизировать изменение мощности</b></p>
+<p><b>Этап 4 — Автоматизировать изменение мощности</b></p>
 <figure class="concept" aria-labelledby="sd-scaling-auto-scale-caption">
 <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
 <svg style="flex:1 1 280px; min-width:0" id="sd-scaling-auto-scale" viewBox="0 0 320 504" role="img" aria-labelledby="sd-scaling-auto-scale-title sd-scaling-auto-scale-desc" xmlns="http://www.w3.org/2000/svg">
@@ -10729,7 +10525,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Если один экземпляр при заданном p99 безопасно обслуживает 2 000 API-запросов/с, а динамический API получает 12 000 запросов/с, нужно минимум 6 экземпляров по этой оценке. Для выдерживания отказа одного при том же потоке — минимум 7; отказ целой зоны требует большего резерва с учётом размещения. Числа иллюстративные, реальная пропускная способность определяется тестом приложения на выбранных ресурсах.</p>
 <p><b>Компромиссы.</b> Автомасштабирование реагирует с задержкой и не исправляет заблокированную БД или медленный внешний сервис. При увеличении группы сумма соединений с БД растёт вместе с числом пулов; этот предел нужно учитывать заранее. Снижение мощности выполняется с завершением принятых запросов. Образы, конфигурация и миграции должны позволять воспроизводимо запускать новый экземпляр.</p>
 <p>Наблюдаемость охватывает весь путь: RPS, p99, ошибки, насыщение экземпляров приложения, очередь запросов, cache hit rate, DB connections, блокировки, IOPS и replication lag. Стоимость инфраструктуры и стоимость на запрос также участвуют в выборе следующего изменения.</p>
-<p><b>Users+++++ — Устранить оставшиеся ограничения и вынести фоновую работу</b></p>
+<p><b>Этап 5 — Устранить оставшиеся ограничения и вынести фоновую работу</b></p>
 <figure class="concept" aria-labelledby="sd-scaling-scaled-caption">
 <div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
 <svg style="flex:1 1 280px; min-width:0" id="sd-scaling-scaled" viewBox="0 0 320 504" role="img" aria-labelledby="sd-scaling-scaled-title sd-scaling-scaled-desc" xmlns="http://www.w3.org/2000/svg">
