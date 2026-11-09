@@ -10369,6 +10369,25 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <text x="160" y="223" text-anchor="middle">Локальные файлы</text>
 </svg><figcaption id="sd-scaling-base-caption">Старт: приложение, БД и файлы на одном сервере.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
+<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
+<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
+<tr><td><code>async_job</code></td><td><code>id</code> (PK)<br>
+<code>idempotency_key</code> (UQ)<br>
+<code>input_ref</code><br>
+<code>result_ref</code><br>
+<code>status</code><br>
+<code>attempt_token</code><br>
+<code>lease_until</code><br>
+<code>next_attempt_at</code></td></tr>
+<tr><td><code>outbox</code></td><td><code>event_id</code> (PK)<br>
+<code>job_id</code> (FK)<br>
+<code>event_type</code><br>
+<code>payload</code><br>
+<code>created_at</code><br>
+<code>published_at</code></td></tr>
+</table></div>
+<p>Это общий пример инфраструктуры фоновых задач; предметные таблицы зависят от продукта. Файлы находятся в объектном хранилище, в БД сохраняются ссылки на них.</p>
+
 
 <div class="table-wrap"><table><tr><th>Ограничение</th><th>Изменение</th></tr><tr><td>Общие ресурсы</td><td>Отдельная БД, файлы в объектном хранилище</td></tr><tr><td>Не хватает API</td><td>Балансировщик и stateless-экземпляры в нескольких зонах</td></tr><tr><td>Дорогое чтение</td><td>Кеш и read-replica</td></tr><tr><td>Долгие операции</td><td>Outbox, очередь и workers</td></tr><tr><td>Предел записи и хранения</td><td>Архив, затем шардирование под запросы</td></tr></table></div>
 <p><b>Изменения.</b> БД переносится на отдельный узел, файлы — в объектное хранилище. В БД остаются ключи объектов и метаданные. Доступ к файлам проверяется приложением, доступ к БД ограничивается нужными компонентами.</p>
@@ -10640,6 +10659,17 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <text x="160" y="257" text-anchor="middle">PostgreSQL: code → URL</text>
 </svg><figcaption id="sd-url-base-caption">Старт: одно приложение и PostgreSQL.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
+<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
+<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
+<tr><td><code>short_link</code></td><td><code>short_code</code> (PK)<br>
+<code>original_url</code><br>
+<code>owner_id</code><br>
+<code>created_at</code><br>
+<code>expires_at</code><br>
+<code>is_active</code></td></tr>
+</table></div>
+<p>Генерируемые коды и пользовательские alias используют один уникальный short_code. Аналитика переходов обрабатывается отдельно.</p>
+
 <p><b>API и модель данных.</b> Создание принимает исходный URL, необязательные alias и срок действия:</p>
 <pre><span class="t">POST</span> /api/v1/urls <span class="t">HTTP</span>/<span class="n">1.1</span>
 <span class="t">Content</span>-<span class="t">Type</span>: application/json
@@ -10719,6 +10749,25 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <defs><marker id="sd-notify-base-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs>
 <path class="concept-edge" d="M160 48 V84" marker-end="url(#sd-notify-base-arrow)"/><path class="concept-edge" d="M160 128 V166" marker-end="url(#sd-notify-base-arrow)"/><path class="concept-edge" d="M160 230 V262" marker-end="url(#sd-notify-base-arrow)"/><path class="concept-edge" d="M160 306 V342" marker-end="url(#sd-notify-base-arrow)"/><path class="concept-edge" d="M160 390 V430" marker-end="url(#sd-notify-base-arrow)"/><path class="concept-edge" d="M160 476 V530" marker-end="url(#sd-notify-base-arrow)"/><rect fill="var(--bg)" x="50" y="8" width="220" height="40" rx="7"/><rect class="concept-node plain" x="50" y="8" width="220" height="40" rx="7"/><text x="160.0" y="33.0" text-anchor="middle">Бизнес-сервисы</text><rect fill="var(--bg)" x="60" y="88" width="200" height="40" rx="7"/><rect class="concept-node accent" x="60" y="88" width="200" height="40" rx="7"/><text x="160.0" y="113.0" text-anchor="middle">Notification API</text><path fill="var(--bg)" d="M52 178 A108 8 0 0 1 268 178 V222 A108 8 0 0 1 52 222 Z"/><path class="concept-db" d="M52 178 A108 8 0 0 1 268 178 V222 A108 8 0 0 1 52 222 Z"/><ellipse class="concept-db" cx="160" cy="178" rx="108" ry="8"/><text x="160" y="200" text-anchor="middle">Уведомления</text><text x="160" y="218" text-anchor="middle">+ Outbox</text><rect fill="var(--bg)" x="60" y="266" width="200" height="40" rx="7"/><rect class="concept-node warning" x="60" y="266" width="200" height="40" rx="7"/><text x="160.0" y="291.0" text-anchor="middle">Outbox Publisher</text><g role="img" aria-label="Фоновый обработчик — worker"><circle cx="258" cy="269" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="258" cy="269" r="10"/><text x="258" y="273" text-anchor="middle">W</text></g><path fill="var(--bg)" d="M77 346 H243 A7 22 0 0 1 243 390 H77 A7 22 0 0 1 77 346 Z"/><path class="concept-broker" d="M77 346 H243 A7 22 0 0 1 243 390 H77 A7 22 0 0 1 77 346 Z"/><ellipse fill="var(--bg)" cx="77" cy="368" rx="7" ry="22"/><ellipse class="concept-broker" cx="77" cy="368" rx="7" ry="22"/><text x="163.0" y="373" text-anchor="middle">Очередь</text><rect fill="var(--bg)" x="70" y="434" width="180" height="42" rx="7"/><rect class="concept-node warning" x="70" y="434" width="180" height="42" rx="7"/><text x="160.0" y="460.0" text-anchor="middle">Обработчик</text><g role="img" aria-label="Фоновый обработчик — worker"><circle cx="248" cy="437" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="248" cy="437" r="10"/><text x="248" y="441" text-anchor="middle">W</text></g><rect fill="var(--bg)" x="70" y="534" width="180" height="40" rx="7"/><rect class="concept-node plain" x="70" y="534" width="180" height="40" rx="7"/><text x="160.0" y="559.0" text-anchor="middle">Провайдер</text></svg><figcaption id="sd-notify-base-caption">Старт: одно приложение с API, публикатором и обработчиком, PostgreSQL и брокер.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
+<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
+<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
+<tr><td><code>notification</code></td><td><code>id</code> (PK)<br>
+<code>idempotency_key</code> (UQ)<br>
+<code>recipient_id</code><br>
+<code>channel</code><br>
+<code>template_version</code><br>
+<code>content</code><br>
+<code>parameters</code><br>
+<code>status</code><br>
+<code>attempt_count</code><br>
+<code>next_attempt_at</code></td></tr>
+<tr><td><code>notification_outbox</code></td><td><code>event_id</code> (PK)<br>
+<code>notification_id</code> (FK)<br>
+<code>event_type</code><br>
+<code>payload</code></td></tr>
+</table></div>
+<p>Фиксируется версия шаблона либо готовое содержимое. Ключ идемпотентности уникален и при необходимости содержит пространство имён клиента; другой запрос с тем же ключом возвращает конфликт.</p>
+
 <p>Запрос:</p>
 <pre>{
   <span class="p">"idempotency_key"</span>:
@@ -10830,13 +10879,38 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <text x="172.0" y="294" text-anchor="middle" class="concept-label">публикации / граф / реакции</text>
 </svg><figcaption id="sd-twitter-base-caption">Старт: приложение и PostgreSQL, домашняя лента строится при чтении. Кеш кандидатов и асинхронный fanout добавляются после измерения стоимости сборки ленты.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
-<div class="table-wrap"><table><tr><th>Данные</th><th>Механизм</th></tr>
-<tr><td>tweet</td><td>id, author_id, text, kind, referenced_tweet_id, created_at, version, deleted_at; ORIGINAL, REPLY или REPOST</td></tr>
-<tr><td>follow</td><td>follower_id, followee_id, status, version; уникальная пара, статус PENDING для запроса к закрытому аккаунту</td></tr>
-<tr><td>like</td><td>Уникальная пара (user_id, tweet_id); повтор лайка не увеличивает число реакций</td></tr>
-<tr><td>home_timeline</td><td>Ограниченный набор кандидатов (viewer_id, activity_id, sort_key), а не копии текста</td></tr>
-<tr><td>outbox / fanout_job</td><td>event_id, tweet_id, version; прогресс обхода подписчиков и повторяемые пакеты</td></tr>
+<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
+<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
+<tr><td><code>tweet</code></td><td><code>id</code> (PK)<br>
+<code>author_id</code><br>
+<code>text</code><br>
+<code>kind</code><br>
+<code>referenced_tweet_id</code> (FK → tweet)<br>
+<code>created_at</code><br>
+<code>version</code><br>
+<code>deleted_at</code></td></tr>
+<tr><td><code>follow</code></td><td><code>follower_id</code> (PK)<br>
+<code>followee_id</code> (PK)<br>
+<code>status</code><br>
+<code>version</code></td></tr>
+<tr><td><code>like</code></td><td><code>user_id</code> (PK)<br>
+<code>tweet_id</code> (PK, FK → tweet)</td></tr>
+<tr><td><code>outbox</code></td><td><code>event_id</code> (PK)<br>
+<code>tweet_id</code> (FK)<br>
+<code>event_type</code><br>
+<code>version</code><br>
+<code>payload</code><br>
+<code>published_at</code></td></tr>
+<tr><td><code>fanout_job</code></td><td><code>id</code> (PK)<br>
+<code>event_id</code> (FK)<br>
+<code>subscriber_range</code><br>
+<code>last_follower_id</code><br>
+<code>status</code><br>
+<code>attempt_token</code><br>
+<code>lease_until</code></td></tr>
 </table></div>
+<p>Пара follow и пара like уникальны. Домашняя лента home_timeline(viewer_id, activity_id, sort_key) — восстанавливаемый кеш Redis, не дополнительная таблица PostgreSQL. Профили и блокировки относятся к графу пользователей.</p>
+
 <div class="table-wrap"><table><tr><th>API</th><th>Назначение</th></tr>
 <tr><td><code><span class="t">POST</span> /tweets</code><br><code><span class="p">Idempotency-Key</span>: ...</code></td><td>Создать оригинал или ответ; тело содержит ссылку на исходник для ответа</td></tr>
 <tr><td><code><span class="k">DELETE</span> /tweets/{id}</code></td><td>Удаление владельцем через tombstone и событие</td></tr>
@@ -11056,6 +11130,48 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <g role="img" aria-label="Фоновый обработчик — worker"><circle cx="247" cy="353" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="247" cy="353" r="10"/><text x="247" y="357" text-anchor="middle">W</text></g>
 </svg><figcaption id="sd-youtube-base-caption">Базовая схема для небольшой нагрузки: метаданные и задания в PostgreSQL, файлы в объектном хранилище. API выдаёт ссылки, фоновый обработчик готовит видео; очередь и CDN добавляются при масштабировании.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
+<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
+<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
+<tr><td><code>video</code></td><td><code>id</code> (PK)<br>
+<code>owner_id</code><br>
+<code>title</code><br>
+<code>visibility</code><br>
+<code>processing_status</code><br>
+<code>moderation_status</code><br>
+<code>source_version</code><br>
+<code>published_manifest_key</code><br>
+<code>deleted_at</code></td></tr>
+<tr><td><code>upload_session</code></td><td><code>id</code> (PK)<br>
+<code>video_id</code> (FK)<br>
+<code>storage_upload_id</code><br>
+<code>source_key</code><br>
+<code>expected_size</code><br>
+<code>expires_at</code><br>
+<code>status</code></td></tr>
+<tr><td><code>rendition</code></td><td><code>video_id</code> (PK, FK)<br>
+<code>source_version</code> (PK)<br>
+<code>profile</code> (PK)<br>
+<code>codec</code><br>
+<code>resolution</code><br>
+<code>bitrate</code><br>
+<code>status</code><br>
+<code>output_prefix</code></td></tr>
+<tr><td><code>processing_job</code></td><td><code>id</code> (PK)<br>
+<code>video_id</code> (FK)<br>
+<code>source_version</code><br>
+<code>profile</code><br>
+<code>status</code><br>
+<code>attempt_token</code><br>
+<code>lease_until</code><br>
+<code>next_attempt_at</code></td></tr>
+<tr><td><code>outbox</code></td><td><code>event_id</code> (PK)<br>
+<code>video_id</code> (FK)<br>
+<code>event_type</code><br>
+<code>payload</code><br>
+<code>published_at</code></td></tr>
+</table></div>
+<p>Профиль уникален для (video_id, source_version). Видео, сегменты и превью находятся в объектном хранилище, в БД — метаданные и ключи объектов. Результат попытки публикуется только по действующему токену.</p>
+
 <div class="table-wrap"><table><tr><th>API</th><th>Назначение</th></tr>
 <tr><td><code><span class="t">POST</span> /videos/uploads</code><br><code><span class="p">Idempotency-Key</span>: ...</code></td><td>Создать video_id, upload_id и ссылки на загрузку частей</td></tr>
 <tr><td><code><span class="t">GET</span> /uploads/{id}</code></td><td>Узнать состояние и уже загруженные части для возобновления</td></tr>
@@ -11063,12 +11179,6 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <tr><td><code><span class="t">GET</span> /videos/{id}</code></td><td>Метаданные, статус обработки и публикации</td></tr>
 <tr><td><code><span class="t">GET</span> /videos/{id}/playback</code></td><td>Проверить доступ, выдать версию манифеста и доступ к сегментам</td></tr>
 <tr><td><code><span class="k">DELETE</span> /videos/{id}</code></td><td>Запретить доступ, поставить очистку файлов и индексов</td></tr>
-</table></div>
-<div class="table-wrap"><table><tr><th>Данные</th><th>Ключевые поля</th></tr>
-<tr><td>video</td><td>id, owner_id, title, visibility, processing_status, moderation_status, source_version, published_manifest_key, deleted_at</td></tr>
-<tr><td>upload_session</td><td>id, video_id, storage_upload_id, source_key, expected_size, expires_at, status</td></tr>
-<tr><td>rendition</td><td>video_id, source_version, profile, codec, resolution, bitrate, status, output_prefix; уникальность по версии источника и профилю</td></tr>
-<tr><td>processing_job / outbox</td><td>Задание, версия источника, профиль, attempt_token, lease_until, next_attempt_at; событие создаётся транзакцией со сменой статуса</td></tr>
 </table></div>
 <p><b>Большая загрузка и её завершение.</b> Multipart-загрузка позволяет повторять отдельные части, а API не проксирует сотни мегабайт. Сервер не доверяет одному сообщению клиента «готово»: проверяет в хранилище завершённость, ключ, размер и контрольную сумму, если она поддерживается выбранным протоколом. Идентификатор объекта должен относиться к этому сеансу; URL не разрешает произвольные ключи и операции.</p>
 <p>Транзакции между хранилищем и БД нет. Если объект собран, но приложение упало до смены статуса, повтор complete или фоновая сверка завершает переход. Незаконченные multipart-загрузки и брошенные объекты очищаются после срока жизни сеанса с запасом на повторы. Очистка не должна удалять исходник уже принятого задания.</p>
@@ -11147,6 +11257,48 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p><b>Шаг 2 — Общая архитектура.</b> Приложение с HTTP/WebSocket и PostgreSQL. Сообщение и Outbox фиксируются до подтверждения отправителю; история восстанавливает пропуски.</p>
 <figure class="concept" aria-labelledby="sd-chat-base-caption"><svg id="sd-chat-base" viewBox="0 0 320 336" role="img" aria-labelledby="sd-chat-base-title sd-chat-base-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-chat-base-title">Обмен сообщениями: базовая архитектура</title><desc id="sd-chat-base-desc">Отправитель передаёт сообщение приложению. Сообщение сохраняется в PostgreSQL до подтверждения отправки. Получатель получает событие по WebSocket.</desc><defs><marker id="sd-chat-base-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M74 56 V92 H116 V120" marker-end="url(#sd-chat-base-arrow)"/><path class="concept-edge" d="M220 124 V92 H242 V60" marker-end="url(#sd-chat-base-arrow)"/><path class="concept-edge" d="M160 184 V250" marker-end="url(#sd-chat-base-arrow)"/><rect fill="var(--bg)" x="8" y="8" width="132" height="48" rx="8"/><rect class="concept-node plain" x="8" y="8" width="132" height="48" rx="8"/><text x="74" y="37" text-anchor="middle">Отправитель</text><rect fill="var(--bg)" x="172" y="8" width="140" height="48" rx="8"/><rect class="concept-node plain" x="172" y="8" width="140" height="48" rx="8"/><text x="242" y="37" text-anchor="middle">Получатель</text><rect fill="var(--bg)" x="60" y="124" width="200" height="60" rx="8"/><rect class="concept-node accent" x="60" y="124" width="200" height="60" rx="8"/><text x="160" y="150" text-anchor="middle">Одно приложение</text><text x="160" y="170" text-anchor="middle" class="concept-label">API + WebSocket</text><path fill="var(--bg)" d="M60 262 A100.0 8 0 0 1 260 262 V308 A100.0 8 0 0 1 60 308 Z"/><path class="concept-db" d="M60 262 A100.0 8 0 0 1 260 262 V308 A100.0 8 0 0 1 60 308 Z"/><ellipse class="concept-db" cx="160.0" cy="262" rx="100.0" ry="8"/><text x="160" y="284" text-anchor="middle">PostgreSQL</text><text x="160" y="303" text-anchor="middle" class="concept-label">чаты и сообщения</text></svg><figcaption id="sd-chat-base-caption">Начало: одно приложение с HTTP API и WebSocket, PostgreSQL для истории. Подтверждение отправки возвращается после commit.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
+<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
+<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
+<tr><td><code>chat</code></td><td><code>id</code> (PK)<br>
+<code>type</code><br>
+<code>next_seq</code><br>
+<code>next_update_seq</code></td></tr>
+<tr><td><code>chat_member</code></td><td><code>chat_id</code> (PK, FK)<br>
+<code>user_id</code> (PK)<br>
+<code>role</code><br>
+<code>last_read_seq</code></td></tr>
+<tr><td><code>message</code></td><td><code>chat_id</code> (PK, FK)<br>
+<code>seq</code> (PK)<br>
+<code>sender_id</code><br>
+<code>client_message_id</code><br>
+<code>text</code><br>
+<code>created_at</code></td></tr>
+<tr><td><code>message_outbox</code></td><td><code>event_id</code> (PK)<br>
+<code>chat_id</code> (FK)<br>
+<code>message_seq</code> (FK)<br>
+<code>event_type</code><br>
+<code>payload</code></td></tr>
+<tr><td><code>device</code></td><td><code>id</code> (PK)<br>
+<code>user_id</code><br>
+<code>session_id</code><br>
+<code>push_token</code><br>
+<code>sync_cursor</code><br>
+<code>revoked_at</code></td></tr>
+<tr><td><code>user_update</code></td><td><code>user_id</code> (PK)<br>
+<code>seq</code> (PK)<br>
+<code>event_id</code><br>
+<code>chat_id</code><br>
+<code>message_seq</code><br>
+<code>event_type</code><br>
+<code>payload</code></td></tr>
+<tr><td><code>chat_update</code></td><td><code>chat_id</code> (PK, FK)<br>
+<code>update_seq</code> (PK)<br>
+<code>message_seq</code><br>
+<code>event_type</code><br>
+<code>payload</code></td></tr>
+</table></div>
+<p>Ключ сообщения — (chat_id, seq); message_seq в Outbox связан с тем же chat_id. В шардированной схеме идемпотентность отправки имеет область (chat_id, sender_id, client_message_id). event_id журнала пользователя уникален вместе с user_id: одно событие получают разные пользователи. Файлы и живые WebSocket-соединения здесь не хранятся.</p>
+
 <p><b>Основные данные.</b> Личные чаты, группы и каналы имеют общий журнал сообщений, тип задаёт права публикации и способ доставки. На схеме — ядро модели; устройства, вложения и журналы синхронизации описаны ниже.</p><figure class="concept" aria-labelledby="er-chat-caption" style="overflow-x:auto"><svg id="er-chat" viewBox="0 0 700 459" role="img" aria-labelledby="er-chat-title er-chat-desc" xmlns="http://www.w3.org/2000/svg" style="width:700px;min-width:700px;max-width:none"><title id="er-chat-title">Чаты, участники, сообщения и Outbox</title><desc id="er-chat-desc">ER-модель. PK — первичный ключ, FK — внешний ключ, UQ — уникальность. На связях указана кратность: 1, 0..1, 0..N или 1..N.</desc><path class="concept-edge" d="M308 69.66666666666667 H326 V93.0 H392"/><path class="concept-edge" d="M308 95.33333333333334 H336 V319.6666666666667 H308"/><path class="concept-edge" d="M308 373.3333333333333 H346 V315.0 H392"/><g><rect class="concept-node" x="8" y="12" width="300" height="117" rx="6"/><rect class="concept-node accent" x="8" y="12" width="300" height="32" rx="6"/><text x="20" y="34" style="font-weight:700">chat</text><text x="20" y="66" style="font-family:var(--mono);font-size:13px">PK id</text><text x="20" y="87" style="font-family:var(--mono);font-size:13px">type</text><text x="20" y="108" style="font-family:var(--mono);font-size:13px">next_seq</text></g><g><rect class="concept-node" x="392" y="12" width="300" height="138" rx="6"/><rect class="concept-node accent" x="392" y="12" width="300" height="32" rx="6"/><text x="404" y="34" style="font-weight:700">chat_member</text><text x="404" y="66" style="font-family:var(--mono);font-size:13px">PK, FK chat_id</text><text x="404" y="87" style="font-family:var(--mono);font-size:13px">PK user_id</text><text x="404" y="108" style="font-family:var(--mono);font-size:13px">role</text><text x="404" y="129" style="font-family:var(--mono);font-size:13px">last_read_seq</text></g><g><rect class="concept-node" x="8" y="234" width="300" height="201" rx="6"/><rect class="concept-node accent" x="8" y="234" width="300" height="32" rx="6"/><text x="20" y="256" style="font-weight:700">message</text><text x="20" y="288" style="font-family:var(--mono);font-size:13px">PK, FK chat_id</text><text x="20" y="309" style="font-family:var(--mono);font-size:13px">PK seq</text><text x="20" y="330" style="font-family:var(--mono);font-size:13px">sender_id</text><text x="20" y="351" style="font-family:var(--mono);font-size:13px">client_message_id</text><text x="20" y="372" style="font-family:var(--mono);font-size:13px">text</text><text x="20" y="393" style="font-family:var(--mono);font-size:13px">created_at</text><text x="20" y="414" style="font-family:var(--mono);font-size:13px">UQ sender_id, client_message_id</text></g><g><rect class="concept-node" x="392" y="234" width="300" height="138" rx="6"/><rect class="concept-node accent" x="392" y="234" width="300" height="32" rx="6"/><text x="404" y="256" style="font-weight:700">message_outbox</text><text x="404" y="288" style="font-family:var(--mono);font-size:13px">PK event_id</text><text x="404" y="309" style="font-family:var(--mono);font-size:13px">FK chat_id, message_seq</text><text x="404" y="330" style="font-family:var(--mono);font-size:13px">event_type</text><text x="404" y="351" style="font-family:var(--mono);font-size:13px">payload</text></g><rect x="309" y="50.66666666666667" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="325" y="63.66666666666667" text-anchor="middle">1</text><rect x="357" y="74.0" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="373" y="87.0" text-anchor="middle">1..N</text><rect x="309" y="76.33333333333334" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="325" y="89.33333333333334" text-anchor="middle">1</text><rect x="309" y="300.6666666666667" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="325" y="313.6666666666667" text-anchor="middle">0..N</text><rect x="309" y="354.3333333333333" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="325" y="367.3333333333333" text-anchor="middle">1</text><rect x="357" y="296.0" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="373" y="309.0" text-anchor="middle">0..N</text></svg><figcaption id="er-chat-caption"><b>PK</b> — первичный ключ, <b>FK</b> — внешний ключ, <b>UQ</b> — уникальность. Составной ключ сообщения — (chat_id, seq), ключ участника — (chat_id, user_id). Идентификаторы пользователей относятся к системе пользователей; право отправки проверяется по участию в чате.</figcaption></figure>
 <pre><span class="t">POST</span> /chats
 <span class="t">POST</span> /chats/{id}/messages
@@ -11266,6 +11418,57 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <text x="256.0" y="340.5" text-anchor="middle" class="concept-label">провайдер</text>
 </svg><figcaption id="sd-uber-base-caption">Начало для одного города и небольшой нагрузки: приложение и PostgreSQL. Подбор и внешние вызовы выполняются фоновыми заданиями, состояние процесса сохраняется в БД.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
+<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
+<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
+<tr><td><code>trip</code></td><td><code>id</code> (PK)<br>
+<code>city_id</code><br>
+<code>passenger_id</code><br>
+<code>driver_id</code><br>
+<code>status</code><br>
+<code>active_offer_id</code><br>
+<code>pickup</code><br>
+<code>destination</code><br>
+<code>quote_id</code> (FK)<br>
+<code>idempotency_key</code><br>
+<code>request_hash</code><br>
+<code>version</code></td></tr>
+<tr><td><code>driver_state</code></td><td><code>driver_id</code> (PK)<br>
+<code>city_id</code><br>
+<code>status</code><br>
+<code>active_trip_id</code> (FK)<br>
+<code>active_offer_id</code> (FK)</td></tr>
+<tr><td><code>offer</code></td><td><code>id</code> (PK)<br>
+<code>trip_id</code> (FK)<br>
+<code>driver_id</code><br>
+<code>status</code><br>
+<code>expires_at</code></td></tr>
+<tr><td><code>quote</code></td><td><code>id</code> (PK)<br>
+<code>pickup</code><br>
+<code>destination</code><br>
+<code>vehicle_class</code><br>
+<code>tariff_version</code><br>
+<code>amount</code><br>
+<code>currency</code><br>
+<code>expires_at</code></td></tr>
+<tr><td><code>payment</code></td><td><code>id</code> (PK)<br>
+<code>trip_id</code> (FK)<br>
+<code>operation_type</code><br>
+<code>idempotency_key</code> (UQ)<br>
+<code>provider_operation_id</code><br>
+<code>amount</code><br>
+<code>currency</code><br>
+<code>status</code></td></tr>
+<tr><td><code>outbox</code></td><td><code>event_id</code> (PK)<br>
+<code>trip_id</code> (FK)<br>
+<code>event_type</code><br>
+<code>payload</code><br>
+<code>status</code><br>
+<code>attempt_token</code><br>
+<code>lease_until</code><br>
+<code>next_attempt_at</code></td></tr>
+</table></div>
+<p>Идемпотентность создания уникальна по (passenger_id, idempotency_key); занятость водителя подтверждает одна строка driver_state. Последние координаты, sequence number и время приёма находятся в геоиндексе, а не записываются в trip при каждом heartbeat.</p>
+
 <div class="table-wrap"><table><tr><th>API</th><th>Назначение</th></tr>
 <tr><td><code><span class="t">POST</span> /quotes</code></td><td>Оценка цены и ETA, версия тарифа и срок действия</td></tr>
 <tr><td><code><span class="t">POST</span> /trips</code><br><code><span class="p">Idempotency-Key</span>: ...</code></td><td>Создать заказ по quote_id, вернуть trip_id и SEARCHING</td></tr>
@@ -11274,12 +11477,6 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <tr><td><code><span class="t">POST</span> /trips/{id}/cancel</code></td><td>Отменить поездку по правилам состояния</td></tr>
 <tr><td><code><span class="t">POST</span> /trips/{id}/start</code><br><code><span class="t">POST</span> /trips/{id}/complete</code></td><td>Начать или завершить назначенную поездку</td></tr>
 <tr><td><code><span class="t">GET</span> /trips/{id}</code></td><td>Восстановить состояние после переподключения</td></tr>
-</table></div>
-<div class="table-wrap"><table><tr><th>Данные</th><th>Ключевые поля и ограничения</th></tr>
-<tr><td>trip</td><td>id, city_id, passenger_id, driver_id, status, active_offer_id, pickup, destination, quote_id, version; уникальный ключ идемпотентности пассажира</td></tr>
-<tr><td>driver_state</td><td>driver_id, city_id, status, active_trip_id, active_offer_id; одна авторитетная строка занятости на водителя</td></tr>
-<tr><td>offer</td><td>id, trip_id, driver_id, status, expires_at; идентификатор предложения защищает от запоздалого принятия</td></tr>
-<tr><td>quote / payment / outbox</td><td>Снимок маршрута и тарифа, платёжная операция со стабильным ключом, фоновые задания с состоянием и next_attempt_at</td></tr>
 </table></div>
 <p><b>Геопоиск.</b> Геоиндекс хранит последнее положение и время серверного приёма координат. Matcher ищет в ячейке подачи и соседних ячейках, постепенно расширяет радиус, отбрасывает устаревшие точки и неподходящий класс машины. Из предварительно ближайших кандидатов выбирает, например, 10–20 и запрашивает матрицу времени подачи у сервиса маршрутов.</p>
 <p><b>Резервирование и принятие предложения.</b> Простейший алгоритм — одно активное предложение на поездку и водителя. Matcher в короткой транзакции блокирует поездку, затем строку водителя, проверяет <code><span class="t">SEARCHING</span></code> и <code><span class="t">FREE</span></code>, создаёт <code>offer</code> и переводит обе записи в <code><span class="t">OFFERED</span></code> с одинаковым <code>active_offer_id</code>. Если водитель уже занят, выбирается другой кандидат. Геопоиск и запрос ETA выполняются до транзакции.</p>
@@ -11436,15 +11633,86 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <text x="256.0" y="344.5" text-anchor="middle" class="concept-label">доставка</text>
 </svg><figcaption id="sd-amazon-base-caption">Старт: модульный монолит и PostgreSQL. Заказ и резерв в одной БД можно сохранить одной транзакцией; внешние платежи и склад обрабатываются надёжными фоновыми шагами.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
-<p><b>Товар, предложение и складской остаток — разные сущности.</b> Product описывает модель товара, SKU — конкретный вариант, например размер и цвет. Offer связывает вариант с продавцом, ценой и условиями. Остаток учитывается для предложения и склада: одинаковый товар у разных продавцов не означает общий запас.</p>
-<div class="table-wrap"><table><tr><th>Данные</th><th>Назначение и ограничения</th></tr>
-<tr><td>product / sku / offer</td><td>Описание, вариант, предложение продавца и версия цены; seller_id определяет право изменения</td></tr>
-<tr><td>cart / cart_item</td><td>buyer_id, offer_id, quantity, version; изменение корзины не меняет уже созданный заказ</td></tr>
-<tr><td>orders / order_item</td><td>buyer_id, status, checkout_attempt_id, version; снимки цены, валюты, состава, продавца и количества</td></tr>
-<tr><td>stock</td><td>offer_id, warehouse_id, on_hand, reserved, allocated; доступно = on_hand − reserved − allocated</td></tr>
-<tr><td>reservation</td><td>id, order_id, item_id, attempt_id, quantity, status, expires_at; стабильный ключ операции</td></tr>
-<tr><td>payment / shipment / outbox</td><td>Операции авторизации, списания и возврата; состав отправления; надёжные команды и события</td></tr>
+<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
+<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
+<tr><td><code>product</code></td><td><code>id</code> (PK)<br>
+<code>title</code><br>
+<code>description</code></td></tr>
+<tr><td><code>sku</code></td><td><code>id</code> (PK)<br>
+<code>product_id</code> (FK)<br>
+<code>attributes</code></td></tr>
+<tr><td><code>offer</code></td><td><code>id</code> (PK)<br>
+<code>sku_id</code> (FK)<br>
+<code>seller_id</code><br>
+<code>price</code><br>
+<code>currency</code><br>
+<code>price_version</code><br>
+<code>status</code></td></tr>
+<tr><td><code>cart</code></td><td><code>id</code> (PK)<br>
+<code>buyer_id</code> (UQ)<br>
+<code>version</code></td></tr>
+<tr><td><code>cart_item</code></td><td><code>cart_id</code> (PK, FK)<br>
+<code>offer_id</code> (PK, FK)<br>
+<code>quantity</code></td></tr>
+<tr><td><code>orders</code></td><td><code>id</code> (PK)<br>
+<code>buyer_id</code><br>
+<code>status</code><br>
+<code>idempotency_key</code><br>
+<code>request_hash</code><br>
+<code>checkout_attempt_id</code><br>
+<code>delivery_address</code><br>
+<code>total_amount</code><br>
+<code>currency</code><br>
+<code>version</code></td></tr>
+<tr><td><code>order_item</code></td><td><code>id</code> (PK)<br>
+<code>order_id</code> (FK)<br>
+<code>offer_id</code> (FK)<br>
+<code>seller_id</code><br>
+<code>title_snapshot</code><br>
+<code>unit_price</code><br>
+<code>quantity</code><br>
+<code>currency</code></td></tr>
+<tr><td><code>stock</code></td><td><code>offer_id</code> (PK, FK)<br>
+<code>warehouse_id</code> (PK)<br>
+<code>on_hand</code><br>
+<code>reserved</code><br>
+<code>allocated</code></td></tr>
+<tr><td><code>reservation</code></td><td><code>id</code> (PK)<br>
+<code>order_id</code><br>
+<code>item_id</code><br>
+<code>attempt_id</code><br>
+<code>offer_id</code> (FK)<br>
+<code>warehouse_id</code><br>
+<code>quantity</code><br>
+<code>status</code><br>
+<code>expires_at</code></td></tr>
+<tr><td><code>payment</code></td><td><code>id</code> (PK)<br>
+<code>order_id</code> (FK)<br>
+<code>shipment_id</code><br>
+<code>operation_type</code><br>
+<code>idempotency_key</code> (UQ)<br>
+<code>provider_operation_id</code><br>
+<code>amount</code><br>
+<code>currency</code><br>
+<code>status</code></td></tr>
+<tr><td><code>shipment</code></td><td><code>id</code> (PK)<br>
+<code>order_id</code> (FK)<br>
+<code>warehouse_id</code><br>
+<code>status</code><br>
+<code>tracking_number</code></td></tr>
+<tr><td><code>shipment_item</code></td><td><code>shipment_id</code> (PK, FK)<br>
+<code>order_item_id</code> (PK, FK)<br>
+<code>quantity</code></td></tr>
+<tr><td><code>outbox</code></td><td><code>event_id</code> (PK)<br>
+<code>order_id</code> (FK)<br>
+<code>event_type</code><br>
+<code>payload</code><br>
+<code>status</code><br>
+<code>next_attempt_at</code></td></tr>
 </table></div>
+<p>Ключ заказа уникален по (buyer_id, idempotency_key), операция резерва — по согласованному ключу позиции и попытки. Снимки в order_item не меняются при обновлении каталога. После разделения сервисов order_id в Inventory и shipment_id в Payment — межсервисные ссылки без SQL FK.</p>
+
+<p><b>Товар, предложение и складской остаток — разные сущности.</b> Product описывает модель товара, SKU — конкретный вариант, например размер и цвет. Offer связывает вариант с продавцом, ценой и условиями. Остаток учитывается для предложения и склада: одинаковый товар у разных продавцов не означает общий запас.</p>
 <div class="table-wrap"><table><tr><th>API</th><th>Назначение</th></tr>
 <tr><td><code><span class="t">GET</span> /products?query=...</code></td><td>Поиск и фильтры, карточки с предложениями</td></tr>
 <tr><td><code><span class="t">PUT</span> /cart/items/{offerId}</code></td><td>Задать количество с проверкой версии корзины</td></tr>
@@ -11616,18 +11884,56 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <text x="256.0" y="335.0" text-anchor="middle">Push / email</text>
 </svg><figcaption id="sd-banking-base-caption">Начало: модульный монолит и PostgreSQL. Внутренний перевод — одна локальная транзакция; внешний платёж — сохраняемый процесс с резервом, повторами и сверкой.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
+<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
+<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
+<tr><td><code>account</code></td><td><code>id</code> (PK)<br>
+<code>owner_id</code><br>
+<code>currency</code><br>
+<code>status</code><br>
+<code>booked_balance</code><br>
+<code>held_amount</code><br>
+<code>version</code></td></tr>
+<tr><td><code>transfer</code></td><td><code>id</code> (PK)<br>
+<code>client_id</code><br>
+<code>idempotency_key</code><br>
+<code>request_hash</code><br>
+<code>source_account</code> (FK)<br>
+<code>destination</code><br>
+<code>amount</code><br>
+<code>currency</code><br>
+<code>status</code><br>
+<code>external_operation_id</code></td></tr>
+<tr><td><code>ledger_transaction</code></td><td><code>id</code> (PK)<br>
+<code>transfer_id</code> (FK, UQ)<br>
+<code>created_at</code></td></tr>
+<tr><td><code>posting</code></td><td><code>id</code> (PK)<br>
+<code>ledger_transaction_id</code> (FK)<br>
+<code>account_id</code> (FK)<br>
+<code>amount_signed</code><br>
+<code>currency</code></td></tr>
+<tr><td><code>hold</code></td><td><code>id</code> (PK)<br>
+<code>transfer_id</code> (FK, UQ)<br>
+<code>account_id</code> (FK)<br>
+<code>amount</code><br>
+<code>status</code></td></tr>
+<tr><td><code>outbox</code></td><td><code>event_id</code> (PK)<br>
+<code>transfer_id</code> (FK)<br>
+<code>event_type</code><br>
+<code>payload</code><br>
+<code>status</code><br>
+<code>next_attempt_at</code></td></tr>
+<tr><td><code>inbox</code></td><td><code>source</code> (PK)<br>
+<code>external_event_id</code> (PK)<br>
+<code>external_operation_id</code><br>
+<code>received_at</code></td></tr>
+</table></div>
+<p>Ключ перевода уникален по (client_id, idempotency_key). Все posting одной операции фиксируются вместе и балансируются по валюте. hold и held_amount изменяются одной транзакцией; available_balance вычисляется как booked_balance − held_amount. Корректировка создаёт отдельную денежную операцию.</p>
+
 <p><b>Модель учёта.</b> Ledger — журнал подтверждённых денежных проводок. Каждая операция содержит сбалансированные записи: для внутреннего перевода в одной валюте уменьшение обязательства банка перед отправителем соответствует увеличению обязательства перед получателем. В примере знаки показывают изменение клиентского остатка:</p>
 <pre>Перевод <span class="n">1</span> <span class="n">000</span> <span class="t">RUB</span>:
 счёт <span class="t">A</span>: −<span class="n">100</span> <span class="n">000</span> копеек
 счёт <span class="t">B</span>: +<span class="n">100</span> <span class="n">000</span> копеек
 сумма изменений = <span class="n">0</span></pre>
-<div class="table-wrap"><table><tr><th>Данные</th><th>Ключевые поля и ограничения</th></tr>
-<tr><td>account</td><td>id, owner_id, currency, status, booked_balance, held_amount, version; доступно = booked_balance − held_amount при отсутствии овердрафта</td></tr>
-<tr><td>transfer</td><td>id, client_id, idempotency_key, request_hash, source_account, destination, amount, currency, status, external_operation_id</td></tr>
-<tr><td>ledger_transaction / posting</td><td>Идентификатор операции, счёт, сумма со знаком и валюта; все проводки одной операции фиксируются вместе, уникальная связь с проводимым transfer</td></tr>
-<tr><td>hold</td><td>id, transfer_id, account_id, amount, status; резерв денег для ещё не завершённой внешней операции</td></tr>
-<tr><td>outbox / inbox</td><td>Надёжные исходящие задания и уникальные идентификаторы уже принятых внешних событий</td></tr>
-</table></div>
 <div class="table-wrap"><table><tr><th>API</th><th>Назначение</th></tr>
 <tr><td><code><span class="t">GET</span> /accounts</code></td><td>Свои счета и актуальные доступные средства</td></tr>
 <tr><td><code><span class="t">GET</span> /accounts/{id}/entries</code></td><td>История с курсорной пагинацией</td></tr>
