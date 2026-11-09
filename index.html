@@ -765,7 +765,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
 <a href="#q277" data-k="afc13b50fb" data-ci="10"><span class="num">277</span><span class="q">Спроектируйте систему, которая масштабируется до миллионов пользователей</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q278" data-k="e4d6b12c8b" data-ci="10"><span class="num">278</span><span class="q">Спроектируйте сокращатель ссылок</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q279" data-k="84777d3397" data-ci="10"><span class="num">279</span><span class="q">Спроектируйте сервис уведомлений</span><i class="st ico none"></i><span class="sr st-t"></span></a>
-<a href="#q280" data-k="d46bbc17f9" data-ci="10"><span class="num">280</span><span class="q">Спроектируйте ленту новостей</span><i class="st ico none"></i><span class="sr st-t"></span></a>
+<a href="#q280" data-k="81cfcfdf64" data-ci="10"><span class="num">280</span><span class="q">Спроектируйте Twitter</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q281" data-k="dc5d0b16d2" data-ci="10"><span class="num">281</span><span class="q">Спроектируйте YouTube</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q282" data-k="1d03f2ec50" data-ci="10"><span class="num">282</span><span class="q">Спроектируйте Telegram</span><i class="st ico none"></i><span class="sr st-t"></span></a>
 <a href="#q283" data-k="36528ac3c0" data-ci="10"><span class="num">283</span><span class="q">Спроектируйте Uber</span><i class="st ico none"></i><span class="sr st-t"></span></a>
@@ -10941,619 +10941,201 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 </table></div>
 <p>Контролировать нужно <b>возраст старейшего задания, время до отправки, долю ошибок и повторов</b>, а не только количество сообщений в очереди. Просроченный код подтверждения следует отменить, даже если очередь наконец до него дошла.</p>
     </div></div></article>
-<article id="q280" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">280. Спроектируйте ленту новостей <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
-<p>Посты и outbox сохраняются в основной БД. Фоновый fanout обновляет <b>кандидатов персональной ленты</b>; содержимое постов и профили загружаются пакетно.</p>
-<p><b>Лента гибридная:</b> посты обычных авторов рассылаются активным подписчикам при записи, популярных — подмешиваются при чтении. Удаление, блокировки и видимость проверяются перед выдачей. Поиск разобран ниже как дополнительный сценарий.</p>
-<figure class="concept" aria-labelledby="sd-facebook-scaled-summary-caption">
-<div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
-<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-summary" viewBox="0 0 320 504" role="img" aria-labelledby="sd-facebook-scaled-summary-title sd-facebook-scaled-summary-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-facebook-scaled-summary-title">Доступ клиента к системе</title><desc id="sd-facebook-scaled-summary-desc">Клиент обращается к DNS за адресом, к CDN за статикой, к API Gateway за API. API Gateway маршрутизирует запросы в отдельные группы API. CDN читает объектное хранилище, а не передаёт API-запросы API Gateway.</desc>
-<defs><marker id="sd-facebook-scaled-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-facebook-scaled-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M110 56 V90 H245 V108" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M65 56 V180 H154 V204" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
-
-<path class="concept-edge" d="M312 134 H318 V466 H316" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M100 268 V296 H51 V318" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M154 268 V318" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
-<path class="concept-edge" d="M220 268 V296 H263 V318" marker-end="url(#sd-facebook-scaled-summary-arrow)"/>
-<rect class="concept-node plain" x="8" y="8" width="132" height="48" rx="9"/>
-<text x="74" y="36" text-anchor="middle">Клиент</text>
-<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
-<text x="245" y="36" text-anchor="middle">DNS</text>
-<rect class="concept-node plain" x="178" y="112" width="134" height="44" rx="9"/>
-<text x="245" y="138" text-anchor="middle">CDN</text>
-
-
-
-
-
-
-
-<rect fill="var(--bg)" stroke="none" x="52" y="208" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="52" y="208" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="214" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="46" y="214" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="220" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="40" y="220" width="228" height="48" rx="9"/>
-<text x="154" y="248" text-anchor="middle">API Gateway</text>
-<rect class="concept-node plain" x="178" y="438" width="134" height="56" rx="9"/>
-<text x="245" y="461.5" text-anchor="middle">Медиа / статика</text>
-<text x="245" y="478.5" text-anchor="middle">Объекты</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="322" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="322" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="328" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="328" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="334" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="334" width="86" height="52" rx="9"/>
-<text x="51" y="364" text-anchor="middle">Read API</text>
-<rect fill="var(--bg)" stroke="none" x="126" y="322" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="126" y="322" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="120" y="328" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="120" y="328" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="114" y="334" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="114" y="334" width="86" height="52" rx="9"/>
-<text x="157" y="364" text-anchor="middle">Write API</text>
-<rect fill="var(--bg)" stroke="none" x="232" y="322" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="232" y="322" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="226" y="328" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="226" y="328" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="220" y="334" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="220" y="334" width="86" height="52" rx="9"/>
-<text x="263" y="364" text-anchor="middle">Search API</text>
-</svg>
-<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-summary-publish" viewBox="0 0 320 724" role="img" aria-labelledby="sd-facebook-scaled-summary-publish-title sd-facebook-scaled-summary-publish-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-facebook-scaled-summary-publish-title">Публикация: Fanout, поиск, медиа и уведомления</title><desc id="sd-facebook-scaled-summary-publish-desc">Write API сохраняет пост и outbox в SQL. Событие независимо обрабатывают Fanout и Search Service. Fanout получает подписчиков из User Graph, обновляет ID ленты и создаёт уведомления. Медиа хранятся в объектном хранилище.</desc>
-<defs><marker id="sd-facebook-scaled-summary-publish-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M140 90 H174" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)"/>
-<path class="concept-edge" d="M245 116 V144 H160 V172" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M98 220 V246 H74 V266" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M222 220 V246 H239 V266" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M74 340 V390" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)"/>
-<path class="concept-edge" d="M239 340 V390" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M140 311 H154 V556 H144" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M140 311 H162 V502 H239 V514" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M8 311 H2 V680 H36" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)"/>
-<path class="concept-edge" d="M140 90 H162 V134 H318 V680 H284" marker-end="url(#sd-facebook-scaled-summary-publish-arrow)"/>
-<text x="160" y="22" text-anchor="middle">Обработка публикации</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
-<text x="74" y="94" text-anchor="middle">Write API</text>
-<path fill="var(--bg)" stroke="none" d="M178 71 A67 7 0 0 1 312 71 V109 A67 7 0 0 1 178 109 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="245" cy="71" rx="67" ry="7"/>
-<path class="concept-db" d="M178 71 A67 7 0 0 1 312 71 V109 A67 7 0 0 1 178 109 Z"/>
-<ellipse class="concept-db" cx="245" cy="71" rx="67" ry="7"/>
-<text x="245" y="93" text-anchor="middle">SQL: посты</text>
-<text x="245" y="110" text-anchor="middle">+ outbox</text>
-<path fill="var(--bg)" stroke="none" d="M48 176 H272 A8 22 0 0 1 272 220 H48 A8 22 0 0 1 48 176 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="48" cy="198" rx="8" ry="22"/>
-<path class="concept-broker" d="M48 176 H272 A8 22 0 0 1 272 220 H48 A8 22 0 0 1 48 176 Z"/>
-<ellipse class="concept-broker" cx="48" cy="198" rx="8" ry="22"/>
-<text x="164" y="202" text-anchor="middle">События публикаций</text>
-
-<rect fill="var(--bg)" stroke="none" x="20" y="270" width="132" height="58" rx="9"/>
-<rect class="concept-node warning" x="20" y="270" width="132" height="58" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="14" y="276" width="132" height="58" rx="9"/>
-<rect class="concept-node warning" x="14" y="276" width="132" height="58" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="8" y="282" width="132" height="58" rx="9"/>
-<rect class="concept-node warning" x="8" y="282" width="132" height="58" rx="9"/>
-<text x="74" y="315" text-anchor="middle">Fanout Service</text>
-
-<rect fill="var(--bg)" stroke="none" x="190" y="270" width="122" height="58" rx="9"/>
-<rect class="concept-node warning" x="190" y="270" width="122" height="58" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="184" y="276" width="122" height="58" rx="9"/>
-<rect class="concept-node warning" x="184" y="276" width="122" height="58" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="178" y="282" width="122" height="58" rx="9"/>
-<rect class="concept-node warning" x="178" y="282" width="122" height="58" rx="9"/>
-<text x="239" y="315" text-anchor="middle">Search Service</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="394" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="394" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="400" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="400" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="406" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="406" width="132" height="52" rx="9"/>
-<text x="74" y="427.5" text-anchor="middle">User Graph</text>
-<text x="74" y="444.5" text-anchor="middle">Подписчики</text>
-<path fill="var(--bg)" stroke="none" d="M190 401 A61 7 0 0 1 312 401 V439 A61 7 0 0 1 190 439 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="251" cy="401" rx="61" ry="7"/>
-<path class="concept-db" d="M190 401 A61 7 0 0 1 312 401 V439 A61 7 0 0 1 190 439 Z"/>
-<ellipse class="concept-db" cx="251" cy="401" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M184 407 A61 7 0 0 1 306 407 V445 A61 7 0 0 1 184 445 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="245" cy="407" rx="61" ry="7"/>
-<path class="concept-db" d="M184 407 A61 7 0 0 1 306 407 V445 A61 7 0 0 1 184 445 Z"/>
-<ellipse class="concept-db" cx="245" cy="407" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M178 413 A61 7 0 0 1 300 413 V451 A61 7 0 0 1 178 451 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="239" cy="413" rx="61" ry="7"/>
-<path class="concept-db" d="M178 413 A61 7 0 0 1 300 413 V451 A61 7 0 0 1 178 451 Z"/>
-<ellipse class="concept-db" cx="239" cy="413" rx="61" ry="7"/>
-<text x="239" y="435" text-anchor="middle">Поисковый</text>
-<text x="239" y="452" text-anchor="middle">индекс</text>
-<path fill="var(--bg)" stroke="none" d="M28 518 H144 L152 526 V562 L144 570 H28 L20 562 V526 Z"/>
-<path class="concept-cache" d="M28 518 H144 L152 526 V562 L144 570 H28 L20 562 V526 Z"/>
-<path fill="var(--bg)" stroke="none" d="M22 524 H138 L146 532 V568 L138 576 H22 L14 568 V532 Z"/>
-<path class="concept-cache" d="M22 524 H138 L146 532 V568 L138 576 H22 L14 568 V532 Z"/>
-<path fill="var(--bg)" stroke="none" d="M16 530 H132 L140 538 V574 L132 582 H16 L8 574 V538 Z"/>
-<path class="concept-cache" d="M16 530 H132 L140 538 V574 L132 582 H16 L8 574 V538 Z"/>
-<text x="74" y="560" text-anchor="middle">Кеш ID ленты</text>
-
-<rect fill="var(--bg)" stroke="none" x="190" y="518" width="122" height="52" rx="9"/>
-<rect class="concept-node warning" x="190" y="518" width="122" height="52" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="184" y="524" width="122" height="52" rx="9"/>
-<rect class="concept-node warning" x="184" y="524" width="122" height="52" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="178" y="530" width="122" height="52" rx="9"/>
-<rect class="concept-node warning" x="178" y="530" width="122" height="52" rx="9"/>
-<text x="239" y="551.5" text-anchor="middle">Notification</text>
-<text x="239" y="568.5" text-anchor="middle">Service</text>
-<rect class="concept-node plain" x="40" y="654" width="240" height="52" rx="9"/>
-<text x="160" y="675.5" text-anchor="middle">Объектное хранилище</text>
-<text x="160" y="692.5" text-anchor="middle">Медиа и статика</text>
-<g role="img" aria-label="Фоновый обработчик — worker">
-<circle cx="140" cy="294" r="10" fill="var(--bg)"/>
-<circle class="concept-node warning" cx="140" cy="294" r="10"/>
-<text x="140" y="298" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
-</g>
-<g role="img" aria-label="Фоновый обработчик — worker">
-<circle cx="300" cy="294" r="10" fill="var(--bg)"/>
-<circle class="concept-node warning" cx="300" cy="294" r="10"/>
-<text x="300" y="298" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
-</g>
-<g role="img" aria-label="Фоновый обработчик — worker">
-<circle cx="300" cy="542" r="10" fill="var(--bg)"/>
-<circle class="concept-node warning" cx="300" cy="542" r="10"/>
-<text x="300" y="546" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
-</g>
-</svg>
-<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-summary-read" viewBox="0 0 320 658" role="img" aria-labelledby="sd-facebook-scaled-summary-read-title sd-facebook-scaled-summary-read-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-facebook-scaled-summary-read-title">Чтение: Read API, Timeline и Search Service</title><desc id="sd-facebook-scaled-summary-read-desc">Read API вызывает Timeline Service для общей ленты и читает SQL для ленты автора. Timeline запрашивает ID в кеше, посты у Post Info и авторов у User Info. Search API вызывает Search Service и индекс, затем получает актуальные посты и профили. Чтения завершаются проверкой прав и ранжированием.</desc>
-<defs><marker id="sd-facebook-scaled-summary-read-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M74 116 V174" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M239 116 V174" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M74 248 V298" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M239 248 V298" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M74 248 V278 H154 V404 H74 V422" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M140 219 H162 V414 H239 V422" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M178 219 H170 V392 H110 V422" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M300 219 H318 V464 H316" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M74 490 V530 H112 V552" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M239 490 V530 H214 V552" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<path class="concept-edge" d="M8 90 H2 V597 H36" marker-end="url(#sd-facebook-scaled-summary-read-arrow)"/>
-<text x="160" y="22" text-anchor="middle">Лента автора, общая лента и поиск</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
-<text x="74" y="94" text-anchor="middle">Read API</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="52" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="190" y="52" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="58" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="184" y="58" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="64" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
-<text x="239" y="94" text-anchor="middle">Search API</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="178" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="20" y="178" width="132" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="184" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="14" y="184" width="132" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="190" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="8" y="190" width="132" height="58" rx="9"/>
-<text x="74" y="214.5" text-anchor="middle">Timeline</text>
-<text x="74" y="231.5" text-anchor="middle">Service</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="178" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="178" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="184" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="184" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="190" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
-<text x="239" y="223" text-anchor="middle">Search Service</text>
-<path fill="var(--bg)" stroke="none" d="M28 302 H144 L152 310 V346 L144 354 H28 L20 346 V310 Z"/>
-<path class="concept-cache" d="M28 302 H144 L152 310 V346 L144 354 H28 L20 346 V310 Z"/>
-<path fill="var(--bg)" stroke="none" d="M22 308 H138 L146 316 V352 L138 360 H22 L14 352 V316 Z"/>
-<path class="concept-cache" d="M22 308 H138 L146 316 V352 L138 360 H22 L14 352 V316 Z"/>
-<path fill="var(--bg)" stroke="none" d="M16 314 H132 L140 322 V358 L132 366 H16 L8 358 V322 Z"/>
-<path class="concept-cache" d="M16 314 H132 L140 322 V358 L132 366 H16 L8 358 V322 Z"/>
-<text x="74" y="344" text-anchor="middle">Кеш ID ленты</text>
-<path fill="var(--bg)" stroke="none" d="M190 309 A61 7 0 0 1 312 309 V347 A61 7 0 0 1 190 347 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="251" cy="309" rx="61" ry="7"/>
-<path class="concept-db" d="M190 309 A61 7 0 0 1 312 309 V347 A61 7 0 0 1 190 347 Z"/>
-<ellipse class="concept-db" cx="251" cy="309" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M184 315 A61 7 0 0 1 306 315 V353 A61 7 0 0 1 184 353 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="245" cy="315" rx="61" ry="7"/>
-<path class="concept-db" d="M184 315 A61 7 0 0 1 306 315 V353 A61 7 0 0 1 184 353 Z"/>
-<ellipse class="concept-db" cx="245" cy="315" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M178 321 A61 7 0 0 1 300 321 V359 A61 7 0 0 1 178 359 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="239" cy="321" rx="61" ry="7"/>
-<path class="concept-db" d="M178 321 A61 7 0 0 1 300 321 V359 A61 7 0 0 1 178 359 Z"/>
-<ellipse class="concept-db" cx="239" cy="321" rx="61" ry="7"/>
-<text x="239" y="343" text-anchor="middle">Поисковый</text>
-<text x="239" y="360" text-anchor="middle">индекс</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="426" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="426" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="432" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="432" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="438" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="438" width="132" height="52" rx="9"/>
-<text x="74" y="468" text-anchor="middle">Post Info</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="426" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="190" y="426" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="432" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="184" y="432" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="438" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="178" y="438" width="122" height="52" rx="9"/>
-<text x="239" y="468" text-anchor="middle">User Info</text>
-<path fill="var(--bg)" stroke="none" d="M52 563 A114 7 0 0 1 280 563 V607 A114 7 0 0 1 52 607 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="166" cy="563" rx="114" ry="7"/>
-<path class="concept-db" d="M52 563 A114 7 0 0 1 280 563 V607 A114 7 0 0 1 52 607 Z"/>
-<ellipse class="concept-db" cx="166" cy="563" rx="114" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M46 569 A114 7 0 0 1 274 569 V613 A114 7 0 0 1 46 613 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="160" cy="569" rx="114" ry="7"/>
-<path class="concept-db" d="M46 569 A114 7 0 0 1 274 569 V613 A114 7 0 0 1 46 613 Z"/>
-<ellipse class="concept-db" cx="160" cy="569" rx="114" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M40 575 A114 7 0 0 1 268 575 V619 A114 7 0 0 1 40 619 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="154" cy="575" rx="114" ry="7"/>
-<path class="concept-db" d="M40 575 A114 7 0 0 1 268 575 V619 A114 7 0 0 1 40 619 Z"/>
-<ellipse class="concept-db" cx="154" cy="575" rx="114" ry="7"/>
-<text x="154" y="597" text-anchor="middle">SQL: посты и профили</text>
-<text x="154" y="614" text-anchor="middle">Реплики чтения</text>
-<text class="concept-label" x="160" y="653" text-anchor="middle">После загрузки: права → ранжирование → ответ</text>
-</svg>
-</div>
-<figcaption id="sd-facebook-scaled-summary-caption">Итог: публикация, лента и поиск масштабируются независимо.</figcaption></figure>
+<article id="q280" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">280. Спроектируйте Twitter <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
+<p><b>Сервис микроблогов хранит короткие публикации, граф подписок и персональные ленты.</b> Tweet API сохраняет твит и Outbox одной транзакцией. Фоновый fanout добавляет идентификаторы публикаций в кеш лент активных подписчиков; Timeline API пакетно загружает содержимое.</p>
+<p><b>Лента гибридная:</b> обычные авторы распространяются при записи, горячие авторы подмешиваются при чтении. Ответы и ретвиты ссылаются на исходный твит. Повторы устраняются по идентификаторам, а удаление, приватность и блокировки проверяются перед выдачей, независимо от состояния кеша.</p>
+<figure class="concept" aria-labelledby="sd-twitter-summary-caption"><svg id="sd-twitter-summary" viewBox="0 0 344 724" role="img" aria-labelledby="sd-twitter-summary-title sd-twitter-summary-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-twitter-summary-title">Twitter: архитектура после масштабирования</title><desc id="sd-twitter-summary-desc">Tweet API сохраняет публикацию и Outbox в PostgreSQL. Публикатор передаёт события в брокер, Fanout обновляет кеш домашних лент по графу подписок, индексатор обновляет поиск. Timeline API объединяет кеш с твитами горячих авторов и пакетно загружает разрешённые публикации.</desc><defs><marker id="sd-twitter-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M172 50 V76 H78 V110" marker-end="url(#sd-twitter-summary-arrow)"/>
+<path class="concept-edge" d="M172 76 H258 V110" marker-end="url(#sd-twitter-summary-arrow)"/>
+<path class="concept-edge" d="M78 164 V230" marker-end="url(#sd-twitter-summary-arrow)"/>
+<path class="concept-edge" d="M258 164 V230" marker-end="url(#sd-twitter-summary-arrow)"/>
+<path class="concept-edge" d="M188 144 H170 V264 H148" marker-end="url(#sd-twitter-summary-arrow)"/>
+<path class="concept-edge" d="M78 296 V362" marker-end="url(#sd-twitter-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M148 390 H188" marker-end="url(#sd-twitter-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M258 418 V446 H78 V488" marker-end="url(#sd-twitter-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M258 418 V488" marker-end="url(#sd-twitter-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M78 542 V636" marker-end="url(#sd-twitter-summary-arrow)"/>
+<path class="concept-edge" d="M258 542 V636" marker-end="url(#sd-twitter-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M148 516 H170 V434 H338 V264 H328" marker-end="url(#sd-twitter-summary-arrow)" stroke-dasharray="4 4"/>
+<rect fill="var(--bg)" stroke="none" x="96" y="8" width="152" height="42" rx="8"/><rect class="concept-node plain" x="96" y="8" width="152" height="42" rx="8"/>
+<text x="172.0" y="34.0" text-anchor="middle">Пользователь</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="98" width="140" height="54" rx="8"/><rect class="concept-node accent" x="20" y="98" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="104" width="140" height="54" rx="8"/><rect class="concept-node accent" x="14" y="104" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="110" width="140" height="54" rx="8"/><rect class="concept-node accent" x="8" y="110" width="140" height="54" rx="8"/>
+<text x="78.0" y="132.5" text-anchor="middle">Tweet API</text>
+<text x="78.0" y="151.5" text-anchor="middle" class="concept-label">публикация</text>
+<rect fill="var(--bg)" stroke="none" x="200" y="98" width="140" height="54" rx="8"/><rect class="concept-node accent" x="200" y="98" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="194" y="104" width="140" height="54" rx="8"/><rect class="concept-node accent" x="194" y="104" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="188" y="110" width="140" height="54" rx="8"/><rect class="concept-node accent" x="188" y="110" width="140" height="54" rx="8"/>
+<text x="258.0" y="132.5" text-anchor="middle">Timeline API</text>
+<text x="258.0" y="151.5" text-anchor="middle" class="concept-label">выдача ленты</text>
+<path fill="var(--bg)" stroke="none" d="M8 238 A70.0 8 0 0 1 148 238 V288 A70.0 8 0 0 1 8 288 Z"/><path class="concept-db" d="M8 238 A70.0 8 0 0 1 148 238 V288 A70.0 8 0 0 1 8 288 Z"/><ellipse class="concept-db" cx="78.0" cy="238" rx="70.0" ry="8"/>
+<text x="78.0" y="261" text-anchor="middle">Твиты</text>
+<text x="78.0" y="280" text-anchor="middle" class="concept-label">PostgreSQL</text>
+<path fill="var(--bg)" stroke="none" d="M196 230 H320 L328 238 V286 L320 294 H196 L188 286 V238 Z"/><path class="concept-cache" d="M196 230 H320 L328 238 V286 L320 294 H196 L188 286 V238 Z"/>
+<text x="258" y="257" text-anchor="middle">Redis</text>
+<text x="258" y="277" text-anchor="middle" class="concept-label">кандидаты лент</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="350" width="140" height="56" rx="8"/><rect class="concept-node warning" x="20" y="350" width="140" height="56" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="356" width="140" height="56" rx="8"/><rect class="concept-node warning" x="14" y="356" width="140" height="56" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="362" width="140" height="56" rx="8"/><rect class="concept-node warning" x="8" y="362" width="140" height="56" rx="8"/>
+<text x="78.0" y="385.5" text-anchor="middle">Outbox</text>
+<text x="78.0" y="404.5" text-anchor="middle" class="concept-label">Publisher</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="145" cy="365" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="145" cy="365" r="10"/><text x="145" y="369" text-anchor="middle">W</text></g>
+<path fill="var(--bg)" stroke="none" d="M198 370 H320 A8 22 0 0 1 320 414 H198 A8 22 0 0 1 198 370 Z"/><path class="concept-broker" d="M198 370 H320 A8 22 0 0 1 320 414 H198 A8 22 0 0 1 198 370 Z"/><ellipse fill="var(--bg)" cx="198" cy="392" rx="8" ry="22"/><ellipse class="concept-broker" cx="198" cy="392" rx="8" ry="22"/>
+<text x="262" y="388" text-anchor="middle">Брокер</text>
+<text x="262" y="406" text-anchor="middle" class="concept-label">события твитов</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="476" width="140" height="54" rx="8"/><rect class="concept-node warning" x="20" y="476" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="482" width="140" height="54" rx="8"/><rect class="concept-node warning" x="14" y="482" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="488" width="140" height="54" rx="8"/><rect class="concept-node warning" x="8" y="488" width="140" height="54" rx="8"/>
+<text x="78.0" y="510.5" text-anchor="middle">Fanout</text>
+<text x="78.0" y="529.5" text-anchor="middle" class="concept-label">домашние ленты</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="145" cy="491" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="145" cy="491" r="10"/><text x="145" y="495" text-anchor="middle">W</text></g>
+<rect fill="var(--bg)" stroke="none" x="200" y="476" width="140" height="54" rx="8"/><rect class="concept-node warning" x="200" y="476" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="194" y="482" width="140" height="54" rx="8"/><rect class="concept-node warning" x="194" y="482" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="188" y="488" width="140" height="54" rx="8"/><rect class="concept-node warning" x="188" y="488" width="140" height="54" rx="8"/>
+<text x="258.0" y="510.5" text-anchor="middle">Индексатор</text>
+<text x="258.0" y="529.5" text-anchor="middle" class="concept-label">поиск</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="325" cy="491" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="325" cy="491" r="10"/><text x="325" y="495" text-anchor="middle">W</text></g>
+<path fill="var(--bg)" stroke="none" d="M8 644 A70.0 8 0 0 1 148 644 V694 A70.0 8 0 0 1 8 694 Z"/><path class="concept-db" d="M8 644 A70.0 8 0 0 1 148 644 V694 A70.0 8 0 0 1 8 694 Z"/><ellipse class="concept-db" cx="78.0" cy="644" rx="70.0" ry="8"/>
+<text x="78.0" y="667" text-anchor="middle">Подписки</text>
+<text x="78.0" y="686" text-anchor="middle" class="concept-label">граф / блокировки</text>
+<path fill="var(--bg)" stroke="none" d="M188 644 A70.0 8 0 0 1 328 644 V694 A70.0 8 0 0 1 188 694 Z"/><path class="concept-db" d="M188 644 A70.0 8 0 0 1 328 644 V694 A70.0 8 0 0 1 188 694 Z"/><ellipse class="concept-db" cx="258.0" cy="644" rx="70.0" ry="8"/>
+<text x="258.0" y="667" text-anchor="middle">Поиск</text>
+<text x="258.0" y="686" text-anchor="middle" class="concept-label">текст / хештеги</text>
+</svg><figcaption id="sd-twitter-summary-caption">Обычные авторы пополняют кеш лент через fanout; твиты горячих авторов подмешиваются при чтении. Timeline API загружает содержимое пакетно и проверяет видимость. Пунктир — фоновые события, обновление кандидатов лент и индекса поиска.</figcaption></figure>
     </div>
     <div class="more">
-<p><b>Шаг 1 — Требования и ограничения</b></p>
-<p>Нужно согласовать три сценария: <b>опубликовать пост, открыть персональную ленту, посмотреть ленту автора</b>. Для примера лента содержит записи друзей и подписок. Поиск по доступным пользователю постам — дополнительный сценарий. Удаление, изменение текста и настроек видимости входят в задачу. Простые вложения и уведомления о публикации входят как дополнительные сценарии. Чаты, реклама, поиск людей и групп, рекомендательная ML-платформа и перекодирование видео остаются за рамками. Это учебный вариант архитектуры, а не описание текущей реализации Facebook.</p>
-<p><b>Допущения:</b> 100 млн активных пользователей в сутки, 50 млн новых постов, 1 млрд запросов страниц ленты. Пик в 5 раз выше среднего. Цели p99 на стороне сервиса: лента до 300 мс. Появление чужих новых постов может отставать на несколько секунд; автор видит успешную публикацию сразу.</p>
-<div class="table-wrap"><table><tr><th>Показатель</th><th>Среднее → пик</th></tr>
-<tr><td>Создание постов</td><td>≈ 580 → 2 900 запросов/с</td></tr>
-<tr><td>Чтение ленты</td><td>≈ 11 600 → 58 000 запросов/с</td></tr>
+<p><b>Шаг 1 — Требования и ограничения.</b> Проектируется учебный Twitter-подобный сервис, а не внутреннее устройство реального продукта. Сценарии: написать и удалить твит, подписаться на автора, читать домашнюю и авторскую ленты, отвечать, ставить лайк и делать ретвит. Текстовый лимит и правила показа ответов задаются продуктом. Для начала — обратная хронология, публичные и закрытые аккаунты; ML-ранжирование, реклама и личные сообщения вне основного разбора.</p>
+<p>В отличие от общего вопроса о ленте новостей здесь важно раскрыть <b>граф подписок, семантику ответов и ретвитов, авторов с миллионами подписчиков и согласование fanout с изменением подписок</b>. Поиск по тексту и хештегам — дополнительный сценарий.</p>
+<p><b>Допущения:</b> 10 млн активных пользователей в сутки, 5 млн новых твитов, 200 млн чтений ленты, пик в 10 раз выше среднего. Это расчётные значения.</p>
+<pre>Публикации: ≈ <span class="n">58</span>/с
+Пик: ≈ <span class="n">580</span>/с
 
-<tr><td>Текст и метаданные, условно 2 КБ на пост</td><td>≈ 100 ГБ/сутки, ≈ 36,5 ТБ/год без индексов, реплик и медиа</td></tr>
-<tr><td>В среднем 200 получателей на пост при рассылке</td><td>50 млн × 200 = 10 млрд обновлений кандидатов/сутки, ≈ 116 тыс./с</td></tr></table></div>
-<p>Последняя оценка показывает <b>усиление записи при рассылке</b>. Средние 200 получателей скрывают перекос: у одного автора десятки друзей, у другого миллионы подписчиков. Число активных получателей, срок хранения и глубину ленты нужно уточнять отдельно.</p>
-<p><b>Шаг 2 — Общая архитектура</b></p>
-<figure class="concept" aria-labelledby="sd-facebook-base-caption"><svg id="sd-facebook-base" viewBox="0 0 320 366" role="img" aria-labelledby="sd-facebook-base-title sd-facebook-base-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-facebook-base-title">Лента новостей: базовая архитектура</title><desc id="sd-facebook-base-desc">Клиент обращается к одному приложению. PostgreSQL хранит посты, профили и подписки. Приложение публикует посты и собирает хронологическую ленту по подпискам.</desc><defs><marker id="sd-facebook-base-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M160 52 V108" marker-end="url(#sd-facebook-base-arrow)"/><path class="concept-edge" d="M160 176 V244" marker-end="url(#sd-facebook-base-arrow)"/><rect class="concept-node plain" x="64" y="8" width="192" height="44" rx="8"/><text x="160" y="35" text-anchor="middle">Клиент</text><rect class="concept-node accent" x="40" y="112" width="240" height="64" rx="8"/><text x="160" y="139" text-anchor="middle">Одно приложение</text><text x="160" y="160" text-anchor="middle" class="concept-label">публикация / чтение ленты</text><path class="concept-db" d="M40 256 A120 8 0 0 1 280 256 V316 A120 8 0 0 1 40 316 Z"/><ellipse class="concept-db" cx="160" cy="256" rx="120" ry="8"/><text x="160" y="285" text-anchor="middle">PostgreSQL</text><text x="160" y="307" text-anchor="middle" class="concept-label">посты, профили, подписки</text></svg><figcaption id="sd-facebook-base-caption">Старт: одно приложение и PostgreSQL. Лента собирается при чтении по подпискам и времени публикации.</figcaption></figure>
-<p><b>Базовая архитектура — одно приложение и PostgreSQL.</b> Публикация сохраняет пост, чтение выбирает записи авторов из подписок, проверяет видимость и сортирует по времени. Профили и связи находятся в той же БД. Отдельные Timeline, Fanout и другие сервисы на старте не нужны.</p>
-<p>При росте станут дороги объединение постов множества авторов на каждом чтении и рассылка поста миллионам получателей. Поэтому в шаге 4 API Gateway, API и обработчики получают независимые группы экземпляров, а представления для чтения обновляются асинхронно.</p>
-<p><b>Шаг 3 — Детали ключевых компонентов</b></p>
-<p><b>API.</b> Пользователь определяется из аутентифицированного запроса; переданный клиентом идентификатор не заменяет проверку прав.</p>
-<pre><span class="t">POST</span> /api/v1/posts
-  text, visibility, media_keys
-  idempotency_key
-  → <span class="n">201</span> <span class="t">Created</span> + post_id
+Чтения ленты: ≈ <span class="n">2</span> <span class="n">300</span>/с
+Пик: ≈ <span class="n">23</span> тыс./с
 
-<span class="t">GET</span> /api/v1/feed?cursor=...
-<span class="t">GET</span> /api/v1/users/{id}/posts?cursor=...
-  → posts + next_cursor
-
-<span class="t">PATCH</span> /api/v1/posts/{id}
-<span class="t">DELETE</span> /api/v1/posts/{id}</pre>
-<p><b>Источник истины и производные данные:</b></p>
-<figure class="concept" aria-labelledby="er-news-feed-caption" style="overflow-x:auto"><svg id="er-news-feed" viewBox="0 0 700 459" role="img" aria-labelledby="er-news-feed-title er-news-feed-desc" xmlns="http://www.w3.org/2000/svg" style="width:700px;min-width:700px;max-width:none"><title id="er-news-feed-title">Источник данных ленты: профили, связи, посты и Outbox</title><desc id="er-news-feed-desc">ER-модель. PK — первичный ключ, FK — внешний ключ, UQ — уникальность. На связях указана кратность: 1, 0..1, 0..N или 1..N.</desc><path class="concept-edge" d="M308 67.5 H326 V76.66666666666666 H392"/><path class="concept-edge" d="M308 91.0 H336 V109.33333333333333 H392"/><path class="concept-edge" d="M308 114.5 H346 V319.6666666666667 H308"/><path class="concept-edge" d="M308 373.3333333333333 H356 V315.0 H392"/><g><rect class="concept-node" x="8" y="12" width="300" height="134" rx="6"/><rect class="concept-node accent" x="8" y="12" width="300" height="32" rx="6"/><text x="20" y="34" style="font-weight:700">user (профиль)</text><text x="20" y="66" style="font-family:var(--mono);font-size:13px">PK id</text></g><g><rect class="concept-node" x="392" y="12" width="300" height="138" rx="6"/><rect class="concept-node accent" x="392" y="12" width="300" height="32" rx="6"/><text x="404" y="34" style="font-weight:700">connection</text><text x="404" y="66" style="font-family:var(--mono);font-size:13px">PK, FK user_id</text><text x="404" y="87" style="font-family:var(--mono);font-size:13px">PK, FK other_user_id</text><text x="404" y="108" style="font-family:var(--mono);font-size:13px">PK type</text><text x="404" y="129" style="font-family:var(--mono);font-size:13px">status</text></g><g><rect class="concept-node" x="8" y="234" width="300" height="201" rx="6"/><rect class="concept-node accent" x="8" y="234" width="300" height="32" rx="6"/><text x="20" y="256" style="font-weight:700">post</text><text x="20" y="288" style="font-family:var(--mono);font-size:13px">PK id</text><text x="20" y="309" style="font-family:var(--mono);font-size:13px">FK author_id</text><text x="20" y="330" style="font-family:var(--mono);font-size:13px">text, media_keys</text><text x="20" y="351" style="font-family:var(--mono);font-size:13px">created_at</text><text x="20" y="372" style="font-family:var(--mono);font-size:13px">visibility</text><text x="20" y="393" style="font-family:var(--mono);font-size:13px">version</text><text x="20" y="414" style="font-family:var(--mono);font-size:13px">deleted_at</text></g><g><rect class="concept-node" x="392" y="234" width="300" height="138" rx="6"/><rect class="concept-node accent" x="392" y="234" width="300" height="32" rx="6"/><text x="404" y="256" style="font-weight:700">post_outbox</text><text x="404" y="288" style="font-family:var(--mono);font-size:13px">PK event_id</text><text x="404" y="309" style="font-family:var(--mono);font-size:13px">FK post_id</text><text x="404" y="330" style="font-family:var(--mono);font-size:13px">version</text><text x="404" y="351" style="font-family:var(--mono);font-size:13px">event_type</text></g><rect x="309" y="48.5" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="325" y="61.5" text-anchor="middle">1</text><rect x="357" y="57.66666666666666" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="373" y="70.66666666666666" text-anchor="middle">0..N</text><rect x="309" y="72.0" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="325" y="85.0" text-anchor="middle">1</text><rect x="357" y="90.33333333333333" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="373" y="103.33333333333333" text-anchor="middle">0..N</text><rect x="309" y="95.5" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="325" y="108.5" text-anchor="middle">1</text><rect x="309" y="300.6666666666667" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="325" y="313.6666666666667" text-anchor="middle">0..N</text><rect x="309" y="354.3333333333333" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="325" y="367.3333333333333" text-anchor="middle">1</text><rect x="357" y="296.0" width="32" height="17" fill="var(--surface)"/><text class="concept-label" x="373" y="309.0" text-anchor="middle">0..N</text></svg><figcaption id="er-news-feed-caption"><b>PK</b> — первичный ключ, <b>FK</b> — внешний ключ, <b>UQ</b> — уникальность. Оба пользователя connection ссылаются на user: связь хранит дружбу, подписку или блокировку. Для постов нужен индекс (author_id, created_at, id); для fanout — обратный индекс связей по автору. Поля профиля опущены, показаны ключи связей.</figcaption></figure>
-<figure class="concept" aria-labelledby="er-feed-candidates-caption" style="overflow-x:auto"><svg id="er-feed-candidates" viewBox="0 0 320 132" role="img" aria-labelledby="er-feed-candidates-title er-feed-candidates-desc" xmlns="http://www.w3.org/2000/svg" style="width:320px;min-width:320px;max-width:none"><title id="er-feed-candidates-title">Производная модель кандидатов ленты</title><desc id="er-feed-candidates-desc">ER-модель. PK — первичный ключ, FK — внешний ключ, UQ — уникальность. На связях указана кратность: 1, 0..1, 0..N или 1..N.</desc><g><rect class="concept-node" x="8" y="12" width="304" height="96" rx="6"/><rect class="concept-node accent" x="8" y="12" width="304" height="32" rx="6"/><text x="20" y="34" style="font-weight:700">feed_candidates — кеш</text><text x="20" y="66" style="font-family:var(--mono);font-size:13px">KEY user_id</text><text x="20" y="87" style="font-family:var(--mono);font-size:13px">post_ids (ограниченный список)</text></g></svg><figcaption id="er-feed-candidates-caption"><b>PK</b> — первичный ключ, <b>FK</b> — внешний ключ, <b>UQ</b> — уникальность. Это восстанавливаемый кеш, а не таблица с внешними ключами. В нём хранятся ID постов, без копирования текста каждому получателю; актуальное содержимое и видимость проверяются по источнику.</figcaption></figure>
-<p><b>Роли API:</b> Write API публикует посты, Read API вызывает Timeline для общей ленты. История автора читается отдельно. При масштабировании эти сценарии получают независимые бюджеты ресурсов; файлы доставляются через CDN. Дополнительный поиск использует собственный API.</p>
-<p><b>Медиа и уведомления.</b> Файлы находятся в объектном хранилище, пост содержит их ключи, а не копии байтов для каждого подписчика. Загрузка проходит с проверкой прав, пост связывается только с завершёнными загрузками; незавершённые и бесхозные объекты очищаются. CDN отдаёт разрешённые объекты по политике доступа, приватные вложения нельзя открыть общим публичным кешем. Notification Service получает события выбранных публикаций и отправляет email/push через отдельную очередь. Ошибка уведомления не отменяет сохранённый пост и не блокирует чтение ленты.</p>
-<p><b>Граф связей.</b> Нужны два направления запросов: кого читает пользователь и кто подписан на автора. Граф хранит дружбу, подписки и блокировки; fanout получает из него получателей порциями, чтение ленты — подписки для подмешивания популярных авторов. Начать можно с таблицы связей и прямого/обратного индексов; отдельная графовая БД не обязательна. Изменение дружбы и блокировка влияют на доступ, поэтому кеш списка подписчиков не заменяет проверку актуальных прав.</p>
-<p><b>Post Info и User Info.</b> Эти логические компоненты возвращают содержимое постов и данные авторов пакетами. В первой версии это методы одного приложения, затем — независимо масштабируемые обработчики или сервисы при необходимости. Сначала кандидаты определяются по ID, затем одним пакетным запросом на группу загружаются посты, а по уникальным author_id — профили. Пакет разбивается по шардам; один batch API не означает один физический запрос ко всем данным.</p>
-<p><b>Публикация.</b> Проверить запрос и ключ идемпотентности → в одной транзакции сохранить пост и outbox → после commit вернуть post_id. Публикатор передаёт событие в надёжный журнал. Fanout и индексатор читают его <b>независимо</b>: сбой поиска не останавливает обновление лент. Повторная доставка не должна дублировать post_id; изменения одного поста применяются по версии, старое событие не перезаписывает новое.</p>
-<p><b>Два способа построить ленту:</b></p>
-<div class="table-wrap"><table><tr><th>Подход</th><th>Механизм и компромисс</th></tr>
-<tr><td>При записи — fanout-on-write</td><td>Добавить ID поста получателям заранее. Чтение быстрое, но одна публикация создаёт много записей</td></tr>
-<tr><td>При чтении — fanout-on-read</td><td>Получить последние посты авторов и объединить их при открытии ленты. Публикация дешёвая, чтение дороже</td></tr>
-<tr><td>Гибрид</td><td>Обычные авторы — предварительная рассылка активным читателям, популярные — подмешивание при чтении</td></tr></table></div>
-<p><b>Кеш кандидатов ленты.</b> Например, Redis sorted set <code>feed:{user_id}</code>: member — post_id, score — время публикации. Для примера сохраняются последние 1 000 ID активного читателя; это ограничение кандидатов, а не готовый персональный рейтинг. Добавление через <a href="https://redis.io/docs/latest/commands/zadd/">ZADD</a> с тем же member не создаёт дубль. После вставки список обрезается до лимита атомарным скриптом, TTL обновляется при активности читателя и удаляет кеш неактивных пользователей. Время публикации не должно меняться при повторной доставке. Для восстановления используется история авторов; кеш не является единственным хранилищем постов.</p>
-<p>Если в ID нельзя определить шард автора, рядом нужна восстанавливаемая связь post_id → author_id либо составной ключ со стабильной маршрутизацией. <b>Размер кеша оценивается по активным читателям:</b> 10 млн прогретых лент × 1 000 кандидатов × условные 32 байта ≈ 320 ГБ только полезных данных, до накладных расходов Redis и репликации. Хранить полный набор в одном узле нельзя считать допустимым по умолчанию.</p>
-<p><b>Чтение ленты:</b> получить ограниченный набор ID из кеша → добавить свежие посты популярных авторов из подписок и собственные посты автора → убрать дубли → пакетно загрузить содержимое → проверить удаление, блокировки и текущие права → ранжировать → вернуть страницу. Рассылка по друзьям не является достаточной проверкой доступа: с момента публикации отношения и видимость могли измениться.</p>
-<p><b>Лента автора.</b> <code><span class="t">GET</span> /api/v1/users/{id}/posts</code> читает историю по индексу <code>author_id, created_at, id</code>, проверяет видимость и отдаёт страницу. Курсор содержит последнюю пару <code>created_at + post_id</code>, запрос ограничен размером страницы. Эта же история позволяет восстановить кеш общей ленты и подмешать свежие посты популярных авторов без массовой рассылки. Автор собственных новых постов читает подтверждённую запись с primary или использует эквивалентную гарантию read-your-writes.</p>
-<p>Начальное ранжирование может учитывать время, близость к автору и взаимодействия. На больших объёмах сначала отбирается небольшой набор кандидатов, затем применяется более дорогой расчёт оценки. <b>Не нужно запускать тяжёлую модель на всех постах.</b> Курсор хронологической ленты может содержать пару <code>created_at + post_id</code>; для меняющегося рейтинга нужна зафиксированная выборка или сессия выдачи, иначе страницы будут пропускать или повторять посты.</p>
-
-<p><b>Удаление и приватность.</b> Сначала фиксируется изменение в источнике истины, затем события обновляют кандидатов и кеши. Старые ID могут ещё оставаться в кандидатах, но пост не должен попасть в ответ. Если нельзя надёжно проверить видимость, закрытые данные не выдаются. Удаление из кеша кандидатов само по себе не обеспечивает немедленную приватность; кеш прав тоже требует явно согласованной гарантии свежести.</p>
-<p><b>Шаг 4 — Масштабирование и узкие места</b></p>
-<figure class="concept" aria-labelledby="sd-facebook-scaled-caption">
-<div style="display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:20px">
-<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled" viewBox="0 0 320 504" role="img" aria-labelledby="sd-facebook-scaled-title sd-facebook-scaled-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-facebook-scaled-title">Доступ клиента к системе</title><desc id="sd-facebook-scaled-desc">Клиент обращается к DNS за адресом, к CDN за статикой, к API Gateway за API. API Gateway маршрутизирует запросы в отдельные группы API. CDN читает объектное хранилище, а не передаёт API-запросы API Gateway.</desc>
-<defs><marker id="sd-facebook-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M140 32 H174" marker-end="url(#sd-facebook-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M110 56 V90 H245 V108" marker-end="url(#sd-facebook-scaled-arrow)"/>
-<path class="concept-edge" d="M65 56 V180 H154 V204" marker-end="url(#sd-facebook-scaled-arrow)"/>
-
-<path class="concept-edge" d="M312 134 H318 V466 H316" marker-end="url(#sd-facebook-scaled-arrow)"/>
-<path class="concept-edge" d="M100 268 V296 H51 V318" marker-end="url(#sd-facebook-scaled-arrow)"/>
-<path class="concept-edge" d="M154 268 V318" marker-end="url(#sd-facebook-scaled-arrow)"/>
-<path class="concept-edge" d="M220 268 V296 H263 V318" marker-end="url(#sd-facebook-scaled-arrow)"/>
-<rect class="concept-node plain" x="8" y="8" width="132" height="48" rx="9"/>
-<text x="74" y="36" text-anchor="middle">Клиент</text>
-<rect class="concept-node plain" x="178" y="8" width="134" height="48" rx="9"/>
-<text x="245" y="36" text-anchor="middle">DNS</text>
-<rect class="concept-node plain" x="178" y="112" width="134" height="44" rx="9"/>
-<text x="245" y="138" text-anchor="middle">CDN</text>
-
-
-
-
-
-
-
-<rect fill="var(--bg)" stroke="none" x="52" y="208" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="52" y="208" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="46" y="214" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="46" y="214" width="228" height="48" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="40" y="220" width="228" height="48" rx="9"/>
-<rect class="concept-node accent" x="40" y="220" width="228" height="48" rx="9"/>
-<text x="154" y="248" text-anchor="middle">API Gateway</text>
-<rect class="concept-node plain" x="178" y="438" width="134" height="56" rx="9"/>
-<text x="245" y="461.5" text-anchor="middle">Медиа / статика</text>
-<text x="245" y="478.5" text-anchor="middle">Объекты</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="322" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="322" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="328" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="328" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="334" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="334" width="86" height="52" rx="9"/>
-<text x="51" y="364" text-anchor="middle">Read API</text>
-<rect fill="var(--bg)" stroke="none" x="126" y="322" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="126" y="322" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="120" y="328" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="120" y="328" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="114" y="334" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="114" y="334" width="86" height="52" rx="9"/>
-<text x="157" y="364" text-anchor="middle">Write API</text>
-<rect fill="var(--bg)" stroke="none" x="232" y="322" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="232" y="322" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="226" y="328" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="226" y="328" width="86" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="220" y="334" width="86" height="52" rx="9"/>
-<rect class="concept-node accent" x="220" y="334" width="86" height="52" rx="9"/>
-<text x="263" y="364" text-anchor="middle">Search API</text>
-</svg>
-<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-publish" viewBox="0 0 320 724" role="img" aria-labelledby="sd-facebook-scaled-publish-title sd-facebook-scaled-publish-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-facebook-scaled-publish-title">Публикация: Fanout, поиск, медиа и уведомления</title><desc id="sd-facebook-scaled-publish-desc">Write API сохраняет пост и outbox в SQL. Событие независимо обрабатывают Fanout и Search Service. Fanout получает подписчиков из User Graph, обновляет ID ленты и создаёт уведомления. Медиа хранятся в объектном хранилище.</desc>
-<defs><marker id="sd-facebook-scaled-publish-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M140 90 H174" marker-end="url(#sd-facebook-scaled-publish-arrow)"/>
-<path class="concept-edge" d="M245 116 V144 H160 V172" marker-end="url(#sd-facebook-scaled-publish-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M98 220 V246 H74 V266" marker-end="url(#sd-facebook-scaled-publish-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M222 220 V246 H239 V266" marker-end="url(#sd-facebook-scaled-publish-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M74 340 V390" marker-end="url(#sd-facebook-scaled-publish-arrow)"/>
-<path class="concept-edge" d="M239 340 V390" marker-end="url(#sd-facebook-scaled-publish-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M140 311 H154 V556 H144" marker-end="url(#sd-facebook-scaled-publish-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M140 311 H162 V502 H239 V514" marker-end="url(#sd-facebook-scaled-publish-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M8 311 H2 V680 H36" marker-end="url(#sd-facebook-scaled-publish-arrow)"/>
-<path class="concept-edge" d="M140 90 H162 V134 H318 V680 H284" marker-end="url(#sd-facebook-scaled-publish-arrow)"/>
-<text x="160" y="22" text-anchor="middle">Обработка публикации</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
-<text x="74" y="94" text-anchor="middle">Write API</text>
-<path fill="var(--bg)" stroke="none" d="M178 71 A67 7 0 0 1 312 71 V109 A67 7 0 0 1 178 109 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="245" cy="71" rx="67" ry="7"/>
-<path class="concept-db" d="M178 71 A67 7 0 0 1 312 71 V109 A67 7 0 0 1 178 109 Z"/>
-<ellipse class="concept-db" cx="245" cy="71" rx="67" ry="7"/>
-<text x="245" y="93" text-anchor="middle">SQL: посты</text>
-<text x="245" y="110" text-anchor="middle">+ outbox</text>
-<path fill="var(--bg)" stroke="none" d="M48 176 H272 A8 22 0 0 1 272 220 H48 A8 22 0 0 1 48 176 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="48" cy="198" rx="8" ry="22"/>
-<path class="concept-broker" d="M48 176 H272 A8 22 0 0 1 272 220 H48 A8 22 0 0 1 48 176 Z"/>
-<ellipse class="concept-broker" cx="48" cy="198" rx="8" ry="22"/>
-<text x="164" y="202" text-anchor="middle">События публикаций</text>
-
-<rect fill="var(--bg)" stroke="none" x="20" y="270" width="132" height="58" rx="9"/>
-<rect class="concept-node warning" x="20" y="270" width="132" height="58" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="14" y="276" width="132" height="58" rx="9"/>
-<rect class="concept-node warning" x="14" y="276" width="132" height="58" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="8" y="282" width="132" height="58" rx="9"/>
-<rect class="concept-node warning" x="8" y="282" width="132" height="58" rx="9"/>
-<text x="74" y="315" text-anchor="middle">Fanout Service</text>
-
-<rect fill="var(--bg)" stroke="none" x="190" y="270" width="122" height="58" rx="9"/>
-<rect class="concept-node warning" x="190" y="270" width="122" height="58" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="184" y="276" width="122" height="58" rx="9"/>
-<rect class="concept-node warning" x="184" y="276" width="122" height="58" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="178" y="282" width="122" height="58" rx="9"/>
-<rect class="concept-node warning" x="178" y="282" width="122" height="58" rx="9"/>
-<text x="239" y="315" text-anchor="middle">Search Service</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="394" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="394" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="400" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="400" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="406" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="406" width="132" height="52" rx="9"/>
-<text x="74" y="427.5" text-anchor="middle">User Graph</text>
-<text x="74" y="444.5" text-anchor="middle">Подписчики</text>
-<path fill="var(--bg)" stroke="none" d="M190 401 A61 7 0 0 1 312 401 V439 A61 7 0 0 1 190 439 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="251" cy="401" rx="61" ry="7"/>
-<path class="concept-db" d="M190 401 A61 7 0 0 1 312 401 V439 A61 7 0 0 1 190 439 Z"/>
-<ellipse class="concept-db" cx="251" cy="401" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M184 407 A61 7 0 0 1 306 407 V445 A61 7 0 0 1 184 445 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="245" cy="407" rx="61" ry="7"/>
-<path class="concept-db" d="M184 407 A61 7 0 0 1 306 407 V445 A61 7 0 0 1 184 445 Z"/>
-<ellipse class="concept-db" cx="245" cy="407" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M178 413 A61 7 0 0 1 300 413 V451 A61 7 0 0 1 178 451 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="239" cy="413" rx="61" ry="7"/>
-<path class="concept-db" d="M178 413 A61 7 0 0 1 300 413 V451 A61 7 0 0 1 178 451 Z"/>
-<ellipse class="concept-db" cx="239" cy="413" rx="61" ry="7"/>
-<text x="239" y="435" text-anchor="middle">Поисковый</text>
-<text x="239" y="452" text-anchor="middle">индекс</text>
-<path fill="var(--bg)" stroke="none" d="M28 518 H144 L152 526 V562 L144 570 H28 L20 562 V526 Z"/>
-<path class="concept-cache" d="M28 518 H144 L152 526 V562 L144 570 H28 L20 562 V526 Z"/>
-<path fill="var(--bg)" stroke="none" d="M22 524 H138 L146 532 V568 L138 576 H22 L14 568 V532 Z"/>
-<path class="concept-cache" d="M22 524 H138 L146 532 V568 L138 576 H22 L14 568 V532 Z"/>
-<path fill="var(--bg)" stroke="none" d="M16 530 H132 L140 538 V574 L132 582 H16 L8 574 V538 Z"/>
-<path class="concept-cache" d="M16 530 H132 L140 538 V574 L132 582 H16 L8 574 V538 Z"/>
-<text x="74" y="560" text-anchor="middle">Кеш ID ленты</text>
-
-<rect fill="var(--bg)" stroke="none" x="190" y="518" width="122" height="52" rx="9"/>
-<rect class="concept-node warning" x="190" y="518" width="122" height="52" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="184" y="524" width="122" height="52" rx="9"/>
-<rect class="concept-node warning" x="184" y="524" width="122" height="52" rx="9"/>
-
-<rect fill="var(--bg)" stroke="none" x="178" y="530" width="122" height="52" rx="9"/>
-<rect class="concept-node warning" x="178" y="530" width="122" height="52" rx="9"/>
-<text x="239" y="551.5" text-anchor="middle">Notification</text>
-<text x="239" y="568.5" text-anchor="middle">Service</text>
-<rect class="concept-node plain" x="40" y="654" width="240" height="52" rx="9"/>
-<text x="160" y="675.5" text-anchor="middle">Объектное хранилище</text>
-<text x="160" y="692.5" text-anchor="middle">Медиа и статика</text>
-<g role="img" aria-label="Фоновый обработчик — worker">
-<circle cx="140" cy="294" r="10" fill="var(--bg)"/>
-<circle class="concept-node warning" cx="140" cy="294" r="10"/>
-<text x="140" y="298" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
-</g>
-<g role="img" aria-label="Фоновый обработчик — worker">
-<circle cx="300" cy="294" r="10" fill="var(--bg)"/>
-<circle class="concept-node warning" cx="300" cy="294" r="10"/>
-<text x="300" y="298" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
-</g>
-<g role="img" aria-label="Фоновый обработчик — worker">
-<circle cx="300" cy="542" r="10" fill="var(--bg)"/>
-<circle class="concept-node warning" cx="300" cy="542" r="10"/>
-<text x="300" y="546" text-anchor="middle" style="font-size:12px;font-weight:700">W</text>
-</g>
-</svg>
-<svg style="flex:1 1 280px; min-width:0" id="sd-facebook-scaled-read" viewBox="0 0 320 658" role="img" aria-labelledby="sd-facebook-scaled-read-title sd-facebook-scaled-read-desc" xmlns="http://www.w3.org/2000/svg">
-<title id="sd-facebook-scaled-read-title">Чтение: Read API, Timeline и Search Service</title><desc id="sd-facebook-scaled-read-desc">Read API вызывает Timeline Service для общей ленты и читает SQL для ленты автора. Timeline запрашивает ID в кеше, посты у Post Info и авторов у User Info. Search API вызывает Search Service и индекс, затем получает актуальные посты и профили. Чтения завершаются проверкой прав и ранжированием.</desc>
-<defs><marker id="sd-facebook-scaled-read-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M74 116 V174" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M239 116 V174" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M74 248 V298" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M239 248 V298" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M74 248 V278 H154 V404 H74 V422" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M140 219 H162 V414 H239 V422" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M178 219 H170 V392 H110 V422" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M300 219 H318 V464 H316" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M74 490 V530 H112 V552" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M239 490 V530 H214 V552" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<path class="concept-edge" d="M8 90 H2 V597 H36" marker-end="url(#sd-facebook-scaled-read-arrow)"/>
-<text x="160" y="22" text-anchor="middle">Лента автора, общая лента и поиск</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="52" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="52" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="58" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="58" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="64" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="64" width="132" height="52" rx="9"/>
-<text x="74" y="94" text-anchor="middle">Read API</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="52" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="190" y="52" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="58" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="184" y="58" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="64" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="178" y="64" width="122" height="52" rx="9"/>
-<text x="239" y="94" text-anchor="middle">Search API</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="178" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="20" y="178" width="132" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="184" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="14" y="184" width="132" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="190" width="132" height="58" rx="9"/>
-<rect class="concept-node accent" x="8" y="190" width="132" height="58" rx="9"/>
-<text x="74" y="214.5" text-anchor="middle">Timeline</text>
-<text x="74" y="231.5" text-anchor="middle">Service</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="178" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="190" y="178" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="184" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="184" y="184" width="122" height="58" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="190" width="122" height="58" rx="9"/>
-<rect class="concept-node accent" x="178" y="190" width="122" height="58" rx="9"/>
-<text x="239" y="223" text-anchor="middle">Search Service</text>
-<path fill="var(--bg)" stroke="none" d="M28 302 H144 L152 310 V346 L144 354 H28 L20 346 V310 Z"/>
-<path class="concept-cache" d="M28 302 H144 L152 310 V346 L144 354 H28 L20 346 V310 Z"/>
-<path fill="var(--bg)" stroke="none" d="M22 308 H138 L146 316 V352 L138 360 H22 L14 352 V316 Z"/>
-<path class="concept-cache" d="M22 308 H138 L146 316 V352 L138 360 H22 L14 352 V316 Z"/>
-<path fill="var(--bg)" stroke="none" d="M16 314 H132 L140 322 V358 L132 366 H16 L8 358 V322 Z"/>
-<path class="concept-cache" d="M16 314 H132 L140 322 V358 L132 366 H16 L8 358 V322 Z"/>
-<text x="74" y="344" text-anchor="middle">Кеш ID ленты</text>
-<path fill="var(--bg)" stroke="none" d="M190 309 A61 7 0 0 1 312 309 V347 A61 7 0 0 1 190 347 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="251" cy="309" rx="61" ry="7"/>
-<path class="concept-db" d="M190 309 A61 7 0 0 1 312 309 V347 A61 7 0 0 1 190 347 Z"/>
-<ellipse class="concept-db" cx="251" cy="309" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M184 315 A61 7 0 0 1 306 315 V353 A61 7 0 0 1 184 353 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="245" cy="315" rx="61" ry="7"/>
-<path class="concept-db" d="M184 315 A61 7 0 0 1 306 315 V353 A61 7 0 0 1 184 353 Z"/>
-<ellipse class="concept-db" cx="245" cy="315" rx="61" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M178 321 A61 7 0 0 1 300 321 V359 A61 7 0 0 1 178 359 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="239" cy="321" rx="61" ry="7"/>
-<path class="concept-db" d="M178 321 A61 7 0 0 1 300 321 V359 A61 7 0 0 1 178 359 Z"/>
-<ellipse class="concept-db" cx="239" cy="321" rx="61" ry="7"/>
-<text x="239" y="343" text-anchor="middle">Поисковый</text>
-<text x="239" y="360" text-anchor="middle">индекс</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="426" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="20" y="426" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="432" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="14" y="432" width="132" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="438" width="132" height="52" rx="9"/>
-<rect class="concept-node accent" x="8" y="438" width="132" height="52" rx="9"/>
-<text x="74" y="468" text-anchor="middle">Post Info</text>
-<rect fill="var(--bg)" stroke="none" x="190" y="426" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="190" y="426" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="184" y="432" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="184" y="432" width="122" height="52" rx="9"/>
-<rect fill="var(--bg)" stroke="none" x="178" y="438" width="122" height="52" rx="9"/>
-<rect class="concept-node accent" x="178" y="438" width="122" height="52" rx="9"/>
-<text x="239" y="468" text-anchor="middle">User Info</text>
-<path fill="var(--bg)" stroke="none" d="M52 563 A114 7 0 0 1 280 563 V607 A114 7 0 0 1 52 607 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="166" cy="563" rx="114" ry="7"/>
-<path class="concept-db" d="M52 563 A114 7 0 0 1 280 563 V607 A114 7 0 0 1 52 607 Z"/>
-<ellipse class="concept-db" cx="166" cy="563" rx="114" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M46 569 A114 7 0 0 1 274 569 V613 A114 7 0 0 1 46 613 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="160" cy="569" rx="114" ry="7"/>
-<path class="concept-db" d="M46 569 A114 7 0 0 1 274 569 V613 A114 7 0 0 1 46 613 Z"/>
-<ellipse class="concept-db" cx="160" cy="569" rx="114" ry="7"/>
-<path fill="var(--bg)" stroke="none" d="M40 575 A114 7 0 0 1 268 575 V619 A114 7 0 0 1 40 619 Z"/>
-<ellipse fill="var(--bg)" stroke="none" cx="154" cy="575" rx="114" ry="7"/>
-<path class="concept-db" d="M40 575 A114 7 0 0 1 268 575 V619 A114 7 0 0 1 40 619 Z"/>
-<ellipse class="concept-db" cx="154" cy="575" rx="114" ry="7"/>
-<text x="154" y="597" text-anchor="middle">SQL: посты и профили</text>
-<text x="154" y="614" text-anchor="middle">Реплики чтения</text>
-<text class="concept-label" x="160" y="653" text-anchor="middle">После загрузки: права → ранжирование → ответ</text>
-</svg>
-</div>
-<figcaption id="sd-facebook-scaled-caption">Журнал событий независимо обновляет ленты и поисковый индекс.</figcaption></figure>
-<p><b>Разделение нагрузки:</b> Write/Read API, Timeline и fanout получают отдельные группы экземпляров и лимиты. На итоговых схемах также показан дополнительный поисковый контур; его сбой не должен останавливать обновление лент.</p>
-<p><b>Распределение данных.</b> Посты можно распределять по author_id: публикация и чтение истории автора попадают в один шард. Пакетная загрузка постов разных авторов обращается к нескольким шардам. Кандидаты ленты распределяются по user_id получателя. Число шардов и глубину запросов выбирают по измерениям, а не по числу пользователей само по себе.</p>
-<div class="table-wrap"><table><tr><th>Узкое место или сбой</th><th>Решение и цена</th></tr>
-<tr><td>Автор с миллионами подписчиков</td><td>Не рассылать его пост каждому сразу; подмешивать при чтении. Порог зависит от активности читателей и цены fanout</td></tr>
-<tr><td>Много неактивных читателей</td><td>Хранить ограниченное число кандидатов активным пользователям; при возвращении восстанавливать ленту из истории авторов</td></tr>
-<tr><td>Вирусный пост</td><td>Кеш содержимого и пакетная загрузка; ограничения срока кеша и инвалидация при изменении</td></tr>
-<tr><td>Fanout отстаёт</td><td>Обрабатывать получателей порциями, ограничивать параллелизм; при необходимости временно подмешивать свежие посты при чтении в ограниченном объёме</td></tr>
-
-
-<tr><td>Кеш кандидатов потерян</td><td>Ограниченное восстановление по активным пользователям; защита БД от одновременной перестройки всех лент</td></tr>
-<tr><td>Сбой ранжирования</td><td>Простая сортировка по времени для уже проверенных кандидатов; проверка доступа остаётся обязательной</td></tr></table></div>
-<p><b>События и перестройка.</b> Повторное применение изменений учитывает event_id и версию поста; удаление сохраняет версию или tombstone, чтобы запоздавшее событие не вернуло пост. Кеш кандидатов восстанавливается по истории авторов; события, пришедшие во время восстановления, применяются с учётом версий. Срок хранения журнала должен покрывать время восстановления.</p>
-<p>Основные метрики — p99 публикации и ленты, возраст самого старого события, скорость fanout, hit rate кешей, количество отброшенных по правам кандидатов и время восстановления. Нагрузочные сценарии должны включать популярных авторов и холодные кеши, а не только равномерный поток.</p>
-<h4>Дополнительный сценарий</h4>
-<details><summary><b>Как добавить поиск по постам?</b></summary>
-<p>Для примера — 100 млн поисковых запросов/сутки, около 1 160/с в среднем и 5 800/с на пике; цель p99 — до 500 мс. Индекс может отставать, но не должен раскрывать скрытые или удалённые посты.</p>
-<pre><span class="t">GET</span> /api/v1/search?q=java&amp;cursor=...
-  → posts + next_cursor</pre>
-<p><b>Поиск:</b> индекс возвращает ограниченный набор ID и оценок; затем Post Info и User Info пакетно загружают данные, проверяются права и выполняется финальное ранжирование. Если кандидатов мало, выборка расширяется в пределах deadline. Курсор фиксирует поисковую сессию или снимок и позицию сортировки.</p>
-<p>Механизм инвертированного индекса, версии событий и пересборка разобраны в ответе «Полнотекстовый поиск рядом с основной БД». Здесь важны <b>независимость индексатора от fanout и проверка приватности перед выдачей</b>.</p>
-<div class="table-wrap"><table><tr><th>Данные или сбой</th><th>Решение</th></tr>
-<tr><td>Инвертированный индекс: слово → post_id</td><td>Поиск кандидатов; документ также содержит поля для фильтрации и ранжирования</td></tr>
-<tr><td>Индексатор недоступен</td><td>Поиск отдаёт прежний индекс с проверкой актуальных прав, после восстановления события доигрываются из журнала</td></tr>
-<tr><td>Поисковый шард недоступен</td><td>Реплика; если допускаются частичные результаты, явно отметить неполноту ответа, не маскировать её под «ничего не найдено»</td></tr></table></div>
-<p>Поисковые документы — по post_id: запрос обходит нужные поисковые шарды, каждый возвращает своих кандидатов, координатор объединяет top-K. Поисковый индекс можно перестроить из снимка БД с известной позицией журнала, затем применить более новые события и переключить чтение. Срок хранения журнала должен покрывать время восстановления. Отдельно измеряются задержка индексации и p99 поиска.</p>
-</details>
-<p class="follow"><b>Почему нельзя всегда рассылать пост всем подписчикам?</b> Стоимость публикации растёт с числом получателей: пост автора с 10 млн подписчиков создаёт до 10 млн обновлений кандидатов. Гибрид переносит часть этой работы на чтение, когда пост нужен конкретному активному пользователю.</p>
-<p><b>Источники:</b> <a href="https://engineering.fb.com/2021/01/26/core-infra/news-feed-ranking/">Meta: многоэтапное ранжирование ленты</a>; <a href="https://engineering.fb.com/2013/10/24/core-infra/under-the-hood-building-posts-search/">Meta: построение и обновление индекса постов</a>. Это материалы о механизмах в разные годы; приведённая выше архитектура — самостоятельное решение для собеседования.</p>
+Твит + метаданные: условно <span class="n">1</span> КБ
+≈ <span class="n">5</span> ГБ/сутки без медиа,
+индексов, fanout и реплик</pre>
+<p>Цели: условно p95 сохранения твита до 300 мс, выдачи ленты до 500 мс, появление у активного подписчика за несколько секунд, доступность чтения 99,95%. Лента, поиск и счётчики допускают задержку. Автор должен увидеть свой подтверждённый твит сразу; запрет доступа нельзя обойти чтением устаревшего кандидата из кеша.</p>
+<p><b>Шаг 2 — Общая архитектура.</b> Начать с приложения и PostgreSQL: Users, Tweets, Social Graph, Timeline и Reactions. Лента при чтении выбирает последние публикации авторов из подписок; индекс по автору и порядку публикации позволяет читать авторскую ленту. При небольшом графе этого достаточно, массовый fanout заранее не нужен.</p>
+<figure class="concept" aria-labelledby="sd-twitter-base-caption"><svg id="sd-twitter-base" viewBox="0 0 344 384" role="img" aria-labelledby="sd-twitter-base-title sd-twitter-base-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-twitter-base-title">Twitter: базовая архитектура</title><desc id="sd-twitter-base-desc">Одно приложение хранит твиты, подписки и взаимодействия в PostgreSQL. Домашняя лента собирается при чтении из публикаций авторов, на которых подписан зритель.</desc><defs><marker id="sd-twitter-base-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M172 50 V106" marker-end="url(#sd-twitter-base-arrow)"/>
+<path class="concept-edge" d="M172 176 V244" marker-end="url(#sd-twitter-base-arrow)"/>
+<rect fill="var(--bg)" stroke="none" x="96" y="8" width="152" height="42" rx="8"/><rect class="concept-node plain" x="96" y="8" width="152" height="42" rx="8"/>
+<text x="172.0" y="34.0" text-anchor="middle">Пользователь</text>
+<rect fill="var(--bg)" stroke="none" x="42" y="106" width="260" height="70" rx="8"/><rect class="concept-node accent" x="42" y="106" width="260" height="70" rx="8"/>
+<text x="172.0" y="136.5" text-anchor="middle">Одно приложение</text>
+<text x="172.0" y="155.5" text-anchor="middle" class="concept-label">твиты / подписки / лента</text>
+<path fill="var(--bg)" stroke="none" d="M62 252 A110.0 8 0 0 1 282 252 V312 A110.0 8 0 0 1 62 312 Z"/><path class="concept-db" d="M62 252 A110.0 8 0 0 1 282 252 V312 A110.0 8 0 0 1 62 312 Z"/><ellipse class="concept-db" cx="172.0" cy="252" rx="110.0" ry="8"/>
+<text x="172.0" y="275" text-anchor="middle">PostgreSQL</text>
+<text x="172.0" y="294" text-anchor="middle" class="concept-label">публикации / граф / реакции</text>
+</svg><figcaption id="sd-twitter-base-caption">Старт: приложение и PostgreSQL, домашняя лента строится при чтении. Кеш кандидатов и асинхронный fanout добавляются после измерения стоимости сборки ленты.</figcaption></figure>
+<p><b>Путь публикации и чтения:</b></p>
+<ol>
+<li>Сервер проверяет пользователя, ограничения текста, вложения и ключ идемпотентности; сохраняет твит и Outbox одной транзакцией.</li>
+<li>После commit автор получает tweet_id. Его авторская лента читается из авторитетного хранилища или с гарантией read-your-writes.</li>
+<li>Событие обычного автора запускает пакетное добавление tweet_id в ограниченные по длине ленты активных подписчиков. Событие горячего автора обновляет его авторскую ленту, без массовой записи всем подписчикам.</li>
+<li>Timeline API объединяет кандидатов из кеша с последними твитами горячих авторов и собственными публикациями пользователя, сортирует по выбранному порядку.</li>
+<li>Содержимое, авторы и исходники ретвитов загружаются пакетно. После проверки видимости и устранения дублей возвращается страница с курсором.</li>
+</ol>
+<p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
+<div class="table-wrap"><table><tr><th>Данные</th><th>Механизм</th></tr>
+<tr><td>tweet</td><td>id, author_id, text, kind, referenced_tweet_id, created_at, version, deleted_at; ORIGINAL, REPLY или REPOST</td></tr>
+<tr><td>follow</td><td>follower_id, followee_id, status, version; уникальная пара, статус PENDING для запроса к закрытому аккаунту</td></tr>
+<tr><td>like</td><td>Уникальная пара (user_id, tweet_id); повтор лайка не увеличивает число реакций</td></tr>
+<tr><td>home_timeline</td><td>Ограниченный набор кандидатов (viewer_id, activity_id, sort_key), а не копии текста</td></tr>
+<tr><td>outbox / fanout_job</td><td>event_id, tweet_id, version; прогресс обхода подписчиков и повторяемые пакеты</td></tr>
+</table></div>
+<p>Индексы графа нужны <b>в обе стороны</b>: кого читает пользователь и кто читает автора. Для твитов — <code>(author_id, created_at, id)</code>. Уникальный идентификатор с временной составляющей удобен для маршрутизации и порядка, но не доказывает глобальный порядок commit. Если ID формируются на узлах, нужно предотвращать совпадение идентификаторов узла и корректно обрабатывать откат часов.</p>
+<div class="table-wrap"><table><tr><th>API</th><th>Назначение</th></tr>
+<tr><td><code><span class="t">POST</span> /tweets</code><br><code><span class="p">Idempotency-Key</span>: ...</code></td><td>Создать оригинал или ответ; тело содержит ссылку на исходник для ответа</td></tr>
+<tr><td><code><span class="k">DELETE</span> /tweets/{id}</code></td><td>Удаление владельцем через tombstone и событие</td></tr>
+<tr><td><code><span class="t">PUT</span> /users/{id}/follow</code><br><code><span class="k">DELETE</span> /users/{id}/follow</code></td><td>Создать подписку или запрос доступа, отписаться</td></tr>
+<tr><td><code><span class="t">PUT</span> /tweets/{id}/like</code><br><code><span class="k">DELETE</span> /tweets/{id}/like</code></td><td>Идемпотентное изменение реакции</td></tr>
+<tr><td><code><span class="t">PUT</span> /tweets/{id}/repost</code></td><td>Создать ретвит с уникальностью по пользователю и исходнику</td></tr>
+<tr><td><code><span class="t">GET</span> /timeline/home?cursor=...</code><br><code><span class="t">GET</span> /users/{id}/tweets?cursor=...</code></td><td>Домашняя и авторская ленты</td></tr>
+</table></div>
+<p><b>Ответы и ретвиты.</b> Ответ — отдельная публикация с reply_to; просмотр ветки требует индекса по исходному твиту и курсорной пагинации. Ретвит — отдельная активность со ссылкой на оригинал, текст не копируется. При удалении оригинала ретвит не должен продолжать раскрывать его содержимое. Если оригинал и несколько ретвитов попали в одну страницу, продукт может показать одну карточку с причинами появления; транспортные дубли устраняются по activity_id, а смысловое объединение — по исходному tweet_id.</p>
+<p><b>Гибридный fanout.</b> Стоимость распространения — не число твитов, а число обновляемых лент. При среднем числе 200 активных получателей 5 млн твитов дают около 1 млрд вставок кандидатов в сутки, порядка 12 тыс./с в среднем. Но одна публикация автора с 10 млн подписчиков сама создаст огромный всплеск. Порог перевода автора в режим чтения определяется активной аудиторией, частотой публикаций и фактической стоимостью чтения и записи, а не только числом подписчиков.</p>
+<p>Задание делится по диапазонам идентификаторов подписчиков; работник сохраняет keyset-курсор и прогресс пакета, повтор вставки уникального кандидата безопасен. Один consumer не держит миллион получателей в памяти и не блокирует очередь до конца рассылки. Кеш хранит последние N кандидатов с TTL, не всю историю. Неактивному пользователю лента восстанавливается при возвращении из авторских журналов, при необходимости в фоне с ограничением ресурсов.</p>
+<p><b>Гонки подписки и распространения.</b> После follow фоновое заполнение добавляет последние публикации нового автора. Оно перекрывается с текущим fanout, дубли удаляются по activity_id. Это закрывает окно, когда обход подписчиков уже прошёл пользователя, а подписка только появилась. После unfollow кандидаты можно удалить асинхронно, но выдача сразу учитывает актуальную подписку; поздний fanout не должен вернуть публикацию по отозванной подписке. Появление того же оригинала через ретвит другого действующего источника оценивается отдельно. Переход горячего автора между режимами выполняется с периодом перекрытия двух путей и дедупликацией, иначе появляются пропуски.</p>
+<p><b>Пагинация и порядок.</b> Для обратной хронологии используется курсор по <code>(created_at, id)</code>, а не OFFSET. Новые записи не сдвигают уже просмотренные страницы. Запоздало обработанное событие может попасть выше текущего курсора; это не строгий снимок всей ленты. Обновление верхней части и клиентская дедупликация дают согласованное с продуктом поведение; строгая стабильная сессия потребовала бы зафиксировать набор кандидатов или снимок выдачи. При будущем ранжировании курсор должен относиться к версии ранжированной выдачи.</p>
+<p><b>Приватность и удаление.</b> Кандидат в Redis не даёт права читать твит. Перед выдачей проверяются tombstone, закрытость автора, одобренная подписка и блокировки; для ретвита — ещё и доступ к оригиналу. Требование немедленного отзыва доступа означает чтение авторитетного состояния политики либо протокол синхронной инвалидации; кеш с TTL сам по себе этой гарантии не даёт. Если проверить право невозможно, приватный контент не выдаётся.</p>
+<p><b>Поиск, хештеги и счётчики.</b> Индексатор обрабатывает события с версией, чтобы старое обновление не отменило удаление. Поиск возвращает кандидатов, финальный слой снова проверяет доступ. Популярность хештегов можно считать потоком по временным окнам с дедупликацией и ограничением влияния одного автора; это отдельная приблизительная проекция. Лайки и число ретвитов агрегируются асинхронно, источником истины остаются уникальные действия, а не инкременты при каждом повторе запроса.</p>
+<p>Вложения загружаются напрямую в объектное хранилище, готовые файлы выдаёт CDN. Твит ссылается только на проверенный объект владельца. Для закрытых публикаций доступ к файлам защищается отдельно: разрешённая карточка не должна превращаться в бессрочную публичную ссылку на приватное медиа.</p>
+<p><b>Шаг 4 — Масштабирование и узкие места.</b> Tweet API и Timeline API масштабируются независимо. Твиты распределяются по автору или маршрутизируемому tweet_id, кеш домашних лент — по viewer_id. Графу нужны проекции в обе стороны; изменение подписки фиксируется одним владельцем записи, обратная проекция обновляется событиями. Независимые двусторонние UPDATE без протокола восстановления разойдутся после сбоя.</p>
+<figure class="concept" aria-labelledby="sd-twitter-scaled-caption"><svg id="sd-twitter-scaled" viewBox="0 0 344 724" role="img" aria-labelledby="sd-twitter-scaled-title sd-twitter-scaled-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-twitter-scaled-title">Twitter: архитектура после масштабирования</title><desc id="sd-twitter-scaled-desc">Tweet API сохраняет публикацию и Outbox в PostgreSQL. Публикатор передаёт события в брокер, Fanout обновляет кеш домашних лент по графу подписок, индексатор обновляет поиск. Timeline API объединяет кеш с твитами горячих авторов и пакетно загружает разрешённые публикации.</desc><defs><marker id="sd-twitter-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M172 50 V76 H78 V110" marker-end="url(#sd-twitter-scaled-arrow)"/>
+<path class="concept-edge" d="M172 76 H258 V110" marker-end="url(#sd-twitter-scaled-arrow)"/>
+<path class="concept-edge" d="M78 164 V230" marker-end="url(#sd-twitter-scaled-arrow)"/>
+<path class="concept-edge" d="M258 164 V230" marker-end="url(#sd-twitter-scaled-arrow)"/>
+<path class="concept-edge" d="M188 144 H170 V264 H148" marker-end="url(#sd-twitter-scaled-arrow)"/>
+<path class="concept-edge" d="M78 296 V362" marker-end="url(#sd-twitter-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M148 390 H188" marker-end="url(#sd-twitter-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M258 418 V446 H78 V488" marker-end="url(#sd-twitter-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M258 418 V488" marker-end="url(#sd-twitter-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M78 542 V636" marker-end="url(#sd-twitter-scaled-arrow)"/>
+<path class="concept-edge" d="M258 542 V636" marker-end="url(#sd-twitter-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M148 516 H170 V434 H338 V264 H328" marker-end="url(#sd-twitter-scaled-arrow)" stroke-dasharray="4 4"/>
+<rect fill="var(--bg)" stroke="none" x="96" y="8" width="152" height="42" rx="8"/><rect class="concept-node plain" x="96" y="8" width="152" height="42" rx="8"/>
+<text x="172.0" y="34.0" text-anchor="middle">Пользователь</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="98" width="140" height="54" rx="8"/><rect class="concept-node accent" x="20" y="98" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="104" width="140" height="54" rx="8"/><rect class="concept-node accent" x="14" y="104" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="110" width="140" height="54" rx="8"/><rect class="concept-node accent" x="8" y="110" width="140" height="54" rx="8"/>
+<text x="78.0" y="132.5" text-anchor="middle">Tweet API</text>
+<text x="78.0" y="151.5" text-anchor="middle" class="concept-label">публикация</text>
+<rect fill="var(--bg)" stroke="none" x="200" y="98" width="140" height="54" rx="8"/><rect class="concept-node accent" x="200" y="98" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="194" y="104" width="140" height="54" rx="8"/><rect class="concept-node accent" x="194" y="104" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="188" y="110" width="140" height="54" rx="8"/><rect class="concept-node accent" x="188" y="110" width="140" height="54" rx="8"/>
+<text x="258.0" y="132.5" text-anchor="middle">Timeline API</text>
+<text x="258.0" y="151.5" text-anchor="middle" class="concept-label">выдача ленты</text>
+<path fill="var(--bg)" stroke="none" d="M8 238 A70.0 8 0 0 1 148 238 V288 A70.0 8 0 0 1 8 288 Z"/><path class="concept-db" d="M8 238 A70.0 8 0 0 1 148 238 V288 A70.0 8 0 0 1 8 288 Z"/><ellipse class="concept-db" cx="78.0" cy="238" rx="70.0" ry="8"/>
+<text x="78.0" y="261" text-anchor="middle">Твиты</text>
+<text x="78.0" y="280" text-anchor="middle" class="concept-label">PostgreSQL</text>
+<path fill="var(--bg)" stroke="none" d="M196 230 H320 L328 238 V286 L320 294 H196 L188 286 V238 Z"/><path class="concept-cache" d="M196 230 H320 L328 238 V286 L320 294 H196 L188 286 V238 Z"/>
+<text x="258" y="257" text-anchor="middle">Redis</text>
+<text x="258" y="277" text-anchor="middle" class="concept-label">кандидаты лент</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="350" width="140" height="56" rx="8"/><rect class="concept-node warning" x="20" y="350" width="140" height="56" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="356" width="140" height="56" rx="8"/><rect class="concept-node warning" x="14" y="356" width="140" height="56" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="362" width="140" height="56" rx="8"/><rect class="concept-node warning" x="8" y="362" width="140" height="56" rx="8"/>
+<text x="78.0" y="385.5" text-anchor="middle">Outbox</text>
+<text x="78.0" y="404.5" text-anchor="middle" class="concept-label">Publisher</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="145" cy="365" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="145" cy="365" r="10"/><text x="145" y="369" text-anchor="middle">W</text></g>
+<path fill="var(--bg)" stroke="none" d="M198 370 H320 A8 22 0 0 1 320 414 H198 A8 22 0 0 1 198 370 Z"/><path class="concept-broker" d="M198 370 H320 A8 22 0 0 1 320 414 H198 A8 22 0 0 1 198 370 Z"/><ellipse fill="var(--bg)" cx="198" cy="392" rx="8" ry="22"/><ellipse class="concept-broker" cx="198" cy="392" rx="8" ry="22"/>
+<text x="262" y="388" text-anchor="middle">Брокер</text>
+<text x="262" y="406" text-anchor="middle" class="concept-label">события твитов</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="476" width="140" height="54" rx="8"/><rect class="concept-node warning" x="20" y="476" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="482" width="140" height="54" rx="8"/><rect class="concept-node warning" x="14" y="482" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="488" width="140" height="54" rx="8"/><rect class="concept-node warning" x="8" y="488" width="140" height="54" rx="8"/>
+<text x="78.0" y="510.5" text-anchor="middle">Fanout</text>
+<text x="78.0" y="529.5" text-anchor="middle" class="concept-label">домашние ленты</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="145" cy="491" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="145" cy="491" r="10"/><text x="145" y="495" text-anchor="middle">W</text></g>
+<rect fill="var(--bg)" stroke="none" x="200" y="476" width="140" height="54" rx="8"/><rect class="concept-node warning" x="200" y="476" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="194" y="482" width="140" height="54" rx="8"/><rect class="concept-node warning" x="194" y="482" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="188" y="488" width="140" height="54" rx="8"/><rect class="concept-node warning" x="188" y="488" width="140" height="54" rx="8"/>
+<text x="258.0" y="510.5" text-anchor="middle">Индексатор</text>
+<text x="258.0" y="529.5" text-anchor="middle" class="concept-label">поиск</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="325" cy="491" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="325" cy="491" r="10"/><text x="325" y="495" text-anchor="middle">W</text></g>
+<path fill="var(--bg)" stroke="none" d="M8 644 A70.0 8 0 0 1 148 644 V694 A70.0 8 0 0 1 8 694 Z"/><path class="concept-db" d="M8 644 A70.0 8 0 0 1 148 644 V694 A70.0 8 0 0 1 8 694 Z"/><ellipse class="concept-db" cx="78.0" cy="644" rx="70.0" ry="8"/>
+<text x="78.0" y="667" text-anchor="middle">Подписки</text>
+<text x="78.0" y="686" text-anchor="middle" class="concept-label">граф / блокировки</text>
+<path fill="var(--bg)" stroke="none" d="M188 644 A70.0 8 0 0 1 328 644 V694 A70.0 8 0 0 1 188 694 Z"/><path class="concept-db" d="M188 644 A70.0 8 0 0 1 328 644 V694 A70.0 8 0 0 1 188 694 Z"/><ellipse class="concept-db" cx="258.0" cy="644" rx="70.0" ry="8"/>
+<text x="258.0" y="667" text-anchor="middle">Поиск</text>
+<text x="258.0" y="686" text-anchor="middle" class="concept-label">текст / хештеги</text>
+</svg><figcaption id="sd-twitter-scaled-caption">Обычные авторы пополняют кеш лент через fanout; твиты горячих авторов подмешиваются при чтении. Timeline API загружает содержимое пакетно и проверяет видимость. Пунктир — фоновые события, обновление кандидатов лент и индекса поиска.</figcaption></figure>
+<div class="table-wrap"><table><tr><th>Ограничение или сбой</th><th>Решение и компромисс</th></tr>
+<tr><td>Горячий автор</td><td>Подмешивание при чтении и кеш авторской ленты; лимит дорогих источников и пакетные чтения. Перенос всей системы на fanout-on-read перегрузит сборку ленты</td></tr>
+<tr><td>Потеря Redis</td><td>Кеш восстанавливается из журналов публикаций и графа, постепенно, с ограничением нагрузки. Последние кандидаты в Redis не являются единственной копией твита</td></tr>
+<tr><td>Fanout отстал</td><td>Сохранённый твит доступен в авторской ленте, домашняя задерживается; контролировать возраст заданий, а не только длину очереди</td></tr>
+<tr><td>Повтор и перестановка событий</td><td>Уникальные event_id и кандидаты, версия публикации и tombstone; повтор не создаёт второй твит и не оживляет удалённый</td></tr>
+<tr><td>Мало видимых кандидатов</td><td>Дочитывать ограниченное число страниц источников после фильтрации; ограничение бюджета предотвращает бесконечную дорогую сборку</td></tr>
+<tr><td>Брокер недоступен</td><td>Outbox сохраняет события, публикация и выдача уже сохранённого могут продолжаться до исчерпания ресурсов; затем backpressure</td></tr>
+<tr><td>Много обращений к одному твиту</td><td>Кеш содержимого и профиля, пакетная загрузка, CDN для медиа; политику доступа проверять отдельно от кешируемого текста</td></tr>
+<tr><td>Злоупотребления</td><td>Лимиты публикаций и подписок на аккаунт, проверки спама, отдельная модерация. Отказ модерации меняет видимость через версионированное событие</td></tr>
+</table></div>
+<p>Контролировать <b>p95 выдачи, задержку появления твита, fanout на одну публикацию, возраст очереди, долю фильтруемых кандидатов, cache hit ratio и стоимость чтения горячих авторов</b>. Нагрузочные сценарии должны включать публикацию знаменитости, массовое возвращение пользователей после простоя и удаление исходника во время выдачи ретвитов.</p>
+<p class="follow"><b>Почему не разослать каждый твит всем подписчикам?</b> Для обычных авторов это ускоряет чтение, но публикация знаменитости превращается в миллионы записей, многие для неактивных пользователей. Гибридная схема распространяет обычных авторов заранее, горячих читает по запросу; цена — более сложное объединение и восстановление ленты.</p>
     </div></div></article>
 <article id="q281" class="responsive-code" hidden><div class="crumbs">System Design</div><h2 tabindex="-1">281. Спроектируйте YouTube <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
 <p><b>Видеосервис принимает оригинал, асинхронно готовит несколько качеств и доставляет видео через CDN.</b> API хранит метаданные в PostgreSQL и выдаёт ссылки на прямую загрузку в объектное хранилище. Фоновые транскодеры создают сегменты и манифест для адаптивного воспроизведения.</p>
