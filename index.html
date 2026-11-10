@@ -10288,17 +10288,6 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <text x="160" y="257" text-anchor="middle">PostgreSQL: code → URL</text>
 </svg><figcaption id="sd-url-base-caption">Старт: одно приложение и PostgreSQL.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
-<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
-<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
-<tr><td><code>short_link</code></td><td><code>short_code</code> (PK)<br>
-<code>original_url</code><br>
-<code>owner_id</code><br>
-<code>created_at</code><br>
-<code>expires_at</code><br>
-<code>is_active</code></td></tr>
-</table></div>
-<p>Генерируемые коды и пользовательские alias используют один уникальный short_code. Аналитика переходов обрабатывается отдельно.</p>
-
 <p><b>API и модель данных.</b> Создание принимает исходный URL, необязательные alias и срок действия:</p>
 <pre><span class="t">POST</span> /api/v1/urls <span class="t">HTTP</span>/<span class="n">1.1</span>
 <span class="t">Content</span>-<span class="t">Type</span>: application/json
@@ -10308,7 +10297,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
   <span class="s">"custom_alias"</span>: <span class="k">null</span>,
   <span class="s">"expires_at"</span>: <span class="k">null</span>
 }</pre>
-<p>После commit возвращается <code><span class="n">201</span> <span class="t">Created</span></code> с короткой ссылкой.</p>
+<p>Сервис сохраняет <code>short_code → original_url</code> вместе со статусом и сроком действия. После commit возвращает <code><span class="n">201</span> <span class="t">Created</span></code> с короткой ссылкой.</p>
 <p><b>Генерация кода.</b> Простой вариант — случайный код из 7 символов Base62: латинские буквы обоих регистров и цифры. Пространство содержит <code>62⁷ ≈ <span class="n">3</span>,<span class="n">52</span> трлн</code> комбинаций, но случайная генерация допускает коллизии. Нужно выполнить INSERT с уникальным ограничением и при конфликте случайного кода сгенерировать другой. Для занятого пользовательского alias возвращается <code><span class="n">409</span> <span class="t">Conflict</span></code>.</p>
 <p><b>SELECT перед INSERT не обеспечивает уникальность:</b> два запроса могут одновременно увидеть свободный код. Base62 — кодирование, а не хеширование или гарантия уникальности. Генерируемые коды и alias должны использовать общее уникальное пространство.</p>
 <p><b>Путь создания:</b> проверить авторизацию, лимит запросов, схему URL (http/https) и длину → получить код → атомарно сохранить запись → после commit вернуть ссылку. Скачивать целевую страницу для создания ссылки не требуется; если нужны preview или проверка содержимого, исходящие запросы требуют защиты от SSRF.</p>
@@ -10322,6 +10311,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Гарантия действует внутри одного пространства генерации. Для этой альтернативы alias получают отдельный префикс, а смена ключа — новое пространство кодов; старые ссылки сохраняются. Это сложнее случайного кода с INSERT и повтором, поэтому в основной схеме FF1 не используется. Код ссылки сам по себе не является авторизацией.</p>
 
 <p><b>Шаг 4 — Масштабирование и узкие места.</b></p>
+<p>При пике в 38 600 переходов/с базовая схема выполняет столько же поисков по ключу в PostgreSQL. <b>Популярные ссылки читаются многократно</b>, поэтому Redirect Service сначала проверяет кеш. При 95% попаданий остаётся около 1 930 чтений/с. Их распределяют по репликам, чтобы всплеск переходов не занимал соединения primary, где создаются и отключаются ссылки.</p>
 <figure class="concept" aria-labelledby="sd-url-scaled-caption">
 <svg id="sd-url-scaled" viewBox="0 0 320 606" role="img" aria-labelledby="sd-url-scaled-title sd-url-scaled-desc" xmlns="http://www.w3.org/2000/svg">
 <title id="sd-url-scaled-title">Сокращатель: независимое масштабирование записи и чтения</title>
@@ -10354,7 +10344,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <rect fill="var(--bg)" x="96" y="550" width="128" height="44" rx="8"/><rect class="concept-node warning" x="96" y="550" width="128" height="44" rx="8"/><text x="160" y="578" text-anchor="middle">Аналитика</text>
 <g role="img" aria-label="Фоновый обработчик — worker"><circle cx="224" cy="556" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="224" cy="556" r="10"/><text x="224" y="560" text-anchor="middle">W</text></g>
 </svg><figcaption id="sd-url-scaled-caption">Write Service пишет в primary; Read Service обслуживает переходы через кеш и реплики.</figcaption></figure>
-<p><b>Выбор репликации.</b> При 95% попаданий кеша до реплик доходит около <b>1 930 чтений/с</b>. В выбранной схеме нет чтений из primary: для редких записей допустим более дорогой commit. PostgreSQL настроен на <code>synchronous_commit=remote_apply</code> и ожидание <b>всего набора обслуживающих чтение реплик</b> через <code>synchronous_standby_names</code>; одна настройка remote_apply сама этого не задаёт. Подтверждённая запись уже применена на каждой из них. Отказ участника задерживает запись: перед исключением из набора его убирают из маршрутизации чтений; новую реплику допускают только после догоняющей синхронизации. См. <a href="https://www.postgresql.org/docs/current/runtime-config-wal.html#GUC-SYNCHRONOUS-COMMIT">настройки PostgreSQL</a>.</p>
+<p><b>Выбор репликации.</b> В выбранной схеме нет чтений из primary: для редких записей допустим более дорогой commit. PostgreSQL настроен на <code>synchronous_commit=remote_apply</code> и ожидание <b>всего набора обслуживающих чтение реплик</b> через <code>synchronous_standby_names</code>; одна настройка remote_apply сама этого не задаёт. Подтверждённая запись уже применена на каждой из них. Отказ участника задерживает запись: перед исключением из набора его убирают из маршрутизации чтений; новую реплику допускают только после догоняющей синхронизации. См. <a href="https://www.postgresql.org/docs/current/runtime-config-wal.html#GUC-SYNCHRONOUS-COMMIT">настройки PostgreSQL</a>.</p>
 <p><b>Свежесть блокировки.</b> Запись кеша живёт максимум 5 с и не дольше срока ссылки. Бюджет отсчитывается от начала короткого SELECT на синхронной реплике, а при заполнении кеша вычитается уже прошедшее время; запоздалый результат не кешируется и перепроверяется перед redirect. Нельзя использовать старый транзакционный снимок или продлевать TTL при cache hit. Инвалидация ускоряет обновление, но гонку заполнения закрывает этот предел свежести. Уже выданный redirect отозвать невозможно.</p>
 <p><b>Альтернатива.</b> Асинхронные реплики и ограниченный запрос в primary при промахе позволяют создавать ссылки без ожидания всех читателей. Цена — нагрузка на primary, защита от перебора кодов и отдельное решение для устаревшего статуса. При отказе Redis выбранная схема ограничивает поток к репликам и сбрасывает лишнюю нагрузку. Аналитика не блокирует переход; коды не переиспользуются.</p>
     </div></div></article>
@@ -10565,32 +10555,9 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
   <text x="196" y="962" text-anchor="middle">Пунктир — передача через брокер</text>
 </svg><figcaption id="sd-notify-base-caption">HTTP API и Kafka Consumer вызывают общую логику регистрации. На старте API, consumer и обработчик каналов работают внутри одного приложения; данные и Outbox сохраняются одной транзакцией.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
-<p><b>Приём задания.</b> HTTP API возвращает <code><span class="n">202</span> <span class="t">Accepted</span></code> с ID после commit. Kafka Consumer подтверждает offset только после сохранения уведомления и Outbox; повтор сообщения возвращает уже существующее уведомление по ключу идемпотентности. Тот же ключ с другим содержимым — ошибка, а не новая отправка. Некорректное Kafka-задание переводится в очередь ошибок с фиксацией причины и продвижением offset после надёжного сохранения ошибки, чтобы не блокировать партицию бесконечными повторами.</p>
+<p><b>Приём задания.</b> При регистрации сервис фиксирует версию шаблона или готовый текст, чтобы повторная попытка отправила то же содержимое. HTTP API возвращает <code><span class="n">202</span> <span class="t">Accepted</span></code> с ID после commit. Kafka Consumer подтверждает offset только после сохранения уведомления и Outbox; повтор сообщения возвращает уже существующее уведомление по ключу идемпотентности. Тот же ключ с другим содержимым — ошибка, а не новая отправка. Некорректное Kafka-задание переводится в очередь ошибок с фиксацией причины и продвижением offset после надёжного сохранения ошибки, чтобы не блокировать партицию бесконечными повторами.</p>
 <p><b>Входной Kafka-топик.</b> Для начала достаточно одного топика заданий с полем <code>channel</code>; обработчики email, SMS и push получают задания из отдельных внутренних очередей. Это позволяет бизнес-сервисам использовать единый контракт. Подтверждение Kafka producer означает приём брокером, а не регистрацию уведомления и не доставку получателю. Если задание должно появиться вместе с бизнес-изменением, например созданием заказа, бизнес-сервис сохраняет собственный Outbox в той же транзакции.</p>
 <p><b>Публикация из Outbox.</b> Уведомление и событие сохраняются одной транзакцией. После commit фоновый publisher читает Outbox, отправляет событие в брокер и после подтверждения отмечает отправленным. Вместо опроса можно использовать CDC, например Debezium. Сбой после отправки, но до отметки допускает повтор, поэтому обработчики используют стабильный event_id и идемпотентную обработку. Publisher может работать внутри приложения; на общей схеме он свёрнут в стрелку.</p>
-<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
-<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
-<tr><td><code>notification</code></td><td><code>id</code> (PK)<br>
-<code>idempotency_key</code> (UQ)<br>
-<code>recipient_id</code><br>
-<code>channel</code><br>
-<code>template_version</code><br>
-<code>content</code><br>
-<code>parameters</code><br>
-<code>status</code><br>
-<code>attempt_count</code><br>
-<code>attempt_token</code><br>
-<code>lease_until</code><br>
-<code>provider_operation_id</code><br>
-<code>expires_at</code><br>
-<code>next_attempt_at</code></td></tr>
-<tr><td><code>notification_outbox</code></td><td><code>event_id</code> (PK)<br>
-<code>notification_id</code> (FK)<br>
-<code>event_type</code><br>
-<code>payload</code></td></tr>
-</table></div>
-<p>Фиксируется версия шаблона либо готовое содержимое. Ключ идемпотентности уникален и при необходимости содержит пространство имён клиента; другой запрос с тем же ключом возвращает конфликт.</p>
-
 <p>Запрос:</p>
 <pre>{
   <span class="p">"idempotency_key"</span>:
@@ -10612,8 +10579,11 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <span class="t">ACCEPTED</span> → <span class="t">DELIVERED</span> / <span class="t">UNDELIVERABLE</span>
 <span class="t">PENDING</span> / <span class="t">RETRY</span> → <span class="t">EXPIRED</span></pre>
 <p><code><span class="t">ACCEPTED</span></code> означает принятие провайдером. <code><span class="t">DELIVERED</span></code> выставляется по подтверждению, если канал его поддерживает.</p>
-<p><b>Самый сложный случай — таймаут после отправки:</b> провайдер мог принять сообщение, а ответ потерялся. Повтор безопасен, если провайдер поддерживает идемпотентный ключ. Без такой поддержки полностью исключить дубли нельзя — это нужно согласовать как ограничение.</p>
+<details><summary><b>Самопроверка.</b> SMS-провайдер не ответил за пять секунд. При каком условии можно безопасно повторить отправку?</summary>
+<p>Провайдер мог принять SMS до таймаута. Если он поддерживает идемпотентность, worker повторяет запрос с тем же ключом в пределах срока его действия. Иначе повтор может отправить второе SMS. Если провайдер позволяет узнать результат по идентификатору операции, сначала стоит сверить статус.</p>
+</details>
 <p><b>Шаг 4 — Масштабирование и узкие места.</b></p>
+<p><b>Медленный SMS-провайдер удерживает обработчик до ответа или таймаута.</b> Если все каналы используют общий пул, очередь email и push тоже начинает расти. Отдельные очереди и пулы изолируют каналы. Внутри SMS часть квоты и обработчиков выделяют кодам подтверждения, иначе массовая рассылка задержит код до истечения его срока.</p>
 <figure class="concept" aria-labelledby="sd-notify-scaled-caption"><svg viewBox="0 0 392 974" role="img" aria-labelledby="sd-notify-scaled-title sd-notify-scaled-desc" id="sd-notify-scaled" xmlns="http://www.w3.org/2000/svg">
   <title id="sd-notify-scaled-title">Сервис уведомлений: HTTP API и Kafka Consumer</title>
   <desc id="sd-notify-scaled-desc">Бизнес-сервисы передают задания через HTTP API или входной топик Kafka. Kafka Consumer и HTTP API вызывают общую логику проверки, идемпотентной регистрации и сохранения уведомления вместе с Outbox. События из Outbox публикуются в очереди email, SMS и push. Независимые обработчики каналов вызывают провайдеров. Ответ HTTP 202 возвращается после сохранения, offset Kafka подтверждается после сохранения.</desc>
@@ -10825,43 +10795,11 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 </svg><figcaption id="sd-twitter-base-caption">Старт: приложение и PostgreSQL, домашняя лента строится при чтении. Кеш кандидатов и асинхронный fanout добавляются после измерения стоимости сборки ленты.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
 <p><b>Надёжный запуск fanout.</b> Твит и событие в Outbox фиксируются вместе. Публикация выполняется фоновым опросом или CDC и повторяется после сбоя; fanout и индексатор устраняют дубли по event_id. На схеме этот механизм свёрнут в стрелку «публикация из Outbox».</p>
-<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
-<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
-<tr><td><code>tweet</code></td><td><code>id</code> (PK)<br>
-<code>author_id</code><br>
-<code>text</code><br>
-<code>kind</code><br>
-<code>referenced_tweet_id</code> (FK → tweet)<br>
-<code>created_at</code><br>
-<code>version</code><br>
-<code>deleted_at</code></td></tr>
-<tr><td><code>follow</code></td><td><code>follower_id</code> (PK)<br>
-<code>followee_id</code> (PK)<br>
-<code>status</code><br>
-<code>version</code></td></tr>
-<tr><td><code>like</code></td><td><code>user_id</code> (PK)<br>
-<code>tweet_id</code> (PK, FK → tweet)</td></tr>
-<tr><td><code>outbox</code></td><td><code>event_id</code> (PK)<br>
-<code>tweet_id</code> (FK)<br>
-<code>event_type</code><br>
-<code>version</code><br>
-<code>payload</code><br>
-<code>published_at</code></td></tr>
-<tr><td><code>fanout_job</code></td><td><code>id</code> (PK)<br>
-<code>event_id</code> (FK)<br>
-<code>subscriber_range</code><br>
-<code>last_follower_id</code><br>
-<code>status</code><br>
-<code>attempt_token</code><br>
-<code>lease_until</code></td></tr>
-</table></div>
-<p>Пара follow и пара like уникальны. Домашняя лента home_timeline(viewer_id, activity_id, sort_key) — восстанавливаемый кеш Redis, не дополнительная таблица PostgreSQL. Профили и блокировки относятся к графу пользователей.</p>
-
 <div class="table-wrap"><table><tr><th>API</th><th>Назначение</th></tr>
 <tr><td><code><span class="t">POST</span> /tweets</code><br><code><span class="p">Idempotency-Key</span>: ...</code></td><td>Создать оригинал или ответ; тело содержит ссылку на исходник для ответа</td></tr>
 <tr><td><code><span class="k">DELETE</span> /tweets/{id}</code></td><td>Удаление владельцем через tombstone и событие</td></tr>
-<tr><td><code><span class="t">PUT</span> /users/{id}/follow</code><br><code><span class="k">DELETE</span> /users/{id}/follow</code></td><td>Создать подписку или запрос доступа, отписаться</td></tr>
-<tr><td><code><span class="t">PUT</span> /tweets/{id}/like</code><br><code><span class="k">DELETE</span> /tweets/{id}/like</code></td><td>Идемпотентное изменение реакции</td></tr>
+<tr><td><code><span class="t">PUT</span> /users/{id}/follow</code><br><code><span class="k">DELETE</span> /users/{id}/follow</code></td><td>Создать подписку или запрос доступа, отписаться. Пара «подписчик, автор» уникальна</td></tr>
+<tr><td><code><span class="t">PUT</span> /tweets/{id}/like</code><br><code><span class="k">DELETE</span> /tweets/{id}/like</code></td><td>Один лайк на пару «пользователь, твит». Повторный PUT сохраняет ту же реакцию</td></tr>
 <tr><td><code><span class="t">PUT</span> /tweets/{id}/repost</code></td><td>Создать ретвит с уникальностью по пользователю и исходнику</td></tr>
 <tr><td><code><span class="t">GET</span> /timeline/home?cursor=...</code><br><code><span class="t">GET</span> /users/{id}/tweets?cursor=...</code></td><td>Домашняя и авторская ленты</td></tr>
 </table></div>
@@ -10934,6 +10872,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p><b>Пакетная проверка видимости.</b> Timeline API выбирает кандидатов с запасом, пакетно загружает твиты и передаёт набор авторов и исходных публикаций сервису доступа. Тот проверяет актуальные подписки, приватность, блокировки и tombstone по авторитетным данным. Это несколько пакетных обращений на страницу вместо запроса на каждую карточку; если после фильтрации карточек мало, дочитываются кандидаты. При недоступности обязательной проверки закрытый контент не выдаётся; обычный TTL-кеш прав не обеспечивает немедленный отзыв доступа.</p>
 <p><b>Пагинация и порядок.</b> Для обратной хронологии используется курсор по <code>(created_at, id)</code>, а не OFFSET. Новые записи не сдвигают уже просмотренные страницы. Запоздало обработанное событие может попасть выше текущего курсора; это не строгий снимок всей ленты. Обновление верхней части и клиентская дедупликация дают согласованное с продуктом поведение; строгая стабильная сессия потребовала бы зафиксировать набор кандидатов или снимок выдачи. При будущем ранжировании курсор должен относиться к версии ранжированной выдачи.</p>
 <p><b>Шаг 4 — Масштабирование и узкие места.</b></p>
+<p>Когда пользователь подписан на сотни авторов, <b>каждое открытие ленты повторяет поиск и слияние их последних публикаций</b>. Для обычных авторов выгодно заранее разложить ID твита по лентам активных подписчиков. Но у автора с 10 млн подписчиков один твит породил бы миллионы вставок и задержал бы рассылку следующих твитов. Его публикации Timeline API подмешивает при чтении.</p>
 <figure class="concept" aria-labelledby="sd-twitter-scaled-caption"><svg xmlns="http://www.w3.org/2000/svg" id="sd-twitter-scaled" viewBox="0 0 344 724" role="img" aria-labelledby="sd-twitter-scaled-title sd-twitter-scaled-desc"><title id="sd-twitter-scaled-title">Twitter: архитектура после масштабирования</title><desc id="sd-twitter-scaled-desc">Tweet API сохраняет публикацию и Outbox в PostgreSQL. Публикатор передаёт события в брокер, Fanout обновляет кеш домашних лент по графу подписок, индексатор обновляет поиск. Timeline API объединяет кеш с твитами горячих авторов и пакетно загружает разрешённые публикации.</desc><defs><marker id="sd-twitter-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" /></marker></defs>
 <path class="concept-edge" d="M172 50 V76 H78 V110" marker-end="url(#sd-twitter-scaled-arrow)" />
 <path class="concept-edge" d="M172 76 H258 V110" marker-end="url(#sd-twitter-scaled-arrow)" />
@@ -11072,48 +11011,6 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <g role="img" aria-label="Фоновый обработчик — worker"><circle cx="247" cy="353" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="247" cy="353" r="10"/><text x="247" y="357" text-anchor="middle">W</text></g>
 </svg><figcaption id="sd-youtube-base-caption">Базовая схема для небольшой нагрузки: метаданные и задания в PostgreSQL, файлы в объектном хранилище. API выдаёт ссылки, фоновый обработчик готовит видео; очередь и CDN добавляются при масштабировании.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
-<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
-<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
-<tr><td><code>video</code></td><td><code>id</code> (PK)<br>
-<code>owner_id</code><br>
-<code>title</code><br>
-<code>visibility</code><br>
-<code>processing_status</code><br>
-<code>moderation_status</code><br>
-<code>source_version</code><br>
-<code>published_manifest_key</code><br>
-<code>deleted_at</code></td></tr>
-<tr><td><code>upload_session</code></td><td><code>id</code> (PK)<br>
-<code>video_id</code> (FK)<br>
-<code>storage_upload_id</code><br>
-<code>source_key</code><br>
-<code>expected_size</code><br>
-<code>expires_at</code><br>
-<code>status</code></td></tr>
-<tr><td><code>rendition</code></td><td><code>video_id</code> (PK, FK)<br>
-<code>source_version</code> (PK)<br>
-<code>profile</code> (PK)<br>
-<code>codec</code><br>
-<code>resolution</code><br>
-<code>bitrate</code><br>
-<code>status</code><br>
-<code>output_prefix</code></td></tr>
-<tr><td><code>processing_job</code></td><td><code>id</code> (PK)<br>
-<code>video_id</code> (FK)<br>
-<code>source_version</code><br>
-<code>profile</code><br>
-<code>status</code><br>
-<code>attempt_token</code><br>
-<code>lease_until</code><br>
-<code>next_attempt_at</code></td></tr>
-<tr><td><code>outbox</code></td><td><code>event_id</code> (PK)<br>
-<code>video_id</code> (FK)<br>
-<code>event_type</code><br>
-<code>payload</code><br>
-<code>published_at</code></td></tr>
-</table></div>
-<p>Профиль уникален для (video_id, source_version). Видео, сегменты и превью находятся в объектном хранилище, в БД — метаданные и ключи объектов. Результат попытки публикуется только по действующему токену.</p>
-
 <div class="table-wrap"><table><tr><th>API</th><th>Назначение</th></tr>
 <tr><td><code><span class="t">POST</span> /videos/uploads</code><br><code><span class="p">Idempotency-Key</span>: ...</code></td><td>Создать video_id, upload_id и ссылки на загрузку частей</td></tr>
 <tr><td><code><span class="t">GET</span> /uploads/{id}</code></td><td>Узнать состояние и уже загруженные части для возобновления</td></tr>
@@ -11131,10 +11028,11 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <span class="t">READY</span> + проверки пройдены
 + автор разрешил публикацию
 + видео не удалено</pre>
-<p>Работник захватывает задание с арендой и новым токеном, пишет файлы в уникальный префикс попытки. После успеха условно фиксирует результат только для своего токена и актуальной версии источника. <b>Старая попытка после истечения аренды не может перезаписать опубликованный результат:</b> её файлы остаются отдельными, право публикации проверяется в БД. Запись объекта с тем же ключом без контроля версии не обеспечивает такую защиту.</p>
+<p>Для каждой комбинации <code>(video_id, source_version, profile)</code> хранится один результат кодирования. Работник захватывает задание с арендой и новым токеном, пишет файлы в уникальный префикс попытки. После успеха условно фиксирует результат только для своего токена и актуальной версии источника. <b>Старая попытка после истечения аренды не может перезаписать опубликованный результат:</b> её файлы остаются отдельными, право публикации проверяется в БД. Запись объекта с тем же ключом без контроля версии не обеспечивает такую защиту.</p>
 <p><b>Публикация без битых ссылок.</b> Сначала сохраняются и проверяются обязательные сегменты, аудио, превью и манифест. Затем одна транзакция устанавливает указатель на <b>неизменяемую опубликованную версию</b>. Первое поддерживаемое качество можно открыть раньше остальных; готовность дополнительных профилей публикует новую версию манифеста. Старые версии и сегменты сохраняются достаточно долго для уже запущенных плееров и CDN. Нельзя сначала показать READY, а затем дописывать файлы по тем же адресам.</p>
 <p><b>Адаптивное воспроизведение.</b> Например, HLS или DASH: манифест перечисляет варианты качества и адреса коротких сегментов. У профилей согласованы временные границы и ключевые кадры, чтобы переключение не ломало декодирование. Плеер начинает с доступного качества, оценивает скорость загрузки и буфер, затем выбирает вариант следующего сегмента. Перемотка загружает нужный временной участок, весь файл заранее не скачивается.</p>
 <p><b>Шаг 4 — Масштабирование и узкие места.</b></p>
+<p>Если новые ролики поступают быстрее, чем один обработчик кодирует их во все профили, <b>растёт время от загрузки до публикации</b>. Очередь позволяет распределять независимые задания между транскодерами. У просмотра другое ограничение: популярный сегмент приходится многократно отдавать из origin. CDN кеширует его ближе к зрителям, поэтому всплеск просмотров можно обслужить без увеличения числа транскодеров.</p>
 <figure class="concept" aria-labelledby="sd-youtube-scaled-caption"><svg id="sd-youtube-scaled" viewBox="0 0 344 732" role="img" aria-labelledby="sd-youtube-scaled-title sd-youtube-scaled-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-youtube-scaled-title">YouTube: архитектура после масштабирования</title><desc id="sd-youtube-scaled-desc">Upload API выдаёт ссылку на загрузку оригинала в объектное хранилище. PostgreSQL хранит метаданные и Outbox, очередь передаёт задания транскодерам. Транскодеры читают оригиналы и сохраняют готовые сегменты и манифесты. Playback API возвращает разрешённый манифест; плеер загружает сегменты через CDN.</desc><defs><marker id="sd-youtube-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
 <path class="concept-edge" d="M78 50 V98" marker-end="url(#sd-youtube-scaled-arrow)"/>
 <path class="concept-edge" d="M258 50 V98" marker-end="url(#sd-youtube-scaled-arrow)"/>
@@ -11200,74 +11098,32 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p><b>Шаг 2 — Общая архитектура.</b> Приложение с HTTP/WebSocket и PostgreSQL. Сообщение и Outbox фиксируются до подтверждения отправителю; история восстанавливает пропуски.</p>
 <figure class="concept" aria-labelledby="sd-chat-base-caption"><svg id="sd-chat-base" viewBox="0 0 320 336" role="img" aria-labelledby="sd-chat-base-title sd-chat-base-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-chat-base-title">Обмен сообщениями: базовая архитектура</title><desc id="sd-chat-base-desc">Отправитель передаёт сообщение приложению. Сообщение сохраняется в PostgreSQL до подтверждения отправки. Получатель получает событие по WebSocket.</desc><defs><marker id="sd-chat-base-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor"/></marker></defs><path class="concept-edge" d="M74 56 V92 H116 V120" marker-end="url(#sd-chat-base-arrow)"/><path class="concept-edge" d="M220 124 V92 H242 V60" marker-end="url(#sd-chat-base-arrow)"/><path class="concept-edge" d="M160 184 V250" marker-end="url(#sd-chat-base-arrow)"/><rect fill="var(--bg)" x="8" y="8" width="132" height="48" rx="8"/><rect class="concept-node plain" x="8" y="8" width="132" height="48" rx="8"/><text x="74" y="37" text-anchor="middle">Отправитель</text><rect fill="var(--bg)" x="172" y="8" width="140" height="48" rx="8"/><rect class="concept-node plain" x="172" y="8" width="140" height="48" rx="8"/><text x="242" y="37" text-anchor="middle">Получатель</text><rect fill="var(--bg)" x="60" y="124" width="200" height="60" rx="8"/><rect class="concept-node accent" x="60" y="124" width="200" height="60" rx="8"/><text x="160" y="150" text-anchor="middle">Одно приложение</text><text x="160" y="170" text-anchor="middle" class="concept-label">API + WebSocket</text><path fill="var(--bg)" d="M60 262 A100.0 8 0 0 1 260 262 V308 A100.0 8 0 0 1 60 308 Z"/><path class="concept-db" d="M60 262 A100.0 8 0 0 1 260 262 V308 A100.0 8 0 0 1 60 308 Z"/><ellipse class="concept-db" cx="160.0" cy="262" rx="100.0" ry="8"/><text x="160" y="284" text-anchor="middle">PostgreSQL</text><text x="160" y="303" text-anchor="middle" class="concept-label">чаты и сообщения</text></svg><figcaption id="sd-chat-base-caption">Начало: одно приложение с HTTP API и WebSocket, PostgreSQL для истории. Подтверждение отправки возвращается после commit.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
+<p><b>1. Отправитель посылает сообщение.</b> Клиент создаёт <code>client_message_id</code> до запроса <code><span class="t">POST</span> /chats/{id}/messages</code> и сохраняет его для повтора, если ответ потеряется.</p>
+<p><b>Порядок внутри чата:</b> в короткой транзакции заблокировать строку чата, проверить участие, выделить следующий <code>seq</code>, сохранить сообщение и Outbox. Уникальное ограничение <code>(chat_id, seq)</code> защищает нумерацию. Это порядок сохранения сервером, а не точный порядок нажатий на разных устройствах. Глобального порядка между чатами не требуется.</p>
+<p>Уникальный ключ <code>(chat_id, sender_id, client_message_id)</code> защищает от двойной записи. При повторе того же запроса API возвращает сохранённый номер сообщения. Другой текст с тем же ключом вызывает конфликт.</p>
 <p><b>Переход от сохранения к доставке.</b> Сообщение и Outbox фиксируются вместе, затем фоновый publisher или CDC передаёт событие в брокер. Сбой между commit и публикацией не отменяет сохранённое событие: доставка продолжается после восстановления. Повторы обрабатываются по event_id; порядок внутри чата контролируется seq. На схеме publisher свёрнут в стрелку.</p>
-<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
-<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
-<tr><td><code>chat</code></td><td><code>id</code> (PK)<br>
-<code>type</code><br>
-<code>next_seq</code><br>
-<code>next_update_seq</code></td></tr>
-<tr><td><code>chat_member</code></td><td><code>chat_id</code> (PK, FK)<br>
-<code>user_id</code> (PK)<br>
-<code>role</code><br>
-<code>last_read_seq</code></td></tr>
-<tr><td><code>message</code></td><td><code>chat_id</code> (PK, FK)<br>
-<code>seq</code> (PK)<br>
-<code>sender_id</code><br>
-<code>client_message_id</code><br>
-<code>text</code><br>
-<code>created_at</code></td></tr>
-<tr><td><code>message_outbox</code></td><td><code>event_id</code> (PK)<br>
-<code>chat_id</code> (FK)<br>
-<code>message_seq</code> (FK)<br>
-<code>event_type</code><br>
-<code>payload</code></td></tr>
-<tr><td><code>device</code></td><td><code>id</code> (PK)<br>
-<code>user_id</code><br>
-<code>session_id</code><br>
-<code>push_token</code><br>
-<code>sync_cursor</code><br>
-<code>revoked_at</code></td></tr>
-<tr><td><code>user_update_state</code></td><td><code>user_id</code> (PK)<br>
-<code>last_seq</code><br>
-<code>retention_floor</code></td></tr>
-<tr><td><code>user_update</code></td><td><code>user_id</code> (PK)<br>
-<code>seq</code> (PK)<br>
-<code>event_id</code><br>
-<code>chat_id</code><br>
-<code>message_seq</code><br>
-<code>event_type</code><br>
-<code>payload</code></td></tr>
-<tr><td><code>chat_update</code></td><td><code>chat_id</code> (PK, FK)<br>
-<code>update_seq</code> (PK)<br>
-<code>message_seq</code><br>
-<code>event_type</code><br>
-<code>payload</code></td></tr>
+<div class="table-wrap"><table><tr><th>Статус</th><th>Что подтверждает</th></tr>
+<tr><td>Сохранено</td><td>Сервер выполнил commit</td></tr>
+<tr><td>Доставлено</td><td>Устройство получателя подтвердило получение; запись в сокет сама по себе недостаточна</td></tr>
+<tr><td>Прочитано</td><td>Клиент сообщил, до какого номера пользователь просмотрел чат</td></tr>
 </table></div>
-<p>Ключ сообщения — (chat_id, seq); message_seq в Outbox связан с тем же chat_id. В шардированной схеме идемпотентность отправки имеет область (chat_id, sender_id, client_message_id). event_id журнала пользователя уникален вместе с user_id: одно событие получают разные пользователи. Файлы и живые WebSocket-соединения здесь не хранятся.</p>
-
-<p><b>Основные данные.</b> Личные чаты, группы и каналы имеют общий журнал сообщений, тип задаёт права публикации и способ доставки. Устройства, вложения и журналы синхронизации описаны ниже.</p>
+<p><b>2. Телефон получателя восстанавливает связь.</b> До обрыва он получил сообщения по №120 включительно. В чате уже есть №121, а №122 может появиться, пока телефон загружает историю.</p>
+<p>История читается по индексу <code>(chat_id, seq)</code> с курсорной пагинацией. После переподключения клиент передаёт последний непрерывно полученный номер. Пропуски догружаются из БД, дубли отбрасываются по идентификатору сообщения.</p>
+<p><b>История и онлайн-поток должны стыковаться без окна потерь:</b> сначала зарегистрировать подписку и временно буферизовать события, затем загрузить историю после курсора и объединить её с буфером по <code>seq</code>. Просто «загрузить историю, потом подключить WebSocket» может пропустить сообщение между этими действиями.</p>
+<p><b>3. Автор редактирует сообщение №120.</b> Второе устройство уже прочитало №122. Запрос новых сообщений после №122 пропустит правку: у отредактированного сообщения остаётся прежний номер. В журнал изменений добавляется событие со своим <code>update_seq</code> и ссылкой на <code>message_seq = <span class="n">120</span></code>. Удаление передаётся такой же записью с пометкой об удалении (tombstone). Доступ к истории зависит от членства, роли и правил показа сообщений до вступления.</p>
+<p><b>Синхронизация устройств.</b> Сообщение получает и отправитель на остальных своих устройствах. В device хранятся сессия, push-токен и подтверждённый курсор; удалённая сессия больше не подключается. Для личных чатов и небольших групп сохраняется журнал user_update со ссылками на сообщения, изменения членства и read-cursor. Журнал и его счётчик размещаются по user_id; формирование из Outbox идемпотентно по (user_id, event_id).</p>
+<p><b>Почему курсор может пропустить событие?</b> Два обработчика получили номера 41 и 42 в журнале одного пользователя. Если первым зафиксируется №42, телефон может применить его и запросить всё после 42. Запись №41, зафиксированная позже, выпадет из выдачи. Один вызов <a href="https://www.postgresql.org/docs/current/functions-sequence.html">nextval</a> на запись не гарантирует порядок commit.</p>
+<p>Поэтому обработчик блокирует строку <code>user_update_state</code> пользователя, увеличивает <code>last_seq</code> и вставляет <code>user_update</code> в той же транзакции. Следующий обработчик получит номер только после освобождения блокировки. У других пользователей свои строки и свой порядок.</p>
+<p>GET /sync читает журнал по (user_id, seq); устройство продвигает свой курсор только после применения полученной страницы. Удаление старого префикса журнала хранит минимальный доступный курсор. Если устройство старше него, сервер возвращает SYNC_REQUIRED: клиент заново получает список доступных чатов, read-cursors и изменения истории. Сначала фиксируется стартовый курсор журнала, затем загружается состояние и воспроизводятся обновления после него с дедупликацией; журнал сохраняется на время такой синхронизации. Большие каналы используют собственный chat_update и курсор чата.</p>
+<p><b>API чатов и устройств.</b> Личные чаты, группы и каналы используют общий формат истории. Тип чата определяет права публикации и способ доставки.</p>
 <pre><span class="t">POST</span> /chats
 <span class="t">POST</span> /chats/{id}/messages
 <span class="t">GET</span> /chats/{id}/messages?after_seq=<span class="n">120</span>
 <span class="t">POST</span> /chats/{id}/read
 <span class="t">GET</span> /sync?cursor=...
 <span class="t">POST</span> /media/uploads</pre>
-<p>Клиент создаёт <code>client_message_id</code> до отправки. Уникальное ограничение, по <code>(chat_id, sender_id, client_message_id)</code>, не даёт повторному запросу создать второе сообщение. Повтор возвращает ранее сохранённый результат; другой текст с тем же идентификатором — конфликт.</p>
-<p><b>Порядок внутри чата:</b> в короткой транзакции заблокировать строку чата, проверить участие, выделить следующий <code>seq</code>, сохранить сообщение и Outbox. Уникальное ограничение <code>(chat_id, seq)</code> защищает нумерацию. Это порядок сохранения сервером, а не точный порядок нажатий на разных устройствах. Глобального порядка между чатами не требуется.</p>
-<p>История читается по индексу <code>(chat_id, seq)</code> с курсорной пагинацией. После переподключения клиент передаёт последний непрерывно полученный номер. Пропуски догружаются из БД, дубли отбрасываются по идентификатору сообщения.</p>
-<p><b>История и онлайн-поток должны стыковаться без окна потерь:</b> сначала зарегистрировать подписку и временно буферизовать события, затем загрузить историю после курсора и объединить её с буфером по <code>seq</code>. Просто «загрузить историю, потом подключить WebSocket» может пропустить сообщение между этими действиями.</p>
-<div class="table-wrap"><table><tr><th>Статус</th><th>Что подтверждает</th></tr>
-<tr><td>Сохранено</td><td>Сервер выполнил commit</td></tr>
-<tr><td>Доставлено</td><td>Устройство получателя подтвердило получение; запись в сокет сама по себе недостаточна</td></tr>
-<tr><td>Прочитано</td><td>Клиент сообщил, до какого номера пользователь просмотрел чат</td></tr>
-</table></div>
-<p><b>Синхронизация устройств.</b> Сообщение получает и отправитель на остальных своих устройствах. В device хранятся сессия, push-токен и подтверждённый курсор; удалённая сессия больше не подключается. Для личных чатов и небольших групп сохраняется журнал user_update со ссылками на сообщения, изменения членства и read-cursor. Журнал и его счётчик размещаются по user_id; формирование из Outbox идемпотентно по (user_id, event_id).</p>
-<p><b>Безопасный курсор.</b> Добавление обновлений одного пользователя сериализуется: транзакция блокирует user_update_state, увеличивает last_seq, вставляет user_update и фиксирует всё вместе. Следующий writer получает блокировку только после завершения предыдущего. Поэтому видимая запись с большим seq не обгоняет ещё не завершённую запись с меньшим. Отдельный <a href="https://www.postgresql.org/docs/current/functions-sequence.html">nextval</a> без этой координации не задаёт порядок commit.</p>
-<p>GET /sync читает журнал по (user_id, seq); устройство продвигает свой курсор только после применения полученной страницы. Удаление старого префикса журнала хранит минимальный доступный курсор. Если устройство старше него, сервер возвращает SYNC_REQUIRED: клиент заново получает список доступных чатов, read-cursors и изменения истории. Сначала фиксируется стартовый курсор журнала, затем загружается состояние и воспроизводятся обновления после него с дедупликацией; журнал сохраняется на время такой синхронизации. Большие каналы используют собственный chat_update и курсор чата.</p>
-<p><b>Редактирование и удаление</b> не создают новый номер сообщения: нужен отдельный <code>update_seq</code> журнала изменений чата, где событие ссылается на исходный <code>message_seq</code>. Иначе устройство, уже прочитавшее сообщение, не узнает об изменении через запрос только новых message_seq. Удаление передаётся как tombstone. Доступ к истории определяется членством, ролью и политикой видимости истории до вступления.</p>
 <p><b>Каналы и большие группы.</b> Сообщение сохраняется один раз в журнале чата. Для небольших групп обработчик создаёт задания доставки участникам; для больших каналов используется <b>fanout-on-read</b>: история общая, каждый подписчик хранит собственную позицию чтения. Онлайн-события рассылаются только активным подписчикам, пакетами по Gateway; полное содержимое по необходимости загружается из истории. Это сокращает запись на публикацию, но увеличивает чтение и не устраняет сетевую стоимость доставки миллиону онлайн-подписчиков.</p>
-
+<p><b>Как событие доходит до нужного WebSocket.</b></p>
 <ol>
 <li>Message API сохраняет сообщение и Outbox, после commit подтверждает отправку.</li>
 <li>Публикатор передаёт событие в брокер с ключом <code>chat_id</code>.</li>
@@ -11276,6 +11132,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <li>Устройство подтверждает получение. Если соединение исчезло или реестр устарел, сообщение остаётся в истории и догружается при восстановлении связи.</li>
 </ol>
 <p><b>Шаг 4 — Масштабирование и узкие места.</b></p>
+<p>При 2 млн соединений и проверенной ёмкости 50 тыс. на экземпляр нужны как минимум 40 WebSocket Gateway. <b>Сокет получателя может находиться на другом Gateway</b>, поэтому Delivery Router ищет владельца соединения в Redis. У записи истории свой предел: когда одна БД перестаёт выдерживать поток сообщений, чаты распределяют по шардам. Ключ <code>chat_id</code> оставляет выдачу номера, сохранение сообщения и Outbox в одной транзакции.</p>
 <figure class="concept" aria-labelledby="sd-chat-scaled-caption"><svg xmlns="http://www.w3.org/2000/svg" id="sd-chat-scaled" viewBox="0 0 320 526" role="img" aria-labelledby="sd-chat-scaled-title sd-chat-scaled-desc"><title id="sd-chat-scaled-title">Telegram: доставка сообщений после масштабирования</title><desc id="sd-chat-scaled-desc">Отправитель передаёт сообщение приложению. Сообщение сохраняется в PostgreSQL до подтверждения отправки. Получатель получает событие по WebSocket. Outbox и брокер отделяют сохранение от доставки; Delivery Router находит нужный Gateway по реестру соединений в Redis и передаёт ему событие.</desc><defs><marker id="sd-chat-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="currentColor" /></marker></defs><path class="concept-edge" d="M74 56 V96" marker-end="url(#sd-chat-scaled-arrow)" /><path class="concept-edge" d="M72 170 V220" marker-end="url(#sd-chat-scaled-arrow)" /><path class="concept-edge" d="M72 286 V308 H24 V422 H160 V452" marker-end="url(#sd-chat-scaled-arrow)" stroke-dasharray="4 4" /><path class="concept-edge" d="M244 481 H316 V358 H308" marker-end="url(#sd-chat-scaled-arrow)" stroke-dasharray="4 4" /><path class="concept-edge" d="M238 108 V60" marker-end="url(#sd-chat-scaled-arrow)" /><path class="concept-edge" d="M238 170 V220" marker-end="url(#sd-chat-scaled-arrow)" stroke-dasharray="4 4" /><path class="concept-edge" d="M240 334 V290" marker-end="url(#sd-chat-scaled-arrow)" stroke-dasharray="4 4" /><path class="concept-edge" d="M176 358 H160 V141 H168" marker-end="url(#sd-chat-scaled-arrow)" /><rect fill="var(--bg)" x="8" y="8" width="132" height="48" rx="8" /><rect class="concept-node plain" x="8" y="8" width="132" height="48" rx="8" /><text x="74" y="37" text-anchor="middle">Отправитель</text><rect fill="var(--bg)" x="172" y="8" width="140" height="48" rx="8" /><rect class="concept-node plain" x="172" y="8" width="140" height="48" rx="8" /><text x="242" y="37" text-anchor="middle">Получатель</text><rect fill="var(--bg)" x="20" y="100" width="128" height="58" rx="8" /><rect class="concept-node accent" x="20" y="100" width="128" height="58" rx="8" /><rect fill="var(--bg)" x="14" y="106" width="128" height="58" rx="8" /><rect class="concept-node accent" x="14" y="106" width="128" height="58" rx="8" /><rect fill="var(--bg)" x="8" y="112" width="128" height="58" rx="8" /><rect class="concept-node accent" x="8" y="112" width="128" height="58" rx="8" /><text x="72" y="145" text-anchor="middle">Message API</text><rect fill="var(--bg)" x="184" y="100" width="128" height="58" rx="8" /><rect class="concept-node accent" x="184" y="100" width="128" height="58" rx="8" /><rect fill="var(--bg)" x="178" y="106" width="128" height="58" rx="8" /><rect class="concept-node accent" x="178" y="106" width="128" height="58" rx="8" /><rect fill="var(--bg)" x="172" y="112" width="128" height="58" rx="8" /><rect class="concept-node accent" x="172" y="112" width="128" height="58" rx="8" /><text x="236" y="145" text-anchor="middle">WS Gateway</text><path fill="var(--bg)" d="M8 232 A64.0 8 0 0 1 136 232 V278 A64.0 8 0 0 1 8 278 Z" /><path class="concept-db" d="M8 232 A64.0 8 0 0 1 136 232 V278 A64.0 8 0 0 1 8 278 Z" /><ellipse class="concept-db" cx="72.0" cy="232" rx="64.0" ry="8" /><text x="72" y="254" text-anchor="middle">Шард БД</text><text x="72" y="273" text-anchor="middle" class="concept-label">история + Outbox</text><path class="concept-cache" d="M180 224 H296 L304 232 V274 L296 282 H180 L172 274 V232 Z" /><text x="238" y="249" text-anchor="middle">Redis</text><text x="238" y="270" text-anchor="middle" class="concept-label">соединения</text><path fill="var(--bg)" d="M88 456 H232 A8 25 0 0 1 232 506 H88 A8 25 0 0 1 88 456 Z" /><path class="concept-broker" d="M88 456 H232 A8 25 0 0 1 232 506 H88 A8 25 0 0 1 88 456 Z" /><ellipse fill="var(--bg)" cx="88" cy="481" rx="8" ry="25" /><ellipse class="concept-broker" cx="88" cy="481" rx="8" ry="25" /><text x="164" y="477" text-anchor="middle">Брокер</text><text x="164" y="496" text-anchor="middle" class="concept-label">события чатов</text><rect fill="var(--bg)" x="176" y="334" width="128" height="48" rx="8" /><rect class="concept-node warning" x="176" y="334" width="128" height="48" rx="8" /><text x="240" y="363" text-anchor="middle">Delivery Router</text><g role="img" aria-label="Фоновый обработчик — worker"><circle cx="302" cy="338" r="10" fill="var(--bg)" /><circle class="concept-node warning" cx="302" cy="338" r="10" /><text x="302" y="342" text-anchor="middle">W</text></g><text x="96" y="350" text-anchor="middle" class="concept-label">публикация</text><text x="96" y="369" text-anchor="middle" class="concept-label">из Outbox</text></svg><figcaption id="sd-chat-scaled-caption">Брокер → Delivery Router → нужный Gateway → устройство. Redis хранит размещение соединений, выбранный по chat_id шард PostgreSQL — историю и Outbox. Схема показывает контур сообщений; вложения выдаются отдельно через объектное хранилище и CDN.</figcaption></figure>
 <p><b>Границы шардинга.</b> История, счётчик и Outbox чата размещаются вместе по chat_id; пользовательский журнал — отдельно по user_id. Один горячий чат остаётся последовательным участком: добавление шардов для других чатов его не ускорит. Помогают короткие транзакции, пакетное выделение и сохранение сообщений одним владельцем чата, выделенные ресурсы и лимиты входного потока; строгий порядок остаётся ограничением. Медленному клиенту ограничивается буфер, после разрыва выполняется синхронизация. Смена домашнего региона исключает старого владельца; асинхронная репликация допускает потерю последних записей при катастрофе.</p>
     </div></div></article>
@@ -11368,60 +11225,9 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <text x="256.0" y="340.5" text-anchor="middle" class="concept-label">провайдер</text>
 </svg><figcaption id="sd-uber-base-caption">Начало для одного города и небольшой нагрузки: приложение и PostgreSQL. Подбор и внешние вызовы выполняются фоновыми заданиями, состояние процесса сохраняется в БД.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
-<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
-<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
-<tr><td><code>trip</code></td><td><code>id</code> (PK)<br>
-<code>city_id</code><br>
-<code>passenger_id</code><br>
-<code>driver_id</code><br>
-<code>status</code><br>
-<code>active_offer_id</code><br>
-<code>pickup</code><br>
-<code>destination</code><br>
-<code>quote_id</code> (FK)<br>
-<code>idempotency_key</code><br>
-<code>request_hash</code><br>
-<code>version</code></td></tr>
-<tr><td><code>driver_state</code></td><td><code>driver_id</code> (PK)<br>
-<code>city_id</code><br>
-<code>status</code><br>
-<code>active_trip_id</code> (FK)<br>
-<code>active_offer_id</code> (FK)</td></tr>
-<tr><td><code>offer</code></td><td><code>id</code> (PK)<br>
-<code>trip_id</code> (FK)<br>
-<code>driver_id</code><br>
-<code>status</code><br>
-<code>expires_at</code></td></tr>
-<tr><td><code>quote</code></td><td><code>id</code> (PK)<br>
-<code>pickup</code><br>
-<code>destination</code><br>
-<code>vehicle_class</code><br>
-<code>tariff_version</code><br>
-<code>amount</code><br>
-<code>currency</code><br>
-<code>expires_at</code></td></tr>
-<tr><td><code>payment</code></td><td><code>id</code> (PK)<br>
-<code>trip_id</code> (FK)<br>
-<code>operation_type</code><br>
-<code>idempotency_key</code> (UQ)<br>
-<code>provider_operation_id</code><br>
-<code>amount</code><br>
-<code>currency</code><br>
-<code>status</code></td></tr>
-<tr><td><code>outbox</code></td><td><code>event_id</code> (PK)<br>
-<code>trip_id</code> (FK)<br>
-<code>event_type</code><br>
-<code>payload</code><br>
-<code>status</code><br>
-<code>attempt_token</code><br>
-<code>lease_until</code><br>
-<code>next_attempt_at</code></td></tr>
-</table></div>
-<p>Идемпотентность создания уникальна по (passenger_id, idempotency_key); занятость водителя подтверждает одна строка driver_state. Последние координаты, sequence number и время приёма находятся в геоиндексе, а не записываются в trip при каждом heartbeat.</p>
-
 <div class="table-wrap"><table><tr><th>API</th><th>Назначение</th></tr>
 <tr><td><code><span class="t">POST</span> /quotes</code></td><td>Оценка цены и ETA, версия тарифа и срок действия</td></tr>
-<tr><td><code><span class="t">POST</span> /trips</code><br><code><span class="p">Idempotency-Key</span>: ...</code></td><td>Создать заказ по quote_id, вернуть trip_id и SEARCHING</td></tr>
+<tr><td><code><span class="t">POST</span> /trips</code><br><code><span class="p">Idempotency-Key</span>: ...</code></td><td>Создать поездку по quote_id в состоянии SEARCHING. Повтор с тем же ключом у того же пассажира возвращает прежний trip_id</td></tr>
 <tr><td><code><span class="t">PUT</span> /drivers/me/location</code></td><td>Координаты, номер обновления и идентификатор сессии; также возможен поток через постоянное соединение</td></tr>
 <tr><td><code><span class="t">POST</span> /offers/{id}/accept</code></td><td>Принять конкретное предложение</td></tr>
 <tr><td><code><span class="t">POST</span> /trips/{id}/cancel</code></td><td>Отменить поездку по правилам состояния</td></tr>
@@ -11443,6 +11249,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p><b>Предварительная и окончательная цена.</b> В этом разборе quote — оценка с версией тарифа, а не обещание фиксированной суммы. После завершения сервер рассчитывает итог по проверенным времени и расстоянию и сохраняет его вместе с применёнными тарифными параметрами. Повтор оплаты использует сохранённую сумму. Продукт с фиксированной ценой потребовал бы другого правила: сохранить принятую котировку и явно определить допустимые доплаты.</p>
 <p>Завершение поездки, освобождение водителя и Outbox на оплату фиксируются вместе. <b>Состояние оплаты отдельно от состояния поездки:</b> COMPLETED не означает успешного списания. Ключ провайдера стабилен для одной операции, webhook проверяется и обрабатывается идемпотентно. При неизвестном результате выполняется сверка с провайдером; повтор с новым ключом способен списать деньги дважды. Неоплаченный долг обрабатывается отдельно.</p>
 <p><b>Шаг 4 — Масштабирование и узкие места.</b></p>
+<p>На пике приходят 200 тыс. обновлений координат и 1 160 заказов в секунду. Если каждый heartbeat писать в БД поездок, координаты будут конкурировать за запись с назначением водителя. <b>Для подбора достаточно последней свежей точки</b>, поэтому Location Gateway обновляет геоиндекс отдельно. Найденный водитель может уже принимать другой заказ: окончательное назначение проверяет и фиксирует БД поездок.</p>
 <figure class="concept" aria-labelledby="sd-uber-scaled-caption"><svg id="sd-uber-scaled" viewBox="0 0 344 664" role="img" aria-labelledby="sd-uber-scaled-title sd-uber-scaled-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-uber-scaled-title">Uber: архитектура после масштабирования</title><desc id="sd-uber-scaled-desc">API поездок сохраняет состояние в шарде PostgreSQL выбранного города. Location Gateway обновляет геоиндекс Redis. Matcher читает кандидатов из геоиндекса, уточняет время подачи у сервиса маршрутов и резервирует водителя в БД. Обработчики Outbox доставляют события через Realtime Gateway и вызывают платёжного провайдера.</desc><defs><marker id="sd-uber-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
 <path class="concept-edge" d="M78 50 V98" marker-end="url(#sd-uber-scaled-arrow)"/>
 <path class="concept-edge" d="M258 50 V98" marker-end="url(#sd-uber-scaled-arrow)"/>
@@ -11586,96 +11393,27 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <text x="256.0" y="344.5" text-anchor="middle" class="concept-label">доставка</text>
 </svg><figcaption id="sd-amazon-base-caption">Старт: модульный монолит и PostgreSQL. Заказ и резерв в одной БД можно сохранить одной транзакцией; внешние платежи и склад обрабатываются надёжными фоновыми шагами.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
-<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
-<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
-<tr><td><code>product</code></td><td><code>id</code> (PK)<br>
-<code>title</code><br>
-<code>description</code></td></tr>
-<tr><td><code>sku</code></td><td><code>id</code> (PK)<br>
-<code>product_id</code> (FK)<br>
-<code>attributes</code></td></tr>
-<tr><td><code>offer</code></td><td><code>id</code> (PK)<br>
-<code>sku_id</code> (FK)<br>
-<code>seller_id</code><br>
-<code>price</code><br>
-<code>currency</code><br>
-<code>price_version</code><br>
-<code>status</code></td></tr>
-<tr><td><code>cart</code></td><td><code>id</code> (PK)<br>
-<code>buyer_id</code> (UQ)<br>
-<code>version</code></td></tr>
-<tr><td><code>cart_item</code></td><td><code>cart_id</code> (PK, FK)<br>
-<code>offer_id</code> (PK, FK)<br>
-<code>quantity</code></td></tr>
-<tr><td><code>orders</code></td><td><code>id</code> (PK)<br>
-<code>buyer_id</code><br>
-<code>status</code><br>
-<code>idempotency_key</code><br>
-<code>request_hash</code><br>
-<code>checkout_attempt_id</code><br>
-<code>delivery_address</code><br>
-<code>total_amount</code><br>
-<code>currency</code><br>
-<code>version</code></td></tr>
-<tr><td><code>order_item</code></td><td><code>id</code> (PK)<br>
-<code>order_id</code> (FK)<br>
-<code>offer_id</code> (FK)<br>
-<code>seller_id</code><br>
-<code>title_snapshot</code><br>
-<code>unit_price</code><br>
-<code>quantity</code><br>
-<code>currency</code></td></tr>
-<tr><td><code>stock</code></td><td><code>offer_id</code> (PK, FK)<br>
-<code>warehouse_id</code> (PK)<br>
-<code>on_hand</code><br>
-<code>reserved</code><br>
-<code>allocated</code></td></tr>
-<tr><td><code>reservation</code></td><td><code>id</code> (PK)<br>
-<code>order_id</code><br>
-<code>item_id</code><br>
-<code>attempt_id</code><br>
-<code>offer_id</code> (FK)<br>
-<code>warehouse_id</code><br>
-<code>quantity</code><br>
-<code>status</code><br>
-<code>expires_at</code></td></tr>
-<tr><td><code>payment</code></td><td><code>id</code> (PK)<br>
-<code>order_id</code> (FK)<br>
-<code>shipment_id</code><br>
-<code>operation_type</code><br>
-<code>idempotency_key</code> (UQ)<br>
-<code>provider_operation_id</code><br>
-<code>amount</code><br>
-<code>currency</code><br>
-<code>status</code></td></tr>
-<tr><td><code>shipment</code></td><td><code>id</code> (PK)<br>
-<code>order_id</code> (FK)<br>
-<code>warehouse_id</code><br>
-<code>status</code><br>
-<code>tracking_number</code></td></tr>
-<tr><td><code>shipment_item</code></td><td><code>shipment_id</code> (PK, FK)<br>
-<code>order_item_id</code> (PK, FK)<br>
-<code>quantity</code></td></tr>
-<tr><td><code>outbox</code></td><td><code>event_id</code> (PK)<br>
-<code>order_id</code> (FK)<br>
-<code>event_type</code><br>
-<code>payload</code><br>
-<code>status</code><br>
-<code>next_attempt_at</code></td></tr>
+<p><b>Порядок оформления и компенсации.</b> Выбран вариант «все позиции или отказ» до подтверждения заказа; частичный заказ требует отдельного согласия покупателя. Платёжный провайдер поддерживает авторизацию и частичные списания по отправлениям.</p>
+<div class="table-wrap"><table><tr><th>Шаг</th><th>Результат и компенсация</th></tr>
+<tr><td>Котировка</td><td><b>Проверить котировку.</b><br>Успех: зафиксировать цены, доставку и итог.<br>Отказ или отмена: запросить подтверждение новых условий.</td></tr>
+<tr><td>Резервы</td><td><b>Зарезервировать все позиции.</b><br>Успех: сохранить идентификаторы резервов.<br>Отказ или отмена: освободить уже полученные резервы.</td></tr>
+<tr><td>Авторизация</td><td><b>Авторизовать итог оплаты.</b><br>Успех: сохранить авторизацию провайдера.<br>Отказ или отмена: при окончательном отказе освободить резервы; UNKNOWN сначала сверить.</td></tr>
+<tr><td>Подтверждение</td><td><b>Перевести все резервы в ALLOCATED.</b><br>Успех: подтвердить заказ после всех ответов.<br>Отказ или отмена: при истёкшем резерве снять авторизацию и освободить остальные выделения.</td></tr>
+<tr><td>Списание</td><td><b>Списать сумму отправления.</b><br>Успех: записать результат и Outbox-команду складу.<br>Отказ или отмена: не запускать отправку; сверить UNKNOWN, при окончательном отказе отменить неисполненную часть.</td></tr>
+<tr><td>Передача складу</td><td><b>Передать отправление складу.</b><br>Успех: дождаться исполнения и отгрузки.<br>Отказ или отмена: сначала подтвердить остановку склада, затем вернуть деньги и остаток; после отгрузки — процесс возврата.</td></tr>
 </table></div>
-<p>Ключ заказа уникален по (buyer_id, idempotency_key), операция резерва — по согласованному ключу позиции и попытки. Снимки в order_item не меняются при обновлении каталога. После разделения сервисов order_id в Inventory и shipment_id в Payment — межсервисные ссылки без SQL FK.</p>
-
+<p>«Все позиции или отказ» относится к оформлению, а не обещает атомарную физическую доставку: после подтверждения возможны разные сроки отправлений и отмена ещё не исполненной части по правилам продукта.</p>
 <p><b>Товар, предложение и складской остаток — разные сущности.</b> Product описывает модель товара, SKU — конкретный вариант, например размер и цвет. Offer связывает вариант с продавцом, ценой и условиями. Остаток учитывается для предложения и склада: одинаковый товар у разных продавцов не означает общий запас.</p>
 <div class="table-wrap"><table><tr><th>API</th><th>Назначение</th></tr>
 <tr><td><code><span class="t">GET</span> /products?query=...</code></td><td>Поиск и фильтры, карточки с предложениями</td></tr>
 <tr><td><code><span class="t">PUT</span> /cart/items/{offerId}</code></td><td>Задать количество с проверкой версии корзины</td></tr>
 <tr><td><code><span class="t">POST</span> /checkout/quotes</code></td><td>Получить подтверждаемые цены, доставку, итог и срок котировки</td></tr>
-<tr><td><code><span class="t">POST</span> /orders</code><br><code><span class="p">Idempotency-Key</span>: ...</code></td><td>Создать заказ по котировке, вернуть PENDING</td></tr>
+<tr><td><code><span class="t">POST</span> /orders</code><br><code><span class="p">Idempotency-Key</span>: ...</code></td><td>Создать заказ по котировке в состоянии PENDING. Повтор с тем же ключом у того же покупателя возвращает прежний заказ</td></tr>
 <tr><td><code><span class="t">GET</span> /orders/{id}</code></td><td>Статусы заказа, оплаты и отправлений</td></tr>
 <tr><td><code><span class="t">POST</span> /orders/{id}/cancel</code></td><td>Запустить допустимую отмену и компенсации</td></tr>
 </table></div>
-<p><b>Каталог и поиск.</b> Product, SKU и Offer изменяются в авторитетной БД; Outbox передаёт изменения индексатору. Документ поиска обновляется по версии предложения, чтобы старое событие не вернуло прежнюю цену. Допущение: поиск может отставать до 30 с, поэтому цена и наличие в нём предварительные; Checkout проверяет их заново. При превышении этого бюджета задержка явно показывается пользователю или устаревшее предложение скрывается. Принятая котировка фиксирует условия заказа на согласованный срок.</p>
-<p><b>Защита от overselling.</b> Проверка «прочитать остаток → записать новый» без блокировки допускает гонку. Inventory выполняет условное обновление и создание reservation одной локальной транзакцией:</p>
+<p><b>Каталог и поиск.</b> Product, SKU и Offer изменяются в авторитетной БД; Outbox передаёт изменения индексатору. Документ поиска обновляется по версии предложения, чтобы старое событие не вернуло прежнюю цену. Допущение: поиск может отставать до 30 с, поэтому цена и наличие в нём предварительные; Checkout проверяет их заново. При превышении этого бюджета задержка явно показывается пользователю или устаревшее предложение скрывается. Принятая котировка фиксирует условия на согласованный срок. В заказ копируются цена и условия каждой позиции, поэтому последующие изменения каталога не меняют оформленный заказ.</p>
+<p><b>Защита от overselling.</b> Два покупателя одновременно заказывают последнюю единицу на складе. Если оба прочитают остаток до записи, каждый увидит одну доступную единицу. Inventory выполняет условное обновление и создание reservation одной локальной транзакцией:</p>
 <pre class="wide"><span class="k">UPDATE</span> stock
 <span class="k">SET</span> reserved = reserved + :quantity
 <span class="k">WHERE</span> offer_id = :offerId
@@ -11690,20 +11428,11 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Обновлена одна строка — резерв возможен; ноль — запаса нет. Уникальность ключа reservation и обновление stock находятся в одной транзакции: повтор операции возвращает прежний резерв без повторного увеличения reserved. Несколько строк одного локального склада блокируются в стабильном порядке, чтобы снизить риск deadlock. Отрицательное количество запрещается.</p>
 <p><b>Жизненный цикл резерва.</b> При подтверждении reservation переходит из ACTIVE в ALLOCATED, reserved уменьшается, allocated увеличивается. Доступное количество не меняется. При физической отгрузке уменьшаются on_hand и allocated; при отмене до передачи на исполнение освобождается соответствующее reserved или allocated. Операция меняет счётчики только вместе с первым успешным переходом резерва.</p>
 <p>Истечение TTL и подтверждение блокируют один резерв и согласуют изменение stock в одной транзакции. Время проверяется после получения блокировки по часам БД. Если истечение победило, запоздалое подтверждение не может оживить старый резерв: нужен новый attempt_id и повторная проверка наличия. Выделенный под подтверждённый заказ остаток не освобождается обычным таймером резервов.</p>
-<p><b>Порядок оформления и компенсации.</b> Выбран вариант «все позиции или отказ» до подтверждения заказа; частичный заказ требует отдельного согласия покупателя. Платёжный провайдер поддерживает авторизацию и частичные списания по отправлениям.</p>
-<div class="table-wrap"><table><tr><th>Шаг</th><th>Результат и компенсация</th></tr>
-<tr><td>Котировка</td><td><b>Проверить котировку.</b><br>Успех: зафиксировать цены, доставку и итог.<br>Отказ или отмена: запросить подтверждение новых условий.</td></tr>
-<tr><td>Резервы</td><td><b>Зарезервировать все позиции.</b><br>Успех: сохранить идентификаторы резервов.<br>Отказ или отмена: освободить уже полученные резервы.</td></tr>
-<tr><td>Авторизация</td><td><b>Авторизовать итог оплаты.</b><br>Успех: сохранить авторизацию провайдера.<br>Отказ или отмена: при окончательном отказе освободить резервы; UNKNOWN сначала сверить.</td></tr>
-<tr><td>Подтверждение</td><td><b>Перевести все резервы в ALLOCATED.</b><br>Успех: подтвердить заказ после всех ответов.<br>Отказ или отмена: при истёкшем резерве снять авторизацию и освободить остальные выделения.</td></tr>
-<tr><td>Списание</td><td><b>Списать сумму отправления.</b><br>Успех: записать результат и Outbox-команду складу.<br>Отказ или отмена: не запускать отправку; сверить UNKNOWN, при окончательном отказе отменить неисполненную часть.</td></tr>
-<tr><td>Передача складу</td><td><b>Передать отправление складу.</b><br>Успех: дождаться исполнения и отгрузки.<br>Отказ или отмена: сначала подтвердить остановку склада, затем вернуть деньги и остаток; после отгрузки — процесс возврата.</td></tr>
-</table></div>
-<p>«Все позиции или отказ» относится к оформлению, а не обещает атомарную физическую доставку: после подтверждения возможны разные сроки отправлений и отмена ещё не исполненной части по правилам продукта.</p>
 <p><b>Несколько складов и saga.</b> Транзакция заказа не охватывает все шарды остатков и платёжного провайдера. Координатор сохраняет результат каждого шага, идентификаторы резервов и операций оплаты; после перезапуска продолжает процесс. Отмена во время обработки сначала сохраняет намерение остановить оформление. Поздний успешный ответ записывается и компенсируется, а не теряется из-за того, что заказ уже помечен отменённым.</p>
 <p><b>Оплата и отгрузка.</b> Для разбора выбран провайдер с авторизацией и частичными списаниями; срок авторизации и правила продления нужно учитывать. На каждую операцию выделяется стабильный ключ, сумма всех списаний не превышает авторизованный итог. Webhook проверяется и устраняет дубли. Таймаут означает неизвестный результат: сначала сверка существующей операции, затем следующий шаг, а не новое списание.</p>
 <p>После подтверждённого списания одной транзакцией фиксируются состояние платежа и Outbox-команда конкретному отправлению. Склад устраняет дубли по shipment_id. Если склад не может выполнить уже оплаченную отправку, запускается возврат. При отмене после передачи команды нельзя просто вернуть allocated в продажу: сначала склад подтверждает остановку исполнения; уже отгруженный товар проходит процесс возврата. Отмена не является откатом совершённой доставки.</p>
 <p><b>Шаг 4 — Масштабирование и узкие места.</b></p>
+<p>На пике каталог обслуживает в 100 раз больше чтений, чем Checkout принимает заказов. <b>Поиск допускает задержку обновления, резерв последней единицы требует актуального остатка.</b> Поэтому чтения каталога уходят в кеш и поисковый индекс, а Checkout запрашивает резерв у Inventory. Когда позиции заказа лежат на разных складских шардах, одной локальной транзакции уже недостаточно: координатор сохраняет полученные резервы, чтобы после сбоя продолжить заказ или освободить товар.</p>
 <figure class="concept" aria-labelledby="sd-amazon-scaled-caption"><svg id="sd-amazon-scaled" viewBox="0 0 344 724" role="img" aria-labelledby="sd-amazon-scaled-title sd-amazon-scaled-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-amazon-scaled-title">Amazon: архитектура после масштабирования</title><desc id="sd-amazon-scaled-desc">Каталог и поиск масштабируются отдельно от Checkout API. PostgreSQL хранит каталог и корзины, поисковый индекс обновляется асинхронно. БД заказов и Outbox запускают координатор через очередь. Координатор резервирует остатки, авторизует оплату и после подтверждения заказа передаёт задания складу и доставке.</desc><defs><marker id="sd-amazon-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
 <path class="concept-edge" d="M172 50 V72 H78 V100" marker-end="url(#sd-amazon-scaled-arrow)"/>
 <path class="concept-edge" d="M172 72 H258 V100" marker-end="url(#sd-amazon-scaled-arrow)"/>
@@ -11843,59 +11572,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 </svg><figcaption id="sd-banking-base-caption">Начало: модульный монолит и PostgreSQL. Внутренний перевод — одна локальная транзакция; внешний платёж — сохраняемый процесс с резервом, повторами и сверкой.</figcaption></figure>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
 <p><b>Надёжная передача команд.</b> Изменение денежного состояния и Outbox фиксируются одной транзакцией. Фоновый publisher или CDC передаёт сохранённые события в брокер; отдельно развёртывать publisher необязательно. Повторная доставка допускается, поэтому потребители устраняют дубли по event_id, а платёжный адаптер сохраняет стабильный ключ внешней операции. На схеме передача из Outbox свёрнута в стрелку.</p>
-<p><b>Сущности в БД.</b> PK — первичный ключ, FK — ссылка, UQ — уникальность. Несколько полей с PK образуют составной ключ.</p>
-<div class="table-wrap"><table><tr><th>Таблица</th><th>Поля</th></tr>
-<tr><td><code>account</code></td><td><code>id</code> (PK)<br>
-<code>owner_id</code><br>
-<code>currency</code><br>
-<code>status</code><br>
-<code>booked_balance</code><br>
-<code>held_amount</code><br>
-<code>version</code></td></tr>
-<tr><td><code>transfer</code></td><td><code>id</code> (PK)<br>
-<code>client_id</code><br>
-<code>idempotency_key</code><br>
-<code>request_hash</code><br>
-<code>confirmation_id</code> (FK, UQ)<br>
-<code>reverses_transfer_id</code> (FK → transfer, nullable)<br>
-<code>source_account</code> (FK)<br>
-<code>destination</code><br>
-<code>amount</code><br>
-<code>currency</code><br>
-<code>status</code><br>
-<code>external_operation_id</code></td></tr>
-<tr><td><code>transfer_confirmation</code></td><td><code>id</code> (PK)<br>
-<code>client_id</code><br>
-<code>request_hash</code><br>
-<code>expires_at</code><br>
-<code>verified_at</code></td></tr>
-<tr><td><code>ledger_transaction</code></td><td><code>id</code> (PK)<br>
-<code>transfer_id</code> (FK, UQ)<br>
-<code>created_at</code></td></tr>
-<tr><td><code>posting</code></td><td><code>id</code> (PK)<br>
-<code>ledger_transaction_id</code> (FK)<br>
-<code>account_id</code> (FK)<br>
-<code>amount_signed</code><br>
-<code>currency</code></td></tr>
-<tr><td><code>hold</code></td><td><code>id</code> (PK)<br>
-<code>transfer_id</code> (FK, UQ)<br>
-<code>account_id</code> (FK)<br>
-<code>amount</code><br>
-<code>status</code></td></tr>
-<tr><td><code>outbox</code></td><td><code>event_id</code> (PK)<br>
-<code>transfer_id</code> (FK)<br>
-<code>event_type</code><br>
-<code>payload</code><br>
-<code>status</code><br>
-<code>next_attempt_at</code></td></tr>
-<tr><td><code>inbox</code></td><td><code>source</code> (PK)<br>
-<code>external_event_id</code> (PK)<br>
-<code>external_operation_id</code><br>
-<code>received_at</code></td></tr>
-</table></div>
-<p>Ключ перевода уникален по (client_id, idempotency_key). Все posting одной операции фиксируются вместе и балансируются по валюте. hold и held_amount изменяются одной транзакцией; available_balance вычисляется как booked_balance − held_amount. Корректировка создаёт отдельную денежную операцию.</p>
-
-<p><b>Модель учёта.</b> Ledger — журнал подтверждённых денежных проводок. Каждая операция содержит сбалансированные записи: для внутреннего перевода в одной валюте уменьшение обязательства банка перед отправителем соответствует увеличению обязательства перед получателем. В примере знаки показывают изменение клиентского остатка:</p>
+<p><b>Модель учёта.</b> Перевод (<code>transfer</code>) после проведения связан с одной операцией журнала (<code>ledger_transaction</code>). Каждая её проводка (<code>posting</code>) указывает счёт и сумму со знаком. Проводки балансируются по каждой валюте: для внутреннего перевода в одной валюте уменьшение обязательства банка перед отправителем соответствует увеличению обязательства перед получателем. В примере знаки показывают изменение клиентского остатка:</p>
 <pre>Перевод <span class="n">1</span> <span class="n">000</span> <span class="t">RUB</span>:
 счёт <span class="t">A</span>: −<span class="n">100</span> <span class="n">000</span> копеек
 счёт <span class="t">B</span>: +<span class="n">100</span> <span class="n">000</span> копеек
@@ -11912,7 +11589,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p><b>Подтверждение команды.</b> POST /transfer-confirmations создаёт challenge, связанный с клиентом, источником, нормализованным получателем, суммой и валютой. После успешной дополнительной проверки сервер ставит verified_at; само создание challenge не означает согласие на перевод. POST /transfers передаёт confirmation_id. В транзакции принятия команды сервер блокирует подтверждение, проверяет владельца, verified_at, срок по часам БД и совпадение request_hash, затем связывает его с единственным transfer. Изменение реквизитов требует нового подтверждения; повтор уже принятого запроса с прежним ключом возвращает прежний transfer, даже если срок challenge истёк.</p>
 <p><b>Идемпотентность.</b> Уникальное ограничение <code>(client_id, idempotency_key)</code> и request_hash различают повтор и другой запрос. Создание записи перевода и внутренние проводки выполняются одной транзакцией; конкурентный дубль ждёт завершения или получает уже сохранённый результат. Уникальность проведения transfer дополнительно защищает от повторной команды внутреннего обработчика. Недостаточно хранить ключ только в Redis с коротким TTL.</p>
 <p><b>Конкурентные списания.</b> Остаток на экране может устареть. Денежная команда блокирует счета в одинаковом порядке, проверяет доступную сумму и записывает оба изменения до commit. При 1 000 RUB на счёте два одновременных перевода по 800 RUB не должны оба пройти. Для внешнего платежа и его hold используется та же блокировка счёта, иначе внутренний перевод сможет потратить уже зарезервированные деньги.</p>
-<p><b>Внешний платёж и hold.</b> Сначала одна транзакция создаёт PENDING, резервирует доступные средства и пишет Outbox. Адаптер отправляет запрос во внешнюю сеть со стабильным идентификатором. Физический вызов выполняется вне транзакции БД.</p>
+<p><b>Внешний платёж и hold.</b> Одна транзакция создаёт перевод в состоянии PENDING, записывает hold, увеличивает зарезервированную сумму счёта и пишет Outbox. Доступный остаток равен учтённому остатку за вычетом резерва. Адаптер отправляет запрос во внешнюю сеть со стабильным идентификатором. Физический вызов выполняется вне транзакции БД.</p>
 <ul>
 <li>Достоверное подтверждение исполнения — одна транзакция закрывает hold, создаёт проводки между клиентским и расчётным счётом, обновляет остатки и переводит операцию в POSTED. Одновременно уменьшаются booked_balance и held_amount, доступная сумма не списывается второй раз.</li>
 <li>Достоверный окончательный отказ — hold освобождается, перевод становится REJECTED, подтверждённого расхода в ledger не появляется.</li>
@@ -11922,6 +11599,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Повтор внешней отправки безопасен только при поддержке идентификатора операции и соответствующей семантики сетью. Если такой гарантии нет, после неизвестного исхода нужны запрос статуса, сверка и разбор, а не слепой повтор. Inbox устраняет дубли внешних сообщений, проверки допустимых переходов не дают вторично провести уже подтверждённую операцию.</p>
 <p>Внутренняя сверка проверяет балансировку операций, итоги счетов и активные holds. Внешняя сопоставляет идентификаторы, суммы, валюты и статусы с подтверждениями или отчётами платёжной сети. Расхождение создаёт задачу расследования или корректирующую операцию; незаметное редактирование старых проводок разрушает возможность объяснить движение денег.</p>
 <p><b>Шаг 4 — Масштабирование и узкие места.</b></p>
+<p>При расчётных 230 внутренних переводах/с сначала проверяют на одной БД задержку проведения и ожидание блокировок на горячем счёте. <b>Обе стороны перевода пока можно провести одним commit.</b> Чтобы сохранить эту гарантию, сначала выносят нагрузку, допускающую отставание: историю читают из проекции, уведомления отправляют через Outbox. Проверка доступных средств остаётся в денежном ядре.</p>
 <figure class="concept" aria-labelledby="sd-banking-scaled-caption"><svg xmlns="http://www.w3.org/2000/svg" id="sd-banking-scaled" viewBox="0 0 344 724" role="img" aria-labelledby="sd-banking-scaled-title sd-banking-scaled-desc"><title id="sd-banking-scaled-title">Банковское приложение: архитектура после масштабирования</title><desc id="sd-banking-scaled-desc">Клиент обращается к BFF, который проверяет сессию и маршрутизирует запросы. Accounts API читает авторитетный ledger и проекцию истории, Transfer API проводит деньги в одной транзакции ledger. События из Outbox публикуются в брокер. Фоновые адаптеры обмениваются сообщениями с внешней платёжной системой, проекции и уведомления обновляются отдельно.</desc><defs><marker id="sd-banking-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" /></marker></defs>
 <path class="concept-edge" d="M172 50 V90" marker-end="url(#sd-banking-scaled-arrow)" />
 <path class="concept-edge" d="M172 144 V166 H78 V200" marker-end="url(#sd-banking-scaled-arrow)" />
@@ -12041,14 +11719,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 </svg><figcaption id="sd-ai-assistant-base-caption">Начало: одно приложение, PostgreSQL с полнотекстовым и векторным поиском и LLM endpoint. Фоновая индексация работает внутри приложения; ответ модели проверяется перед показом оператору.</figcaption></figure>
 <p><b>Путь обращения:</b> CRM передаёт идентификатор обращения → API проверяет доступ и загружает необходимый текст → ищет разрешённые актуальные фрагменты → собирает контекст → вызывает LLM → проверяет формат и ссылки → показывает черновик и источники. История диалога берётся в пределах бюджета токенов; лишние персональные данные удаляются до обращения к модели.</p>
 <p><b>Шаг 3 — Детали ключевых компонентов.</b></p>
-<p><b>Подготовка базы знаний.</b> Коннектор получает новую версию статьи, извлекает текст и разбивает его по разделам. Начальное допущение — фрагменты по 400–800 токенов с небольшим перекрытием, затем размер подбирается по качеству поиска. Заголовок, название продукта и границы инструкции сохраняются: отдельный абзац без условий применения может менять смысл. Для каждого фрагмента рассчитывается <b>embedding</b> — числовой вектор смысла, пригодный для поиска похожего текста.</p>
-<div class="table-wrap"><table><thead><tr><th>Данные</th><th>Что хранить и зачем</th></tr></thead><tbody>
-<tr><td>Документ</td><td><code>documentId</code>, версия, ссылка, продукт, язык, сроки действия, статус публикации и политика доступа.</td></tr>
-<tr><td>Фрагмент</td><td><code>chunkId</code>, документ и версия, раздел, текст, embedding и версия модели embedding. Полнотекстовый и векторный индексы обслуживают разные способы поиска.</td></tr>
-<tr><td>Генерация</td><td><code>requestId</code>, оператор, обращение, версии prompt и модели, использованные фрагменты, статус и задержка. Тексты с персональными данными — только при обоснованной необходимости и с ограниченным сроком хранения.</td></tr>
-<tr><td>Обратная связь</td><td>Оценка оператора, причина отказа, принятый или отредактированный ответ с соблюдением политики хранения.</td></tr>
-</tbody></table></div>
-<p><b>Публикация версии.</b> Новые фрагменты сначала полностью подготавливаются, затем транзакционно переключается активная версия документа. Поиск исключает неактивные версии; частично проиндексированная статья не должна смешиваться со старой. Повторная обработка безопасна по ключу <code>(documentId, version, chunkId)</code>. Удаление блокирует документ для выдачи сразу, очистка векторов выполняется фоном. При отдельном поисковом движке его индекс обновляется с задержкой, поэтому актуальный статус и права повторно проверяются по авторитетным метаданным.</p>
+<p><b>Обращение T-42.</b> Клиент видит код E17 при возврате товара. В базе две статьи с этим кодом для разных продуктов. Оператору нужен черновик с действующей инструкцией для продукта клиента и фрагментом, который разрешено цитировать.</p>
 <p><b>Поиск и выбор контекста.</b></p>
 <ol>
 <li>По серверной сессии определить организацию, группы оператора и доступ к обращению. Не доверять <code>operatorId</code> или фильтру прав из тела запроса.</li>
@@ -12058,7 +11729,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 </ol>
 <p><b>Почему недостаточно одного vector search?</b> Похожие по смыслу статьи могут относиться к другому продукту или старым условиям. Точный код ошибки лучше находится по словам; применимость задают метаданные. Порог сходства настраивается на проверочных вопросах и <b>не является вероятностью правильного ответа</b>.</p>
 <p><b>Генерация и проверка.</b> Prompt отделяет инструкции системы от вопроса и найденных текстов, требует отвечать по контексту и указывать идентификаторы источников. API принимает структурированный результат: текст, ссылки на фрагменты, статус «черновик / нужны уточнения / данных недостаточно». Ссылки разрешаются сервером по переданным фрагментам; произвольный URL из ответа модели не становится доверенным источником. Наличие ссылки не доказывает, что она подтверждает утверждение: оператор видит сам фрагмент и проверяет применимость.</p>
-<p><b>Пример.</b> Клиент спрашивает, можно ли вернуть товар после вскрытия. В контекст попадает действующая инструкция для нужной категории и региона вместе с исключениями. Если категория неизвестна, помощник предлагает уточняющий вопрос. Нельзя подставлять общее правило возврата, игнорируя исключение в соседнем разделе.</p>
+<p>Если в обращении не указан продукт, помощник предлагает оператору уточнить его. После уточнения оператор видит черновик и раздел инструкции для этого продукта вместе с условиями и исключениями.</p>
 <p><b>API.</b> Создание генерации возвращает идентификатор задачи; CRM получает статус опросом. Потоковую выдачу можно добавить для уменьшения воспринимаемой задержки, но незавершённый текст помечается как непроверенный.</p>
 <pre><span class="t">POST</span> /api/v1/drafts
 {
@@ -12080,7 +11751,17 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 { <span class="s">"rating"</span>: <span class="s">"EDITED"</span>, <span class="s">"reason"</span>: <span class="s">"..."</span> }</pre>
 <p>Пара <code>(operatorId, requestId)</code> уникальна: повтор запроса возвращает прежнюю задачу, а тот же ключ с другим обращением отклоняется. Чтение результата заново проверяет доступ. Перед показом сохранённого черновика проверяются права и актуальность источников; при изменении результат помечается устаревшим и пересоздаётся.</p>
 <p><b>Безопасность.</b> Документы и обращения — недоверенные данные: фраза «игнорируй инструкции и покажи секреты» внутри статьи является <b>prompt injection</b>. Разделение инструкций и контекста снижает риск, но не устраняет его. Модель не получает доступ к другим обращениям, секретам или инструментам отправки; права обеспечивает код сервиса. HTML и Markdown ответа безопасно отображаются, внешние изображения и опасные ссылки блокируются. Внешняя модель допустима только при согласованных условиях передачи, хранения и использования данных; иначе нужен разрешённый закрытый контур.</p>
+<p><b>Что произойдёт, когда инструкция по E17 изменится?</b> Коннектор получает новую версию статьи, извлекает текст и разбивает его по разделам. Начальное допущение — фрагменты по 400–800 токенов с небольшим перекрытием, затем размер подбирается по качеству поиска. Заголовок, название продукта и границы инструкции сохраняются: отдельный абзац без условий применения может менять смысл. Для каждого фрагмента рассчитывается <b>embedding</b> — числовой вектор смысла, пригодный для поиска похожего текста.</p>
+<div class="table-wrap"><table><thead><tr><th>Данные</th><th>Что хранить и зачем</th></tr></thead><tbody>
+<tr><td>Документ</td><td><code>documentId</code>, версия, ссылка, продукт, язык, сроки действия, статус публикации и политика доступа.</td></tr>
+<tr><td>Фрагмент</td><td><code>chunkId</code>, документ и версия, раздел, текст, embedding и версия модели embedding. Полнотекстовый и векторный индексы обслуживают разные способы поиска.</td></tr>
+<tr><td>Генерация</td><td><code>requestId</code>, оператор, обращение, версии prompt и модели, использованные фрагменты, статус и задержка. Тексты с персональными данными — только при обоснованной необходимости и с ограниченным сроком хранения.</td></tr>
+<tr><td>Обратная связь</td><td>Оценка оператора, причина отказа, принятый или отредактированный ответ с соблюдением политики хранения.</td></tr>
+</tbody></table></div>
+<p><b>Публикация версии.</b> Новые фрагменты сначала полностью подготавливаются, затем транзакционно переключается активная версия документа. Поиск исключает неактивные версии; частично проиндексированная статья не должна смешиваться со старой. Повторная обработка безопасна по ключу <code>(documentId, version, chunkId)</code>. Удаление блокирует документ для выдачи сразу, очистка векторов выполняется фоном. При отдельном поисковом движке его индекс обновляется с задержкой, поэтому актуальный статус и права повторно проверяются по авторитетным метаданным.</p>
 <p><b>Шаг 4 — Масштабирование и узкие места.</b></p>
+<p><b>Расчёт лимитов LLM.</b> При 30 запросах/с и среднем времени генерации 6 с в работе около <b>180 генераций</b>. При среднем входе 6 000 и выходе 500 токенов требуется около 10,8 млн входных и 0,9 млн выходных токенов в минуту на пике. Это требование к пропускной способности и бюджету модели; добавление API-реплик само по себе его не решает. Задержка 6 с здесь — допущение для расчёта, а достижение p95 проверяется нагрузкой.</p>
+<p>Поэтому API ограничивает число одновременных генераций и длину очереди. У индексации другой источник нагрузки: массовая публикация статей занимает ресурсы поиска даже при прежнем числе обращений. Когда из-за неё растёт задержка ответа оператору, изменения документов передают отдельным индексаторам через очередь.</p>
 <figure class="concept" aria-labelledby="sd-ai-assistant-scaled-caption"><svg id="sd-ai-assistant-scaled" viewBox="0 0 344 588" role="img" aria-labelledby="sd-ai-assistant-scaled-title sd-ai-assistant-scaled-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-ai-assistant-scaled-title">ИИ-помощник: архитектура после масштабирования</title><desc id="sd-ai-assistant-scaled-desc">Оператор получает черновик через API. Только разрешённые фрагменты поиска попадают в LLM. Отдельный фоновый поток обновляет индекс из базы знаний.</desc><defs><marker id="sd-ai-assistant-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
 <path class="concept-edge" d="M172 50 V96" marker-end="url(#sd-ai-assistant-scaled-arrow)"/>
 <path class="concept-edge" d="M100 150 V180 H80 V220" marker-end="url(#sd-ai-assistant-scaled-arrow)"/>
@@ -12113,7 +11794,6 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <rect fill="var(--bg)" stroke="none" x="8" y="534" width="144" height="44" rx="8"/><rect class="concept-node plain" x="8" y="534" width="144" height="44" rx="8"/>
 <text x="80.0" y="561.0" text-anchor="middle">База знаний</text>
 </svg><figcaption id="sd-ai-assistant-scaled-caption">API и индексаторы масштабируются независимо. Пунктир — фоновые изменения документов. Индекс фильтруется по правам до передачи текста в модель; стрелка от LLM возвращает черновик на проверку в API.</figcaption></figure>
-<p><b>Расчёт лимитов LLM.</b> При 30 запросах/с и среднем времени генерации 6 с в работе около <b>180 генераций</b>. При среднем входе 6 000 и выходе 500 токенов требуется около 10,8 млн входных и 0,9 млн выходных токенов в минуту на пике. Это требование к пропускной способности и бюджету модели; добавление API-реплик само по себе его не решает. Задержка 6 с здесь — допущение для расчёта, а достижение p95 проверяется нагрузкой.</p>
 <p><b>API масштабируется по запросам, генерация — по допустимой параллельности и токенам.</b> Ограничение допуска, квоты на оператора и короткая ограниченная очередь предотвращают накопление задач. При таймауте или 429 — ограниченные повторы с backoff и jitter в общем deadline. Если лимит исчерпан, CRM показывает доступные статьи или предлагает повторить позже; отмена ожидания не гарантирует остановку уже принятого провайдером вызова и его оплаты.</p>
 <p><b>Индексация масштабируется отдельно.</b> Очередь изменений и индексаторы нужны, когда загрузка документов мешает ответам или возникают массовые обновления. Контролируются возраст очереди, задержка публикации и ошибки извлечения текста. Для 1 млн векторов по 1 536 float32 только векторы занимают около 6 ГБ; текст, метаданные и индекс требуют дополнительного места и измерения памяти. Если PostgreSQL перестаёт укладываться в задержку поиска, индекс выносится в отдельный поисковый движок. Модель embedding запроса и документов должна совпадать; смена требует переиндексации, а не смешивания несовместимых векторов.</p>
 <p><b>Сбои и кеш.</b> Недоступен поиск — нельзя заменять подтверждённый ответ общими знаниями LLM; недоступна модель — остаётся поиск статей. Начальная схема обходится без кеша готовых ответов. Если измерения обосновывают его введение, ключ учитывает контекст, область доступа, версии базы, prompt и модели; перед выдачей права и актуальность источников проверяются заново. Общий кеш по одному тексту вопроса может раскрыть данные другой группы.</p>
