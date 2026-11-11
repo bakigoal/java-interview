@@ -10392,14 +10392,15 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Примеры основного HTTP API. Пользователь определяется по сессии; JSON передаётся с <code><span class="p">Content-Type</span>: application/json</code>. Пути и ID — примеры для разбора.</p>
 <div class="table-wrap"><table>
 <colgroup><col style="width:35%"><col></colgroup>
-<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример тела запроса</th></tr></thead>
+<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример запроса / ответа</th></tr></thead>
 <tbody>
 <tr><td><b>POST</b><br><code>/api/v1/urls</code><p>Создать короткую ссылку</p></td><td><pre>{
   <span class="p">"long_url"</span>: <span class="s">"https://example.com/path"</span>,
   <span class="p">"custom_alias"</span>: <span class="k">null</span>,
   <span class="p">"expires_at"</span>: <span class="k">null</span>
 }</pre></td></tr>
-<tr><td><b>GET</b><br><code>/{code}</code><p>Перенаправить на исходный URL. Неизвестный код — 404, истёкшая ссылка — 410.</p></td><td>Без тела.</td></tr>
+<tr><td><b>GET</b><br><code>/{code}</code><p>Перенаправить на исходный URL. Неизвестный код — 404, истёкшая ссылка — 410.</p></td><td>Без тела.<p><b>Ответ · 302 Found</b></p><pre><span class="p">Location</span>: https://example.com/path
+<span class="p">Cache-Control</span>: no-store</pre><p>Тело не требуется: клиент переходит по <code><span class="t">Location</span></code>.</p></td></tr>
 </tbody>
 </table></div>
 </details>
@@ -10693,7 +10694,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Примеры основного HTTP API. Пользователь определяется по сессии; JSON передаётся с <code><span class="p">Content-Type</span>: application/json</code>. Пути и ID — примеры для разбора.</p>
 <div class="table-wrap"><table>
 <colgroup><col style="width:35%"><col></colgroup>
-<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример тела запроса</th></tr></thead>
+<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример запроса / ответа</th></tr></thead>
 <tbody>
 <tr><td><b>POST</b><br><code>/notifications</code><p>Зарегистрировать уведомление. После commit — 202 с ID.</p></td><td><pre>{
   <span class="p">"idempotency_key"</span>: <span class="s">"n-123"</span>,
@@ -10705,7 +10706,12 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
     <span class="p">"order_id"</span>: <span class="n">105</span>
   }
 }</pre></td></tr>
-<tr><td><b>GET</b><br><code>/notifications/{id}</code><p>Узнать состояние обработки и доставки.</p></td><td>Без тела.</td></tr>
+<tr><td><b>GET</b><br><code>/notifications/{id}</code><p>Узнать состояние обработки и доставки.</p></td><td>Без тела.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"id"</span>: <span class="s">"n-123"</span>,
+  <span class="p">"status"</span>: <span class="s">"DELIVERED"</span>,
+  <span class="p">"channel"</span>: <span class="s">"EMAIL"</span>,
+  <span class="p">"recipient_id"</span>: <span class="n">42</span>
+}</pre></td></tr>
 <tr><td><b>POST</b><br><code>/providers/{provider}/callbacks</code><p>Принять подтверждение провайдера; проверить подлинность и устранить дубли.</p></td><td><pre>{
   <span class="p">"event_id"</span>: <span class="s">"e-17"</span>,
   <span class="p">"provider_ref"</span>: <span class="s">"p-91"</span>,
@@ -11061,13 +11067,22 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Примеры основного HTTP API. Пользователь определяется по сессии; JSON передаётся с <code><span class="p">Content-Type</span>: application/json</code>. Пути и ID — примеры для разбора.</p>
 <div class="table-wrap"><table>
 <colgroup><col style="width:35%"><col></colgroup>
-<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример тела запроса</th></tr></thead>
+<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример запроса / ответа</th></tr></thead>
 <tbody>
 <tr><td><b>POST</b><br><code>/v1/me/feed</code><p>Опубликовать пост; автор определяется по сессии.</p></td><td><pre>{
   <span class="p">"content"</span>: <span class="s">"Новый пост"</span>,
   <span class="p">"media_ids"</span>: [<span class="s">"media-7"</span>]
 }</pre></td></tr>
-<tr><td><b>GET</b><br><code>/v1/me/feed?cursor=abc123&amp;limit=<span class="n">20</span></code><p>Получить страницу ленты после курсора. Объединить обычные и популярные публикации, проверить доступ.</p></td><td>Без тела. Параметры передаются в URL.</td></tr>
+<tr><td><b>GET</b><br><code>/v1/me/feed?cursor=abc123&amp;limit=<span class="n">20</span></code><p>Получить страницу ленты после курсора. Объединить обычные и популярные публикации, проверить доступ.</p></td><td>Без тела. Параметры передаются в URL.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"items"</span>: [
+    {
+      <span class="p">"id"</span>: <span class="n">105</span>,
+      <span class="p">"author_id"</span>: <span class="n">7</span>,
+      <span class="p">"content"</span>: <span class="s">"Новый пост"</span>
+    }
+  ],
+  <span class="p">"next_cursor"</span>: <span class="s">"abc124"</span>
+}</pre></td></tr>
 </tbody>
 </table></div>
 </details>
@@ -11248,14 +11263,24 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Примеры основного HTTP API. Пользователь определяется по сессии; JSON передаётся с <code><span class="p">Content-Type</span>: application/json</code>. Пути и ID — примеры для разбора.</p>
 <div class="table-wrap"><table>
 <colgroup><col style="width:35%"><col></colgroup>
-<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример тела запроса</th></tr></thead>
+<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример запроса / ответа</th></tr></thead>
 <tbody>
 <tr><td><b>POST</b><br><code>/videos/uploads</code><p>Создать video_id, upload_id и ссылки на загрузку частей.</p><p><code><span class="p">Idempotency-Key</span>: k-123</code></p></td><td><pre>{
   <span class="p">"file_name"</span>: <span class="s">"video.mp4"</span>,
   <span class="p">"size"</span>: <span class="n">104857600</span>,
   <span class="p">"checksum"</span>: <span class="s">"sha256:abc123"</span>
 }</pre></td></tr>
-<tr><td><b>GET</b><br><code>/uploads/{id}</code><p>Узнать состояние и уже загруженные части для возобновления.</p></td><td>Без тела.</td></tr>
+<tr><td><b>GET</b><br><code>/uploads/{id}</code><p>Узнать состояние и уже загруженные части для возобновления.</p></td><td>Без тела.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"upload_id"</span>: <span class="s">"u-17"</span>,
+  <span class="p">"video_id"</span>: <span class="s">"v-42"</span>,
+  <span class="p">"status"</span>: <span class="s">"UPLOADING"</span>,
+  <span class="p">"parts"</span>: [
+    {
+      <span class="p">"part_number"</span>: <span class="n">1</span>,
+      <span class="p">"etag"</span>: <span class="s">"part-1-etag"</span>
+    }
+  ]
+}</pre></td></tr>
 <tr><td><b>POST</b><br><code>/uploads/{id}/complete</code><p>Завершить загрузку и поставить обработку.</p></td><td><pre>{
   <span class="p">"parts"</span>: [
     {
@@ -11264,8 +11289,16 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
     }
   ]
 }</pre></td></tr>
-<tr><td><b>GET</b><br><code>/videos/{id}</code><p>Получить метаданные, состояние обработки и публикации.</p></td><td>Без тела.</td></tr>
-<tr><td><b>GET</b><br><code>/videos/{id}/playback</code><p>Проверить доступ и выдать опубликованный манифест с доступом к сегментам.</p></td><td>Без тела.</td></tr>
+<tr><td><b>GET</b><br><code>/videos/{id}</code><p>Получить метаданные, состояние обработки и публикации.</p></td><td>Без тела.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"id"</span>: <span class="s">"v-42"</span>,
+  <span class="p">"status"</span>: <span class="s">"READY"</span>,
+  <span class="p">"published_version"</span>: <span class="n">3</span>
+}</pre></td></tr>
+<tr><td><b>GET</b><br><code>/videos/{id}/playback</code><p>Проверить доступ и выдать опубликованный манифест с доступом к сегментам.</p></td><td>Без тела.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"video_id"</span>: <span class="s">"v-42"</span>,
+  <span class="p">"version"</span>: <span class="n">3</span>,
+  <span class="p">"manifest_url"</span>: <span class="s">"https://cdn.example.com/v-42/3/master.m3u8"</span>
+}</pre></td></tr>
 <tr><td><b>DELETE</b><br><code>/videos/{id}</code><p>Запретить доступ и поставить очистку файлов и индексов.</p></td><td>Без тела.</td></tr>
 </tbody>
 </table></div>
@@ -11411,7 +11444,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Личные чаты, группы и каналы используют общий формат истории. Тип чата определяет права публикации и способ доставки. Ниже — примеры запросов; пользователь определяется по сессии, JSON передаётся с <code><span class="p">Content-Type</span>: application/json</code>.</p>
 <div class="table-wrap"><table>
 <colgroup><col style="width:35%"><col></colgroup>
-<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример тела запроса</th></tr></thead>
+<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример запроса / ответа</th></tr></thead>
 <tbody>
 <tr><td><b>POST</b><br><code>/chats</code><p>Создать чат</p></td><td><pre>{
   <span class="p">"type"</span>: <span class="s">"private"</span>,
@@ -11421,11 +11454,36 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
   <span class="p">"client_message_id"</span>: <span class="s">"m-123"</span>,
   <span class="p">"content"</span>: <span class="s">"Привет"</span>
 }</pre></td></tr>
-<tr><td><b>GET</b><br><code>/chats/{id}/messages?after_seq=<span class="n">120</span></code><p>Догрузить историю</p></td><td>Без тела. Параметр <code>after_seq</code> передаётся в URL.</td></tr>
+<tr><td><b>GET</b><br><code>/chats/{id}/messages?after_seq=<span class="n">120</span></code><p>Догрузить историю</p></td><td>Без тела. Параметр <code>after_seq</code> передаётся в URL.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"items"</span>: [
+    {
+      <span class="p">"message_id"</span>: <span class="s">"msg-121"</span>,
+      <span class="p">"seq"</span>: <span class="n">121</span>,
+      <span class="p">"sender_id"</span>: <span class="n">7</span>,
+      <span class="p">"content"</span>: <span class="s">"Привет"</span>,
+      <span class="p">"version"</span>: <span class="n">1</span>,
+      <span class="p">"deleted"</span>: <span class="k">false</span>
+    }
+  ],
+  <span class="p">"next_seq"</span>: <span class="n">121</span>,
+  <span class="p">"has_more"</span>: <span class="k">false</span>
+}</pre></td></tr>
 <tr><td><b>POST</b><br><code>/chats/{id}/read</code><p>Отметить сообщения прочитанными</p></td><td><pre>{
   <span class="p">"read_seq"</span>: <span class="n">121</span>
 }</pre></td></tr>
-<tr><td><b>GET</b><br><code>/sync?cursor=abc123</code><p>Получить обновления после курсора</p></td><td>Без тела. Параметр <code>cursor</code> передаётся в URL.</td></tr>
+<tr><td><b>GET</b><br><code>/sync?cursor=abc123</code><p>Получить обновления после курсора</p></td><td>Без тела. Параметр <code>cursor</code> передаётся в URL.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"updates"</span>: [
+    {
+      <span class="p">"seq"</span>: <span class="n">41</span>,
+      <span class="p">"type"</span>: <span class="s">"MESSAGE_CREATED"</span>,
+      <span class="p">"chat_id"</span>: <span class="n">42</span>,
+      <span class="p">"message_seq"</span>: <span class="n">121</span>,
+      <span class="p">"version"</span>: <span class="n">1</span>
+    }
+  ],
+  <span class="p">"next_cursor"</span>: <span class="s">"abc124"</span>,
+  <span class="p">"has_more"</span>: <span class="k">false</span>
+}</pre></td></tr>
 <tr><td><b>POST</b><br><code>/media/uploads</code><p>Начать загрузку вложения</p></td><td><pre>{
   <span class="p">"file_name"</span>: <span class="s">"photo.jpg"</span>,
   <span class="p">"content_type"</span>: <span class="s">"image/jpeg"</span>,
@@ -11618,7 +11676,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Примеры основного HTTP API. Пользователь определяется по сессии; JSON передаётся с <code><span class="p">Content-Type</span>: application/json</code>. Пути и ID — примеры для разбора.</p>
 <div class="table-wrap"><table>
 <colgroup><col style="width:35%"><col></colgroup>
-<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример тела запроса</th></tr></thead>
+<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример запроса / ответа</th></tr></thead>
 <tbody>
 <tr><td><b>POST</b><br><code>/namespaces/{id}/uploads</code><p>Создать сессию; получить недостающие блоки и ссылки на их загрузку.</p></td><td><pre>{
   <span class="p">"request_id"</span>: <span class="s">"u-17"</span>,
@@ -11633,8 +11691,30 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
   ]
 }</pre></td></tr>
 <tr><td><b>POST</b><br><code>/uploads/{id}/complete</code><p>Проверить блоки и опубликовать новую ревизию. Повтор возвращает результат той же сессии; конфликт базовой ревизии не затирает файл.</p></td><td>Без тела.</td></tr>
-<tr><td><b>GET</b><br><code>/namespaces/{id}/changes?cursor=abc123</code><p>Получить страницу изменений и следующий курсор.</p></td><td>Без тела. Параметры передаются в URL.</td></tr>
-<tr><td><b>GET</b><br><code>/files/{id}/revisions/{revision}</code><p>Получить манифест версии и разрешённые ссылки для скачивания блоков.</p></td><td>Без тела.</td></tr>
+<tr><td><b>GET</b><br><code>/namespaces/{id}/changes?cursor=abc123</code><p>Получить страницу изменений и следующий курсор.</p></td><td>Без тела. Параметры передаются в URL.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"changes"</span>: [
+    {
+      <span class="p">"seq"</span>: <span class="n">101</span>,
+      <span class="p">"file_id"</span>: <span class="s">"f-42"</span>,
+      <span class="p">"operation"</span>: <span class="s">"UPDATE"</span>,
+      <span class="p">"revision_id"</span>: <span class="n">8</span>
+    }
+  ],
+  <span class="p">"next_cursor"</span>: <span class="s">"abc124"</span>
+}</pre></td></tr>
+<tr><td><b>GET</b><br><code>/files/{id}/revisions/{revision}</code><p>Получить манифест версии и разрешённые ссылки для скачивания блоков.</p></td><td>Без тела.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"file_id"</span>: <span class="s">"f-42"</span>,
+  <span class="p">"revision_id"</span>: <span class="n">8</span>,
+  <span class="p">"size"</span>: <span class="n">1024</span>,
+  <span class="p">"manifest"</span>: [
+    {
+      <span class="p">"block_id"</span>: <span class="s">"b-1"</span>,
+      <span class="p">"size"</span>: <span class="n">1024</span>,
+      <span class="p">"hash"</span>: <span class="s">"sha256:abc123"</span>,
+      <span class="p">"download_url"</span>: <span class="s">"https://storage.example.com/b-1?token=demo"</span>
+    }
+  ]
+}</pre></td></tr>
 </tbody>
 </table></div>
 </details>
@@ -11903,7 +11983,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Примеры основного HTTP API. Пользователь определяется по сессии; JSON передаётся с <code><span class="p">Content-Type</span>: application/json</code>. Пути и ID — примеры для разбора.</p>
 <div class="table-wrap"><table>
 <colgroup><col style="width:35%"><col></colgroup>
-<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример тела запроса</th></tr></thead>
+<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример запроса / ответа</th></tr></thead>
 <tbody>
 <tr><td><b>POST</b><br><code>/quotes</code><p>Оценить цену и ETA; вернуть quote_id, версию тарифа и срок действия.</p></td><td><pre>{
   <span class="p">"pickup"</span>: {
@@ -11930,7 +12010,12 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 }</pre></td></tr>
 <tr><td><b>POST</b><br><code>/trips/{id}/start</code><p>Начать назначенную поездку.</p></td><td>Без тела.</td></tr>
 <tr><td><b>POST</b><br><code>/trips/{id}/complete</code><p>Завершить поездку и зафиксировать итоговую стоимость на сервере.</p></td><td>Без тела.</td></tr>
-<tr><td><b>GET</b><br><code>/trips/{id}</code><p>Восстановить состояние после переподключения.</p></td><td>Без тела.</td></tr>
+<tr><td><b>GET</b><br><code>/trips/{id}</code><p>Восстановить состояние после переподключения.</p></td><td>Без тела.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"id"</span>: <span class="s">"t-42"</span>,
+  <span class="p">"status"</span>: <span class="s">"ASSIGNED"</span>,
+  <span class="p">"driver_id"</span>: <span class="n">7</span>,
+  <span class="p">"quote_id"</span>: <span class="s">"q-17"</span>
+}</pre></td></tr>
 </tbody>
 </table></div>
 </details>
@@ -12232,9 +12317,26 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Примеры основного HTTP API. Пользователь определяется по сессии; JSON передаётся с <code><span class="p">Content-Type</span>: application/json</code>. Пути и ID — примеры для разбора.</p>
 <div class="table-wrap"><table>
 <colgroup><col style="width:35%"><col></colgroup>
-<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример тела запроса</th></tr></thead>
+<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример запроса / ответа</th></tr></thead>
 <tbody>
-<tr><td><b>GET</b><br><code>/products?query=phone</code><p>Найти товары с фильтрами и предложениями продавцов.</p></td><td>Без тела. Параметры передаются в URL.</td></tr>
+<tr><td><b>GET</b><br><code>/products?query=phone</code><p>Найти товары с фильтрами и предложениями продавцов.</p></td><td>Без тела. Параметры передаются в URL.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"items"</span>: [
+    {
+      <span class="p">"product_id"</span>: <span class="s">"p-42"</span>,
+      <span class="p">"name"</span>: <span class="s">"Телефон"</span>,
+      <span class="p">"offers"</span>: [
+        {
+          <span class="p">"offer_id"</span>: <span class="s">"o-7"</span>,
+          <span class="p">"sku_id"</span>: <span class="s">"sku-1"</span>,
+          <span class="p">"seller_id"</span>: <span class="n">7</span>,
+          <span class="p">"price"</span>: <span class="n">49900</span>,
+          <span class="p">"currency"</span>: <span class="s">"RUB"</span>
+        }
+      ]
+    }
+  ],
+  <span class="p">"next_cursor"</span>: <span class="k">null</span>
+}</pre></td></tr>
 <tr><td><b>PUT</b><br><code>/cart/items/{offerId}</code><p>Задать количество с проверкой версии корзины.</p></td><td><pre>{
   <span class="p">"quantity"</span>: <span class="n">2</span>,
   <span class="p">"cart_version"</span>: <span class="n">7</span>
@@ -12246,7 +12348,17 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <tr><td><b>POST</b><br><code>/orders</code><p>Создать заказ по котировке в состоянии PENDING. Повтор для покупателя возвращает прежний заказ.</p><p><code><span class="p">Idempotency-Key</span>: k-123</code></p></td><td><pre>{
   <span class="p">"quote_id"</span>: <span class="s">"q-17"</span>
 }</pre></td></tr>
-<tr><td><b>GET</b><br><code>/orders/{id}</code><p>Получить статусы заказа, оплаты и отправлений.</p></td><td>Без тела.</td></tr>
+<tr><td><b>GET</b><br><code>/orders/{id}</code><p>Получить статусы заказа, оплаты и отправлений.</p></td><td>Без тела.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"id"</span>: <span class="s">"o-42"</span>,
+  <span class="p">"status"</span>: <span class="s">"CONFIRMED"</span>,
+  <span class="p">"payment_status"</span>: <span class="s">"AUTHORIZED"</span>,
+  <span class="p">"shipments"</span>: [
+    {
+      <span class="p">"id"</span>: <span class="s">"s-17"</span>,
+      <span class="p">"status"</span>: <span class="s">"PREPARING"</span>
+    }
+  ]
+}</pre></td></tr>
 <tr><td><b>POST</b><br><code>/orders/{id}/cancel</code><p>Запустить допустимую отмену и компенсации.</p></td><td><pre>{
   <span class="p">"reason"</span>: <span class="s">"ordered_by_mistake"</span>
 }</pre></td></tr>
@@ -12572,10 +12684,30 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Примеры основного HTTP API. Пользователь определяется по сессии; JSON передаётся с <code><span class="p">Content-Type</span>: application/json</code>. Пути и ID — примеры для разбора.</p>
 <div class="table-wrap"><table>
 <colgroup><col style="width:35%"><col></colgroup>
-<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример тела запроса</th></tr></thead>
+<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример запроса / ответа</th></tr></thead>
 <tbody>
-<tr><td><b>GET</b><br><code>/accounts</code><p>Получить свои счета и актуальные доступные средства.</p></td><td>Без тела.</td></tr>
-<tr><td><b>GET</b><br><code>/accounts/{id}/entries?cursor=abc123</code><p>Прочитать историю с курсорной пагинацией.</p></td><td>Без тела. Параметры передаются в URL.</td></tr>
+<tr><td><b>GET</b><br><code>/accounts</code><p>Получить свои счета и актуальные доступные средства.</p></td><td>Без тела.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"items"</span>: [
+    {
+      <span class="p">"id"</span>: <span class="s">"a-42"</span>,
+      <span class="p">"currency"</span>: <span class="s">"RUB"</span>,
+      <span class="p">"booked_balance"</span>: <span class="n">100000</span>,
+      <span class="p">"held_amount"</span>: <span class="n">20000</span>,
+      <span class="p">"available_balance"</span>: <span class="n">80000</span>
+    }
+  ]
+}</pre></td></tr>
+<tr><td><b>GET</b><br><code>/accounts/{id}/entries?cursor=abc123</code><p>Прочитать историю с курсорной пагинацией.</p></td><td>Без тела. Параметры передаются в URL.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"items"</span>: [
+    {
+      <span class="p">"transaction_id"</span>: <span class="s">"lt-17"</span>,
+      <span class="p">"transfer_id"</span>: <span class="s">"t-42"</span>,
+      <span class="p">"amount_signed"</span>: <span class="n">-100000</span>,
+      <span class="p">"currency"</span>: <span class="s">"RUB"</span>
+    }
+  ],
+  <span class="p">"next_cursor"</span>: <span class="k">null</span>
+}</pre></td></tr>
 <tr><td><b>POST</b><br><code>/transfer-confirmations</code><p>Создать подтверждение, связанное с источником, получателем, суммой и валютой. Создание ещё не означает успешную дополнительную проверку.</p></td><td><pre>{
   <span class="p">"source_account_id"</span>: <span class="s">"a-42"</span>,
   <span class="p">"destination"</span>: {
@@ -12593,7 +12725,12 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
   <span class="p">"amount"</span>: <span class="n">100000</span>,
   <span class="p">"currency"</span>: <span class="s">"RUB"</span>
 }</pre></td></tr>
-<tr><td><b>GET</b><br><code>/transfers/{id}</code><p>Выяснить исход без повторного создания операции.</p></td><td>Без тела.</td></tr>
+<tr><td><b>GET</b><br><code>/transfers/{id}</code><p>Выяснить исход без повторного создания операции.</p></td><td>Без тела.<p><b>Ответ · 200 OK</b></p><pre>{
+  <span class="p">"id"</span>: <span class="s">"t-42"</span>,
+  <span class="p">"status"</span>: <span class="s">"POSTED"</span>,
+  <span class="p">"amount"</span>: <span class="n">100000</span>,
+  <span class="p">"currency"</span>: <span class="s">"RUB"</span>
+}</pre></td></tr>
 </tbody>
 </table></div>
 <p>Суммы передаются в минимальных единицах валюты: <code><span class="n">100000</span></code> копеек = 1 000 RUB. Проверка средств и проведение выполняются сервером.</p>
@@ -12895,21 +13032,13 @@ CRM передаёт обращение в API. Приложение наход�
 <p>Примеры основного HTTP API. Пользователь определяется по сессии; JSON передаётся с <code><span class="p">Content-Type</span>: application/json</code>. Пути и ID — примеры для разбора.</p>
 <div class="table-wrap"><table>
 <colgroup><col style="width:35%"><col></colgroup>
-<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример тела запроса</th></tr></thead>
+<thead><tr><th scope="col">Запрос и назначение</th><th scope="col">Пример запроса / ответа</th></tr></thead>
 <tbody>
 <tr><td><b>POST</b><br><code>/api/v1/drafts</code><p>Создать задачу генерации. Пара (operatorId, requestId) защищает от повторов.</p></td><td><pre>{
   <span class="p">"ticketId"</span>: <span class="s">"T-42"</span>,
   <span class="p">"requestId"</span>: <span class="s">"r-17"</span>
 }</pre></td></tr>
-<tr><td><b>GET</b><br><code>/api/v1/drafts/{id}</code><p>Получить статус, черновик и источники; заново проверить доступ и актуальность.</p></td><td>Без тела.</td></tr>
-<tr><td><b>POST</b><br><code>/api/v1/drafts/{id}/feedback</code><p>Сохранить оценку оператора.</p></td><td><pre>{
-  <span class="p">"rating"</span>: <span class="s">"EDITED"</span>,
-  <span class="p">"reason"</span>: <span class="s">"Нужна другая инструкция"</span>
-}</pre></td></tr>
-</tbody>
-</table></div>
-<p>Пример ответа на чтение готового черновика:</p>
-<pre>{
+<tr><td><b>GET</b><br><code>/api/v1/drafts/{id}</code><p>Получить статус, черновик и источники; заново проверить доступ и актуальность.</p></td><td>Без тела.<p><b>Ответ · 200 OK</b></p><pre>{
   <span class="p">"status"</span>: <span class="s">"READY"</span>,
   <span class="p">"draft"</span>: <span class="s">"..."</span>,
   <span class="p">"sources"</span>: [
@@ -12919,7 +13048,14 @@ CRM передаёт обращение в API. Приложение наход�
       <span class="p">"chunkId"</span>: <span class="s">"c-2"</span>
     }
   ]
-}</pre>
+}</pre></td></tr>
+<tr><td><b>POST</b><br><code>/api/v1/drafts/{id}/feedback</code><p>Сохранить оценку оператора.</p></td><td><pre>{
+  <span class="p">"rating"</span>: <span class="s">"EDITED"</span>,
+  <span class="p">"reason"</span>: <span class="s">"Нужна другая инструкция"</span>
+}</pre></td></tr>
+</tbody>
+</table></div>
+
 </details>
 <details class="db-data db-table"><summary id="sd-assistant-db-data">Данные в БД</summary>
 <p class="db-legend"><span class="db-key">PK</span> — первичный ключ, <span class="db-key">UK</span> — уникальное ограничение. Несколько полей PK образуют составной ключ.</p>
