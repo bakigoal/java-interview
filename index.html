@@ -12429,77 +12429,118 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 
     </div></div></article>
 <article id="q286" class="responsive-code" hidden><div class="crumbs">System Design — разбор задач</div><h2 tabindex="-1">286. Спроектируйте Amazon <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
-<p><b>Маркетплейс объединяет каталог продавцов, поиск, корзину, заказ, оплату и исполнение со склада.</b> Каталог и поиск обслуживают основную долю чтений; Checkout проверяет актуальные цены и резервирует остатки. Заказ хранит снимок условий покупки, а не ссылки на изменяемую цену.</p>
+<p><b>Маркетплейс объединяет каталог продавцов, поиск, корзину, заказ, оплату и исполнение со склада.</b> Каталог и поиск обслуживают основную долю чтений; Order проверяет актуальные цены и резервирует остатки. Заказ хранит снимок условий покупки, а не ссылки на изменяемую цену.</p>
 <p><b>Главные инварианты — не продать больше доступного и не списать деньги повторно.</b> Транзакции защищают остатки, идемпотентные шаги и Outbox связывают резерв, оплату и отгрузку. При разделении сервисов оформление становится процессом с сохранённым состоянием и компенсациями.</p>
-<figure class="concept" aria-labelledby="sd-amazon-summary-caption"><svg id="sd-amazon-summary" viewBox="-18 0 380 724" role="img" aria-labelledby="sd-amazon-summary-title sd-amazon-summary-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-amazon-summary-title">Amazon: архитектура после масштабирования</title><desc id="sd-amazon-summary-desc">Каталог и поиск масштабируются отдельно от Checkout API. PostgreSQL хранит каталог и корзины, поисковый индекс обновляется асинхронно. БД заказов и Outbox запускают координатор через очередь. Координатор резервирует остатки, авторизует оплату и после подтверждения заказа передаёт задания складу и доставке.</desc><defs><marker id="sd-amazon-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M172 50 V72 H78 V88" marker-end="url(#sd-amazon-summary-arrow)"/>
-<path class="concept-edge" d="M172 72 H258 V88" marker-end="url(#sd-amazon-summary-arrow)"/>
-<path class="concept-edge" d="M78 154 V210" marker-end="url(#sd-amazon-summary-arrow)"/>
-<path class="concept-edge" d="M258 154 V210" marker-end="url(#sd-amazon-summary-arrow)"/>
-<path class="concept-edge" d="M8 126 H2 V362 H8" marker-end="url(#sd-amazon-summary-arrow)"/>
-<path class="concept-edge" d="M78 276 V330" marker-end="url(#sd-amazon-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M258 276 V330" marker-end="url(#sd-amazon-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M258 380 V430" marker-end="url(#sd-amazon-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M188 470 H170 V582 H148" marker-end="url(#sd-amazon-summary-arrow)"/>
-<path class="concept-edge" d="M258 496 V550" marker-end="url(#sd-amazon-summary-arrow)"/>
-<path class="concept-edge" d="M328 470 H338 V688 H270" marker-end="url(#sd-amazon-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M188 484 H162 V244 H188" marker-end="url(#sd-amazon-summary-arrow)" stroke-dasharray="4 4"/>
+<figure class="concept" aria-labelledby="sd-amazon-summary-caption"><svg id="sd-amazon-summary" viewBox="-18 0 400 738" role="img" aria-labelledby="sd-amazon-summary-title sd-amazon-summary-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-amazon-summary-title">Amazon: архитектура после масштабирования</title><desc id="sd-amazon-summary-desc">Catalog, Search и Order масштабируются независимо. Search обращается к отдельному поисковому индексу. PostgreSQL хранит каталог и корзины, поисковый индекс обновляется асинхронно. БД заказов и Outbox запускают оркестратор через Kafka. Оркестратор вызывает Inventory для резервирования, Payment для оплаты и Delivery для исполнения заказа. Inventory работает с БД остатков, Payment — с провайдером, Delivery — со складом и доставкой.</desc><defs><marker id="sd-amazon-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M120 50 V66 H56 V88" marker-end="url(#sd-amazon-summary-arrow)"/>
+<path class="concept-edge" d="M220 50 V66 H288 V88" marker-end="url(#sd-amazon-summary-arrow)"/>
+<path class="concept-edge" d="M56 154 V210" marker-end="url(#sd-amazon-summary-arrow)"/>
+<path class="concept-edge" d="M288 154 V210" marker-end="url(#sd-amazon-summary-arrow)"/>
+<path class="concept-edge" d="M172 154 V210" marker-end="url(#sd-amazon-summary-arrow)"/>
+<path class="concept-edge" d="M60 288 V308 H176 V288" marker-end="url(#sd-amazon-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M292 288 V320 H212 V334" marker-end="url(#sd-amazon-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M176 378 V430" marker-end="url(#sd-amazon-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 496 V522 H56 V538" marker-end="url(#sd-amazon-summary-arrow)"/>
+<path class="concept-edge" d="M176 496 V538" marker-end="url(#sd-amazon-summary-arrow)"/>
+<path class="concept-edge" d="M212 496 V522 H288 V538" marker-end="url(#sd-amazon-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M258 454 H324 V286.3" marker-end="url(#sd-amazon-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M172 50 V88" marker-end="url(#sd-amazon-summary-arrow)"/>
+<path class="concept-edge" d="M56 604 V660" marker-end="url(#sd-amazon-summary-arrow)"/>
+<path class="concept-edge" d="M172 604 V660" marker-end="url(#sd-amazon-summary-arrow)"/>
+<path class="concept-edge" d="M288 604 V660" marker-end="url(#sd-amazon-summary-arrow)"/>
 <rect fill="var(--bg)" stroke="none" x="96" y="8" width="152" height="42" rx="8"/><rect x="96" y="8" width="152" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="114" cy="22" r="4"/><path d="M107 39 V35 Q107 29 114 29 Q121 29 121 35 V39"/></g>
 <text style="font-size:12px" x="182" y="34.0" text-anchor="middle">Покупатель</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="88" width="140" height="54" rx="8"/><rect class="concept-node accent" x="20" y="88" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="94" width="140" height="54" rx="8"/><rect class="concept-node accent" x="14" y="94" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="100" width="140" height="54" rx="8"/><rect class="concept-node accent" x="8" y="100" width="140" height="54" rx="8"/>
-<text x="78.0" y="122.5" text-anchor="middle">Каталог</text>
-<text x="78.0" y="141.5" text-anchor="middle" class="concept-label">поиск / корзина</text>
-<rect fill="var(--bg)" stroke="none" x="200" y="88" width="140" height="54" rx="8"/><rect class="concept-node accent" x="200" y="88" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="194" y="94" width="140" height="54" rx="8"/><rect class="concept-node accent" x="194" y="94" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="188" y="100" width="140" height="54" rx="8"/><rect class="concept-node accent" x="188" y="100" width="140" height="54" rx="8"/>
-<text x="258.0" y="122.5" text-anchor="middle">Checkout API</text>
-<text x="258.0" y="141.5" text-anchor="middle" class="concept-label">заказы</text>
-<path fill="var(--bg)" stroke="none" d="M8 218 A70.0 8 0 0 1 148 218 V268 A70.0 8 0 0 1 8 268 Z"/><path class="concept-db" d="M8 218 A70.0 8 0 0 1 148 218 V268 A70.0 8 0 0 1 8 268 Z"/><ellipse class="concept-db" cx="78.0" cy="218" rx="70.0" ry="8"/>
-<text x="78.0" y="241" text-anchor="middle">PostgreSQL</text>
-<text x="78.0" y="260" text-anchor="middle" class="concept-label">каталог / корзины</text>
-<path fill="var(--bg)" stroke="none" d="M188 218 A70.0 8 0 0 1 328 218 V268 A70.0 8 0 0 1 188 268 Z"/><path class="concept-db" d="M188 218 A70.0 8 0 0 1 328 218 V268 A70.0 8 0 0 1 188 268 Z"/><ellipse class="concept-db" cx="258.0" cy="218" rx="70.0" ry="8"/>
-<text x="258.0" y="241" text-anchor="middle">PostgreSQL</text>
-<text x="258.0" y="260" text-anchor="middle" class="concept-label">заказы + Outbox</text>
-<path fill="var(--bg)" stroke="none" d="M8 338 A70.0 8 0 0 1 148 338 V388 A70.0 8 0 0 1 8 388 Z"/><path class="concept-db" d="M8 338 A70.0 8 0 0 1 148 338 V388 A70.0 8 0 0 1 8 388 Z"/><ellipse class="concept-db" cx="78.0" cy="338" rx="70.0" ry="8"/>
-<text x="78.0" y="361" text-anchor="middle">Индекс поиска</text>
-<text x="78.0" y="380" text-anchor="middle" class="concept-label">фильтры / текст</text>
-<path fill="var(--bg)" stroke="none" d="M198 334 H320 A8 22 0 0 1 320 378 H198 A8 22 0 0 1 198 334 Z"/><path class="concept-broker" d="M198 334 H320 A8 22 0 0 1 320 378 H198 A8 22 0 0 1 198 334 Z"/><ellipse fill="var(--bg)" cx="198" cy="356" rx="8" ry="22"/><ellipse class="concept-broker" cx="198" cy="356" rx="8" ry="22"/>
-<text x="262" y="352" text-anchor="middle">Очередь</text>
-<text x="262" y="370" text-anchor="middle" class="concept-label">команды / события</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="88" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="20" y="88" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="94" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="14" y="94" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="100" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="8" y="100" width="96" height="54" rx="8"/>
+<text x="56" y="123" text-anchor="middle">Catalog</text><text x="56" y="142" text-anchor="middle" class="concept-label">корзина</text>
+<rect fill="var(--bg)" stroke="none" x="136" y="88" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="136" y="88" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="130" y="94" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="130" y="94" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="124" y="100" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="124" y="100" width="96" height="54" rx="8"/>
+<text x="172" y="123" text-anchor="middle">Search</text><text x="172" y="142" text-anchor="middle" class="concept-label">поиск</text>
+<rect fill="var(--bg)" stroke="none" x="252" y="88" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="252" y="88" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="246" y="94" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="246" y="94" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="240" y="100" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="240" y="100" width="96" height="54" rx="8"/>
+<text x="288" y="123" text-anchor="middle">Order</text><text x="288" y="142" text-anchor="middle" class="concept-label">заказы</text>
+<path fill="var(--bg)" stroke="none" d="M 8 218 A 52 8 0 0 1 112 218 V 280 A 52 8 0 0 1 8 280 Z"/><path class="concept-db" d="M 8 218 A 52 8 0 0 1 112 218 V 280 A 52 8 0 0 1 8 280 Z"/><ellipse class="concept-db" cx="60" cy="218" rx="52" ry="8"/>
+<text x="60" y="239" text-anchor="middle">PostgreSQL</text><text x="60" y="257" text-anchor="middle" class="concept-label">каталог</text><text x="60" y="274" text-anchor="middle" class="concept-label">корзины</text>
+<path fill="var(--bg)" stroke="none" d="M 124 218 A 52 8 0 0 1 228 218 V 280 A 52 8 0 0 1 124 280 Z"/><path class="concept-db" d="M 124 218 A 52 8 0 0 1 228 218 V 280 A 52 8 0 0 1 124 280 Z"/><ellipse class="concept-db" cx="176" cy="218" rx="52" ry="8"/>
+<text x="176" y="239" text-anchor="middle">Индекс</text><text x="176" y="257" text-anchor="middle">поиска</text><text x="176" y="274" text-anchor="middle" class="concept-label">фильтры / текст</text>
+<path fill="var(--bg)" stroke="none" d="M 240 218 A 52 8 0 0 1 344 218 V 280 A 52 8 0 0 1 240 280 Z"/><path class="concept-db" d="M 240 218 A 52 8 0 0 1 344 218 V 280 A 52 8 0 0 1 240 280 Z"/><ellipse class="concept-db" cx="292" cy="218" rx="52" ry="8"/>
+<text x="292" y="239" text-anchor="middle">PostgreSQL</text><text x="292" y="257" text-anchor="middle" class="concept-label">заказы</text><text x="292" y="274" text-anchor="middle" class="concept-label">+ Outbox</text>
+<path fill="var(--bg)" stroke="none" d="M115 334 H237 A8 22 0 0 1 237 378 H115 A8 22 0 0 1 115 334 Z"/><path class="concept-broker" d="M115 334 H237 A8 22 0 0 1 237 378 H115 A8 22 0 0 1 115 334 Z"/><ellipse fill="var(--bg)" cx="115" cy="356" rx="8" ry="22"/><ellipse class="concept-broker" cx="115" cy="356" rx="8" ry="22"/>
+<text x="179" y="352" text-anchor="middle">Kafka</text>
+<text x="179" y="370" text-anchor="middle" class="concept-label">команды / события</text>
 
 
-<rect fill="var(--bg)" stroke="none" x="200" y="430" width="140" height="54" rx="8"/><rect class="concept-node warning" x="200" y="430" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="194" y="436" width="140" height="54" rx="8"/><rect class="concept-node warning" x="194" y="436" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="188" y="442" width="140" height="54" rx="8"/><rect class="concept-node warning" x="188" y="442" width="140" height="54" rx="8"/>
-<text x="258.0" y="464.5" text-anchor="middle">Координатор</text>
-<text x="258.0" y="483.5" text-anchor="middle" class="concept-label">checkout saga</text>
-<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="325" cy="445" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="325" cy="445" r="10"/><text x="325" y="449" text-anchor="middle">W</text></g>
-<path fill="var(--bg)" stroke="none" d="M8 558 A70.0 8 0 0 1 148 558 V608 A70.0 8 0 0 1 8 608 Z"/><path class="concept-db" d="M8 558 A70.0 8 0 0 1 148 558 V608 A70.0 8 0 0 1 8 608 Z"/><ellipse class="concept-db" cx="78.0" cy="558" rx="70.0" ry="8"/>
-<text x="78.0" y="581" text-anchor="middle">Остатки</text>
-<text x="78.0" y="600" text-anchor="middle" class="concept-label">через Inventory API</text>
-<rect fill="var(--bg)" stroke="none" x="188" y="550" width="140" height="58" rx="8"/><rect class="concept-node plain" x="188" y="550" width="140" height="58" rx="8"/>
-<text x="258.0" y="574.5" text-anchor="middle">Платёжный</text>
-<text x="258.0" y="593.5" text-anchor="middle" class="concept-label">провайдер</text>
-<rect fill="var(--bg)" stroke="none" x="78" y="664" width="192" height="48" rx="8"/><rect class="concept-node plain" x="78" y="664" width="192" height="48" rx="8"/>
-<text x="174.0" y="693.0" text-anchor="middle">Склад / доставка</text>
-<g aria-label="К1"><circle cx="172" cy="72" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="172" cy="72" r="13"/><text x="172" y="76" text-anchor="middle" style="font-size:10px"><tspan x="172">К1</tspan></text></g>
-<g aria-label="П1"><circle cx="222" cy="72" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="222" cy="72" r="13"/><text x="222" y="76" text-anchor="middle" style="font-size:10px"><tspan x="222">П1</tspan></text></g>
-<g aria-label="К2"><circle cx="78" cy="182" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="78" cy="182" r="13"/><text x="78" y="186" text-anchor="middle" style="font-size:10px"><tspan x="78">К2</tspan></text></g>
-<g aria-label="П2"><circle cx="258" cy="182" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="258" cy="182" r="13"/><text x="258" y="186" text-anchor="middle" style="font-size:10px"><tspan x="258">П2</tspan></text></g>
-<g aria-label="И1"><circle cx="78" cy="302" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="78" cy="302" r="13"/><text x="78" y="306" text-anchor="middle" style="font-size:10px"><tspan x="78">И1</tspan></text></g>
-<g aria-label="П3"><circle cx="258" cy="304" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="258" cy="304" r="13"/><text x="258" y="308" text-anchor="middle" style="font-size:10px"><tspan x="258">П3</tspan></text></g>
-<g aria-label="П4"><circle cx="258" cy="404" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="258" cy="404" r="13"/><text x="258" y="408" text-anchor="middle" style="font-size:10px"><tspan x="258">П4</tspan></text></g>
-<g aria-label="П5"><circle cx="170" cy="524" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="170" cy="524" r="13"/><text x="170" y="528" text-anchor="middle" style="font-size:10px"><tspan x="170">П5</tspan></text></g>
-<g aria-label="П6"><circle cx="258" cy="522" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="258" cy="522" r="13"/><text x="258" y="526" text-anchor="middle" style="font-size:10px"><tspan x="258">П6</tspan></text></g>
-<g aria-label="П7"><circle cx="328" cy="688" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="328" cy="688" r="13"/><text x="328" y="692" text-anchor="middle" style="font-size:10px"><tspan x="328">П7</tspan></text></g>
-<g aria-label="П8"><circle cx="162.0" cy="424" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="162.0" cy="424" r="13"/><text x="162.0" y="428" text-anchor="middle" style="font-size:10px"><tspan x="162.0">П8</tspan></text></g>
-<g aria-label="К3"><circle cx="2.0" cy="182" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="2.0" cy="182" r="13"/><text x="2.0" y="186" text-anchor="middle" style="font-size:10px"><tspan x="2.0">К3</tspan></text></g>
-</svg><figcaption id="sd-amazon-summary-caption">Поиск не участвует в подтверждении наличия. Координатор сохраняет прогресс в БД заказов, вызывает Inventory API и провайдера, затем запускает отгрузку. Пунктир — индексация, Outbox, обработка событий и фоновые команды складу. Каталог, Checkout API и координаторы масштабируются независимо.<br>
-<b>Каталог и поиск: К1</b>&nbsp;— открыть каталог, поиск или корзину; <b>К2</b>&nbsp;— прочитать каталог или сохранить корзину; <b>К3</b>&nbsp;— выполнить поиск по индексу;<br>
+<rect fill="var(--bg)" stroke="none" x="118" y="430" width="140" height="54" rx="8"/><rect class="concept-node warning" x="118" y="430" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="112" y="436" width="140" height="54" rx="8"/><rect class="concept-node warning" x="112" y="436" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="106" y="442" width="140" height="54" rx="8"/><rect class="concept-node warning" x="106" y="442" width="140" height="54" rx="8"/>
+<text x="176" y="464.5" text-anchor="middle">Saga Orchestrator</text>
+<text x="176" y="483.5" text-anchor="middle" class="concept-label">checkout saga</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="243" cy="445" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="243" cy="445" r="10"/><text x="243" y="449" text-anchor="middle">W</text></g>
+<rect fill="var(--bg)" stroke="none" x="20" y="538" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="20" y="538" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="544" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="14" y="544" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="550" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="8" y="550" width="96" height="54" rx="8"/>
+<text x="56" y="573" text-anchor="middle">Inventory</text><text x="56" y="592" text-anchor="middle" class="concept-label">резервы</text>
+<rect fill="var(--bg)" stroke="none" x="136" y="538" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="136" y="538" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="130" y="544" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="130" y="544" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="124" y="550" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="124" y="550" width="96" height="54" rx="8"/>
+<text x="172" y="573" text-anchor="middle">Payment</text><text x="172" y="592" text-anchor="middle" class="concept-label">операции</text>
+<rect fill="var(--bg)" stroke="none" x="252" y="538" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="252" y="538" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="246" y="544" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="246" y="544" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="240" y="550" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="240" y="550" width="96" height="54" rx="8"/>
+<text x="288" y="573" text-anchor="middle">Delivery</text><text x="288" y="592" text-anchor="middle" class="concept-label">отправления</text>
+<path fill="var(--bg)" stroke="none" d="M 8 668 A 52 8 0 0 1 112 668 V 718 A 52 8 0 0 1 8 718 Z"/><path class="concept-db" d="M 8 668 A 52 8 0 0 1 112 668 V 718 A 52 8 0 0 1 8 718 Z"/><ellipse class="concept-db" cx="60" cy="668" rx="52" ry="8"/>
+<text x="60" y="691" text-anchor="middle">Остатки</text><text x="60" y="710" text-anchor="middle" class="concept-label">stock / резервы</text>
+<rect fill="var(--bg)" stroke="none" x="124" y="660" width="104" height="58" rx="8"/>
+<rect class="concept-node plain" x="124" y="660" width="104" height="58" rx="8"/>
+<text x="176" y="684" text-anchor="middle">Платёжный</text><text x="176" y="703" text-anchor="middle" class="concept-label">провайдер</text>
+<rect fill="var(--bg)" stroke="none" x="240" y="660" width="104" height="58" rx="8"/>
+<rect class="concept-node plain" x="240" y="660" width="104" height="58" rx="8"/>
+<text x="292" y="684" text-anchor="middle">Склад</text><text x="292" y="703" text-anchor="middle" class="concept-label">исполнение</text>
+<g aria-label="К1"><circle cx="56" cy="69" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="56" cy="69" r="13"/><text x="56" y="73" text-anchor="middle" style="font-size:10px"><tspan x="56">К1</tspan></text></g>
+<g aria-label="П1"><circle cx="288" cy="69" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="69" r="13"/><text x="288" y="73" text-anchor="middle" style="font-size:10px"><tspan x="288">П1</tspan></text></g>
+<g aria-label="К2"><circle cx="56" cy="182" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="56" cy="182" r="13"/><text x="56" y="186" text-anchor="middle" style="font-size:10px"><tspan x="56">К2</tspan></text></g>
+<g aria-label="П2"><circle cx="288" cy="182" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="182" r="13"/><text x="288" y="186" text-anchor="middle" style="font-size:10px"><tspan x="288">П2</tspan></text></g>
+<g aria-label="И1"><circle cx="118" cy="308" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="118" cy="308" r="13"/><text x="118" y="312" text-anchor="middle" style="font-size:10px"><tspan x="118">И1</tspan></text></g>
+<g aria-label="П3"><circle cx="292" cy="308" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="292" cy="308" r="13"/><text x="292" y="312" text-anchor="middle" style="font-size:10px"><tspan x="292">П3</tspan></text></g>
+<g aria-label="П4"><circle cx="176" cy="404" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="176" cy="404" r="13"/><text x="176" y="408" text-anchor="middle" style="font-size:10px"><tspan x="176">П4</tspan></text></g>
+<g aria-label="П5"><circle cx="98" cy="522" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="98" cy="522" r="13"/><text x="98" y="526" text-anchor="middle" style="font-size:10px"><tspan x="98">П5</tspan></text></g>
+<g aria-label="П6"><circle cx="176" cy="517" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="176" cy="517" r="13"/><text x="176" y="521" text-anchor="middle" style="font-size:10px"><tspan x="176">П6</tspan></text></g>
+<g aria-label="П7"><circle cx="250" cy="522" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="250" cy="522" r="13"/><text x="250" y="526" text-anchor="middle" style="font-size:10px"><tspan x="250">П7</tspan></text></g>
+<g aria-label="П8"><circle cx="324" cy="390" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="324" cy="390" r="13"/><text x="324" y="394" text-anchor="middle" style="font-size:10px"><tspan x="324">П8</tspan></text></g>
+<g aria-label="С2"><circle cx="172" cy="182" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="172" cy="182" r="13"/><text x="172" y="186" text-anchor="middle" style="font-size:10px"><tspan x="172">С2</tspan></text></g>
+<g aria-label="С1"><circle cx="172" cy="69" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="172" cy="69" r="13"/><text x="172" y="73" text-anchor="middle" style="font-size:10px"><tspan x="172">С1</tspan></text></g>
+<g aria-label="Р1"><circle cx="56" cy="632" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="56" cy="632" r="13"/><text x="56" y="636" text-anchor="middle" style="font-size:10px"><tspan x="56">Р1</tspan></text></g>
+<g aria-label="О1"><circle cx="172" cy="632" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="172" cy="632" r="13"/><text x="172" y="636" text-anchor="middle" style="font-size:10px"><tspan x="172">О1</tspan></text></g>
+<g aria-label="Д1"><circle cx="288" cy="632" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="632" r="13"/><text x="288" y="636" text-anchor="middle" style="font-size:10px"><tspan x="288">Д1</tspan></text></g>
+</svg><figcaption id="sd-amazon-summary-caption">Поиск не участвует в подтверждении наличия. Оркестратор сохраняет прогресс в БД заказов и вызывает Inventory, Payment и Delivery. Каждый сервис выполняет свой шаг и обрабатывает его повторы. Пунктир — индексация, Outbox, обработка событий и фоновые команды складу. Catalog, Search, Order, оркестраторы, Inventory, Payment и Delivery масштабируются независимо.<br>
+<b>Каталог и корзина: К1</b>&nbsp;— обратиться к Catalog; <b>К2</b>&nbsp;— прочитать каталог или сохранить корзину;<br>
+<b>Поиск: С1</b>&nbsp;— обратиться к Search; <b>С2</b>&nbsp;— выполнить поиск по индексу;<br>
 <b>Индексация: И1</b>&nbsp;— обновить поисковый индекс;<br>
-<b>Оформление заказа: П1</b>&nbsp;— начать оформление заказа; <b>П2</b>&nbsp;— сохранить заказ и Outbox; <b>П3</b>&nbsp;— опубликовать событие заказа; <b>П4</b>&nbsp;— получить событие координатором; <b>П5</b>&nbsp;— зарезервировать остатки через Inventory API; <b>П6</b>&nbsp;— выполнить платёж; <b>П7</b>&nbsp;— передать оплаченный заказ в доставку; <b>П8</b>&nbsp;— зафиксировать результат checkout saga.</figcaption></figure>
+<b>Оформление заказа: П1</b>&nbsp;— начать оформление заказа; <b>П2</b>&nbsp;— сохранить заказ и Outbox; <b>П3</b>&nbsp;— опубликовать событие заказа; <b>П4</b>&nbsp;— получить событие оркестратором; <b>П5</b>&nbsp;— запросить резерв у Inventory; <b>П6</b>&nbsp;— запросить оплату у Payment; <b>П7</b>&nbsp;— передать оплаченный заказ в Delivery; <b>П8</b>&nbsp;— зафиксировать результат checkout saga;<br>
+<b>Остатки: Р1</b>&nbsp;— Inventory атомарно меняет остаток и резерв в своей БД;<br>
+<b>Оплата: О1</b>&nbsp;— Payment вызывает провайдера со стабильным ключом операции;<br>
+<b>Исполнение: Д1</b>&nbsp;— Delivery передаёт складу идемпотентное задание и отслеживает доставку.</figcaption></figure>
     </div>
     <div class="more">
 <h3 class="design-step"><span class="step-badge">Шаг 1</span> <span>Согласовать границы и требования.</span></h3>
@@ -12514,7 +12555,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <h5 class="design-subsection">Границы задачи.</h5>
 <p>Проследить заказ от предложения в каталоге до резерва, оплаты и передачи на склад.</p>
 <h5 class="design-subsection">Расчёт нагрузки.</h5>
-<p>При трёх позициях на заказ пик 580 заказов/с означает примерно <b>1 740 резервов позиций/с</b> до повторов и распределения по складам. Чтений каталога 58 тыс./с — в 100 раз больше заказов: кеш и поисковый индекс разгружают этот поток независимо от Checkout.</p>
+<p>При трёх позициях на заказ пик 580 заказов/с означает примерно <b>1 740 резервов позиций/с</b> до повторов и распределения по складам. Чтений каталога 58 тыс./с — в 100 раз больше заказов: кеш и поисковый индекс разгружают этот поток независимо от Order.</p>
 <p>Горячий SKU проверяется отдельно: средняя нагрузка по складам скрывает конкуренцию за одну строку stock.</p>
 <h3 class="design-step"><span class="step-badge">Шаг 2</span> <span>Предложить и согласовать общую схему.</span></h3>
 <p>
@@ -12684,8 +12725,9 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p><b>Товар, предложение и складской остаток — разные сущности.</b> Product описывает модель товара, SKU — конкретный вариант, например размер и цвет. Offer связывает вариант с продавцом, ценой и условиями. Остаток учитывается для предложения и склада: одинаковый товар у разных продавцов не означает общий запас.</p>
 
 <h5 class="design-subsection">Каталог и поиск.</h5>
+<p><b>Catalog и Search — отдельные сервисы.</b> Catalog обслуживает карточки товаров и корзины через PostgreSQL, Search выполняет полнотекстовый поиск и фильтрацию через поисковый индекс. Изменения каталога поступают в индекс асинхронно, запросы поиска не проходят через Catalog.</p>
 <p>Product, SKU и Offer изменяются в авторитетной БД; Outbox передаёт изменения индексатору. Документ поиска обновляется по версии предложения, чтобы старое событие не вернуло прежнюю цену.</p>
-<p>Допущение: поиск может отставать до 30 с, поэтому цена и наличие в нём предварительные; Checkout проверяет их заново. При превышении этого бюджета задержка явно показывается пользователю или устаревшее предложение скрывается.</p>
+<p>Допущение: поиск может отставать до 30 с, поэтому цена и наличие в нём предварительные; Order проверяет их заново. При превышении этого бюджета задержка явно показывается пользователю или устаревшее предложение скрывается.</p>
 <p>Принятая котировка фиксирует условия на согласованный срок. В заказ копируются цена и условия каждой позиции, поэтому последующие изменения каталога не меняют оформленный заказ.</p>
 <h5 class="design-subsection">Защита от overselling.</h5>
 <p>Два покупателя одновременно заказывают последнюю единицу на складе. Если оба прочитают остаток до записи, каждый увидит одну доступную единицу. Inventory выполняет условное обновление и создание reservation одной локальной транзакцией:</p>
@@ -12708,92 +12750,134 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Истечение TTL и подтверждение блокируют один резерв и согласуют изменение stock в одной транзакции. Время проверяется после получения блокировки по часам БД.</p>
 <p>Если истечение победило, запоздалое подтверждение не может оживить старый резерв: нужен новый attempt_id и повторная проверка наличия. Выделенный под подтверждённый заказ остаток не освобождается обычным таймером резервов.</p>
 <h4 class="design-section">Несколько складов и saga.</h4>
-<p>Транзакция заказа не охватывает все шарды остатков и платёжного провайдера. Координатор сохраняет результат каждого шага, идентификаторы резервов и операций оплаты; после перезапуска продолжает процесс.</p>
+<p><b>Inventory, Payment и Delivery — отдельные сервисы, шаги вызывает Saga Orchestrator.</b> Inventory владеет остатками и резервами, Payment — платёжными операциями и сверкой с провайдером, Delivery — отправлениями и взаимодействием со складом и перевозчиками. Оркестратор сохраняет прогресс саги, идентификаторы результатов и управляет компенсациями.</p>
+<p>Транзакция заказа не охватывает Inventory, Payment и Delivery. Оркестратор сохраняет результат каждого шага, идентификаторы резервов и операций оплаты; после перезапуска продолжает процесс.</p>
 <p>Отмена во время обработки сначала сохраняет намерение остановить оформление. Поздний успешный ответ записывается и компенсируется, а не теряется из-за того, что заказ уже помечен отменённым.</p>
 <h4 class="design-section">Оплата и отгрузка.</h4>
 <p>Для разбора выбран провайдер с авторизацией и частичными списаниями; срок авторизации и правила продления нужно учитывать. На каждую операцию выделяется стабильный ключ, сумма всех списаний не превышает авторизованный итог.</p>
-<p>Webhook проверяется и устраняет дубли. Таймаут означает неизвестный результат: сначала сверка существующей операции, затем следующий шаг, а не новое списание.</p>
-<p>После подтверждённого списания одной транзакцией фиксируются состояние платежа и Outbox-команда конкретному отправлению. Склад устраняет дубли по shipment_id.</p>
+<p>Payment проверяет webhook и устраняет дубли. Таймаут означает неизвестный результат: сначала сверка существующей операции, затем следующий шаг, а не новое списание. Оркестратор использует стабильный ID операции при повторном вызове Payment.</p>
+<p>Payment сохраняет подтверждённое списание и исходящее событие одной транзакцией. Оркестратор фиксирует результат шага и Outbox-команду для Delivery в своей транзакции. Delivery сохраняет задание на исполнение, а при повторах возвращает прежний результат по <code>shipment_id</code>. Склад также устраняет дубли по этому ID.</p>
 <p>Если склад не может выполнить уже оплаченную отправку, запускается возврат. При отмене после передачи команды нельзя просто вернуть allocated в продажу: сначала склад подтверждает остановку исполнения; уже отгруженный товар проходит процесс возврата.</p>
 <p>Отмена не является откатом совершённой доставки.</p>
 <h4 class="design-section">Что меняется при разделении каталога и складов?</h4>
-<p>На пике каталог обслуживает в 100 раз больше чтений, чем Checkout принимает заказов. <b>Поиск допускает задержку обновления, резерв последней единицы требует актуального остатка.</b> Поэтому чтения каталога уходят в кеш и поисковый индекс, а Checkout запрашивает резерв у Inventory. Когда позиции заказа лежат на разных складских шардах, одной локальной транзакции уже недостаточно: координатор сохраняет полученные резервы, чтобы после сбоя продолжить заказ или освободить товар.</p>
+<p>На пике каталог обслуживает в 100 раз больше чтений, чем Order принимает заказов. <b>Поиск допускает задержку обновления, резерв последней единицы требует актуального остатка.</b> Поэтому чтения каталога уходят в кеш и поисковый индекс, а Order запрашивает резерв у Inventory. Когда позиции заказа лежат на разных складских шардах, одной локальной транзакции уже недостаточно: оркестратор сохраняет полученные резервы, чтобы после сбоя продолжить заказ или освободить товар.</p>
 
 <h5 class="design-subsection">Проверка масштаба.</h5>
-<p>Каталог и поиск масштабируются по чтениям, Checkout и координаторы — по заказам и возрасту незавершённых шагов. Для распродажи важна конкуренция за горячий SKU: ограничение допуска в Checkout защищает Inventory от очереди блокировок.</p>
+<p>Каталог и поиск масштабируются по чтениям, Order и оркестраторы — по заказам и возрасту незавершённых шагов. Для распродажи важна конкуренция за горячий SKU: ограничение допуска в Order защищает Inventory от очереди блокировок.</p>
 <p>Межскладские вызовы выполняются вне локальных транзакций; нагрузочный тест проверяет не только успешные заказы, но и массовые истечения резервов, задержки платежей и выполнение компенсаций.</p>
 <h3 class="design-step"><span class="step-badge">Шаг 4</span> <span>Подвести итог.</span></h3>
 <p>
-Поиск может показать устаревшее наличие. До подтверждения Checkout получает резервы всех позиций и авторизацию оплаты. Сохранённый прогресс позволяет после сбоя продолжить оформление или снять резервы. Цена — промежуточные состояния: при неизвестном исходе платежа заказ ждёт сверки, а товар временно остаётся зарезервированным.</p>
-<figure class="concept" aria-labelledby="sd-amazon-scaled-caption"><svg id="sd-amazon-scaled" viewBox="-18 0 380 724" role="img" aria-labelledby="sd-amazon-scaled-title sd-amazon-scaled-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-amazon-scaled-title">Amazon: архитектура после масштабирования</title><desc id="sd-amazon-scaled-desc">Каталог и поиск масштабируются отдельно от Checkout API. PostgreSQL хранит каталог и корзины, поисковый индекс обновляется асинхронно. БД заказов и Outbox запускают координатор через очередь. Координатор резервирует остатки, авторизует оплату и после подтверждения заказа передаёт задания складу и доставке.</desc><defs><marker id="sd-amazon-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M172 50 V72 H78 V88" marker-end="url(#sd-amazon-scaled-arrow)"/>
-<path class="concept-edge" d="M172 72 H258 V88" marker-end="url(#sd-amazon-scaled-arrow)"/>
-<path class="concept-edge" d="M78 154 V210" marker-end="url(#sd-amazon-scaled-arrow)"/>
-<path class="concept-edge" d="M258 154 V210" marker-end="url(#sd-amazon-scaled-arrow)"/>
-<path class="concept-edge" d="M8 126 H2 V362 H8" marker-end="url(#sd-amazon-scaled-arrow)"/>
-<path class="concept-edge" d="M78 276 V330" marker-end="url(#sd-amazon-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M258 276 V330" marker-end="url(#sd-amazon-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M258 380 V430" marker-end="url(#sd-amazon-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M188 470 H170 V582 H148" marker-end="url(#sd-amazon-scaled-arrow)"/>
-<path class="concept-edge" d="M258 496 V550" marker-end="url(#sd-amazon-scaled-arrow)"/>
-<path class="concept-edge" d="M328 470 H338 V688 H270" marker-end="url(#sd-amazon-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M188 484 H162 V244 H188" marker-end="url(#sd-amazon-scaled-arrow)" stroke-dasharray="4 4"/>
+Поиск может показать устаревшее наличие. До подтверждения Order получает резервы всех позиций и авторизацию оплаты. Сохранённый прогресс позволяет после сбоя продолжить оформление или снять резервы. Цена — промежуточные состояния: при неизвестном исходе платежа заказ ждёт сверки, а товар временно остаётся зарезервированным.</p>
+<figure class="concept" aria-labelledby="sd-amazon-scaled-caption"><svg id="sd-amazon-scaled" viewBox="-18 0 400 738" role="img" aria-labelledby="sd-amazon-scaled-title sd-amazon-scaled-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-amazon-scaled-title">Amazon: архитектура после масштабирования</title><desc id="sd-amazon-scaled-desc">Catalog, Search и Order масштабируются независимо. Search обращается к отдельному поисковому индексу. PostgreSQL хранит каталог и корзины, поисковый индекс обновляется асинхронно. БД заказов и Outbox запускают оркестратор через Kafka. Оркестратор вызывает Inventory для резервирования, Payment для оплаты и Delivery для исполнения заказа. Inventory работает с БД остатков, Payment — с провайдером, Delivery — со складом и доставкой.</desc><defs><marker id="sd-amazon-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M120 50 V66 H56 V88" marker-end="url(#sd-amazon-scaled-arrow)"/>
+<path class="concept-edge" d="M220 50 V66 H288 V88" marker-end="url(#sd-amazon-scaled-arrow)"/>
+<path class="concept-edge" d="M56 154 V210" marker-end="url(#sd-amazon-scaled-arrow)"/>
+<path class="concept-edge" d="M288 154 V210" marker-end="url(#sd-amazon-scaled-arrow)"/>
+<path class="concept-edge" d="M172 154 V210" marker-end="url(#sd-amazon-scaled-arrow)"/>
+<path class="concept-edge" d="M60 288 V308 H176 V288" marker-end="url(#sd-amazon-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M292 288 V320 H212 V334" marker-end="url(#sd-amazon-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M176 378 V430" marker-end="url(#sd-amazon-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M140 496 V522 H56 V538" marker-end="url(#sd-amazon-scaled-arrow)"/>
+<path class="concept-edge" d="M176 496 V538" marker-end="url(#sd-amazon-scaled-arrow)"/>
+<path class="concept-edge" d="M212 496 V522 H288 V538" marker-end="url(#sd-amazon-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M258 454 H324 V286.3" marker-end="url(#sd-amazon-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M172 50 V88" marker-end="url(#sd-amazon-scaled-arrow)"/>
+<path class="concept-edge" d="M56 604 V660" marker-end="url(#sd-amazon-scaled-arrow)"/>
+<path class="concept-edge" d="M172 604 V660" marker-end="url(#sd-amazon-scaled-arrow)"/>
+<path class="concept-edge" d="M288 604 V660" marker-end="url(#sd-amazon-scaled-arrow)"/>
 <rect fill="var(--bg)" stroke="none" x="96" y="8" width="152" height="42" rx="8"/><rect x="96" y="8" width="152" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="114" cy="22" r="4"/><path d="M107 39 V35 Q107 29 114 29 Q121 29 121 35 V39"/></g>
 <text style="font-size:12px" x="182" y="34.0" text-anchor="middle">Покупатель</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="88" width="140" height="54" rx="8"/><rect class="concept-node accent" x="20" y="88" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="94" width="140" height="54" rx="8"/><rect class="concept-node accent" x="14" y="94" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="100" width="140" height="54" rx="8"/><rect class="concept-node accent" x="8" y="100" width="140" height="54" rx="8"/>
-<text x="78.0" y="122.5" text-anchor="middle">Каталог</text>
-<text x="78.0" y="141.5" text-anchor="middle" class="concept-label">поиск / корзина</text>
-<rect fill="var(--bg)" stroke="none" x="200" y="88" width="140" height="54" rx="8"/><rect class="concept-node accent" x="200" y="88" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="194" y="94" width="140" height="54" rx="8"/><rect class="concept-node accent" x="194" y="94" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="188" y="100" width="140" height="54" rx="8"/><rect class="concept-node accent" x="188" y="100" width="140" height="54" rx="8"/>
-<text x="258.0" y="122.5" text-anchor="middle">Checkout API</text>
-<text x="258.0" y="141.5" text-anchor="middle" class="concept-label">заказы</text>
-<path fill="var(--bg)" stroke="none" d="M8 218 A70.0 8 0 0 1 148 218 V268 A70.0 8 0 0 1 8 268 Z"/><path class="concept-db" d="M8 218 A70.0 8 0 0 1 148 218 V268 A70.0 8 0 0 1 8 268 Z"/><ellipse class="concept-db" cx="78.0" cy="218" rx="70.0" ry="8"/>
-<text x="78.0" y="241" text-anchor="middle">PostgreSQL</text>
-<text x="78.0" y="260" text-anchor="middle" class="concept-label">каталог / корзины</text>
-<path fill="var(--bg)" stroke="none" d="M188 218 A70.0 8 0 0 1 328 218 V268 A70.0 8 0 0 1 188 268 Z"/><path class="concept-db" d="M188 218 A70.0 8 0 0 1 328 218 V268 A70.0 8 0 0 1 188 268 Z"/><ellipse class="concept-db" cx="258.0" cy="218" rx="70.0" ry="8"/>
-<text x="258.0" y="241" text-anchor="middle">PostgreSQL</text>
-<text x="258.0" y="260" text-anchor="middle" class="concept-label">заказы + Outbox</text>
-<path fill="var(--bg)" stroke="none" d="M8 338 A70.0 8 0 0 1 148 338 V388 A70.0 8 0 0 1 8 388 Z"/><path class="concept-db" d="M8 338 A70.0 8 0 0 1 148 338 V388 A70.0 8 0 0 1 8 388 Z"/><ellipse class="concept-db" cx="78.0" cy="338" rx="70.0" ry="8"/>
-<text x="78.0" y="361" text-anchor="middle">Индекс поиска</text>
-<text x="78.0" y="380" text-anchor="middle" class="concept-label">фильтры / текст</text>
-<path fill="var(--bg)" stroke="none" d="M198 334 H320 A8 22 0 0 1 320 378 H198 A8 22 0 0 1 198 334 Z"/><path class="concept-broker" d="M198 334 H320 A8 22 0 0 1 320 378 H198 A8 22 0 0 1 198 334 Z"/><ellipse fill="var(--bg)" cx="198" cy="356" rx="8" ry="22"/><ellipse class="concept-broker" cx="198" cy="356" rx="8" ry="22"/>
-<text x="262" y="352" text-anchor="middle">Очередь</text>
-<text x="262" y="370" text-anchor="middle" class="concept-label">команды / события</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="88" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="20" y="88" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="94" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="14" y="94" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="100" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="8" y="100" width="96" height="54" rx="8"/>
+<text x="56" y="123" text-anchor="middle">Catalog</text><text x="56" y="142" text-anchor="middle" class="concept-label">корзина</text>
+<rect fill="var(--bg)" stroke="none" x="136" y="88" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="136" y="88" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="130" y="94" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="130" y="94" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="124" y="100" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="124" y="100" width="96" height="54" rx="8"/>
+<text x="172" y="123" text-anchor="middle">Search</text><text x="172" y="142" text-anchor="middle" class="concept-label">поиск</text>
+<rect fill="var(--bg)" stroke="none" x="252" y="88" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="252" y="88" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="246" y="94" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="246" y="94" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="240" y="100" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="240" y="100" width="96" height="54" rx="8"/>
+<text x="288" y="123" text-anchor="middle">Order</text><text x="288" y="142" text-anchor="middle" class="concept-label">заказы</text>
+<path fill="var(--bg)" stroke="none" d="M 8 218 A 52 8 0 0 1 112 218 V 280 A 52 8 0 0 1 8 280 Z"/><path class="concept-db" d="M 8 218 A 52 8 0 0 1 112 218 V 280 A 52 8 0 0 1 8 280 Z"/><ellipse class="concept-db" cx="60" cy="218" rx="52" ry="8"/>
+<text x="60" y="239" text-anchor="middle">PostgreSQL</text><text x="60" y="257" text-anchor="middle" class="concept-label">каталог</text><text x="60" y="274" text-anchor="middle" class="concept-label">корзины</text>
+<path fill="var(--bg)" stroke="none" d="M 124 218 A 52 8 0 0 1 228 218 V 280 A 52 8 0 0 1 124 280 Z"/><path class="concept-db" d="M 124 218 A 52 8 0 0 1 228 218 V 280 A 52 8 0 0 1 124 280 Z"/><ellipse class="concept-db" cx="176" cy="218" rx="52" ry="8"/>
+<text x="176" y="239" text-anchor="middle">Индекс</text><text x="176" y="257" text-anchor="middle">поиска</text><text x="176" y="274" text-anchor="middle" class="concept-label">фильтры / текст</text>
+<path fill="var(--bg)" stroke="none" d="M 240 218 A 52 8 0 0 1 344 218 V 280 A 52 8 0 0 1 240 280 Z"/><path class="concept-db" d="M 240 218 A 52 8 0 0 1 344 218 V 280 A 52 8 0 0 1 240 280 Z"/><ellipse class="concept-db" cx="292" cy="218" rx="52" ry="8"/>
+<text x="292" y="239" text-anchor="middle">PostgreSQL</text><text x="292" y="257" text-anchor="middle" class="concept-label">заказы</text><text x="292" y="274" text-anchor="middle" class="concept-label">+ Outbox</text>
+<path fill="var(--bg)" stroke="none" d="M115 334 H237 A8 22 0 0 1 237 378 H115 A8 22 0 0 1 115 334 Z"/><path class="concept-broker" d="M115 334 H237 A8 22 0 0 1 237 378 H115 A8 22 0 0 1 115 334 Z"/><ellipse fill="var(--bg)" cx="115" cy="356" rx="8" ry="22"/><ellipse class="concept-broker" cx="115" cy="356" rx="8" ry="22"/>
+<text x="179" y="352" text-anchor="middle">Kafka</text>
+<text x="179" y="370" text-anchor="middle" class="concept-label">команды / события</text>
 
 
-<rect fill="var(--bg)" stroke="none" x="200" y="430" width="140" height="54" rx="8"/><rect class="concept-node warning" x="200" y="430" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="194" y="436" width="140" height="54" rx="8"/><rect class="concept-node warning" x="194" y="436" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="188" y="442" width="140" height="54" rx="8"/><rect class="concept-node warning" x="188" y="442" width="140" height="54" rx="8"/>
-<text x="258.0" y="464.5" text-anchor="middle">Координатор</text>
-<text x="258.0" y="483.5" text-anchor="middle" class="concept-label">checkout saga</text>
-<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="325" cy="445" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="325" cy="445" r="10"/><text x="325" y="449" text-anchor="middle">W</text></g>
-<path fill="var(--bg)" stroke="none" d="M8 558 A70.0 8 0 0 1 148 558 V608 A70.0 8 0 0 1 8 608 Z"/><path class="concept-db" d="M8 558 A70.0 8 0 0 1 148 558 V608 A70.0 8 0 0 1 8 608 Z"/><ellipse class="concept-db" cx="78.0" cy="558" rx="70.0" ry="8"/>
-<text x="78.0" y="581" text-anchor="middle">Остатки</text>
-<text x="78.0" y="600" text-anchor="middle" class="concept-label">через Inventory API</text>
-<rect fill="var(--bg)" stroke="none" x="188" y="550" width="140" height="58" rx="8"/><rect class="concept-node plain" x="188" y="550" width="140" height="58" rx="8"/>
-<text x="258.0" y="574.5" text-anchor="middle">Платёжный</text>
-<text x="258.0" y="593.5" text-anchor="middle" class="concept-label">провайдер</text>
-<rect fill="var(--bg)" stroke="none" x="78" y="664" width="192" height="48" rx="8"/><rect class="concept-node plain" x="78" y="664" width="192" height="48" rx="8"/>
-<text x="174.0" y="693.0" text-anchor="middle">Склад / доставка</text>
-<g aria-label="К1"><circle cx="172" cy="72" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="172" cy="72" r="13"/><text x="172" y="76" text-anchor="middle" style="font-size:10px"><tspan x="172">К1</tspan></text></g>
-<g aria-label="П1"><circle cx="222" cy="72" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="222" cy="72" r="13"/><text x="222" y="76" text-anchor="middle" style="font-size:10px"><tspan x="222">П1</tspan></text></g>
-<g aria-label="К2"><circle cx="78" cy="182" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="78" cy="182" r="13"/><text x="78" y="186" text-anchor="middle" style="font-size:10px"><tspan x="78">К2</tspan></text></g>
-<g aria-label="П2"><circle cx="258" cy="182" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="258" cy="182" r="13"/><text x="258" y="186" text-anchor="middle" style="font-size:10px"><tspan x="258">П2</tspan></text></g>
-<g aria-label="И1"><circle cx="78" cy="302" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="78" cy="302" r="13"/><text x="78" y="306" text-anchor="middle" style="font-size:10px"><tspan x="78">И1</tspan></text></g>
-<g aria-label="П3"><circle cx="258" cy="304" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="258" cy="304" r="13"/><text x="258" y="308" text-anchor="middle" style="font-size:10px"><tspan x="258">П3</tspan></text></g>
-<g aria-label="П4"><circle cx="258" cy="404" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="258" cy="404" r="13"/><text x="258" y="408" text-anchor="middle" style="font-size:10px"><tspan x="258">П4</tspan></text></g>
-<g aria-label="П5"><circle cx="170" cy="524" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="170" cy="524" r="13"/><text x="170" y="528" text-anchor="middle" style="font-size:10px"><tspan x="170">П5</tspan></text></g>
-<g aria-label="П6"><circle cx="258" cy="522" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="258" cy="522" r="13"/><text x="258" y="526" text-anchor="middle" style="font-size:10px"><tspan x="258">П6</tspan></text></g>
-<g aria-label="П7"><circle cx="328" cy="688" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="328" cy="688" r="13"/><text x="328" y="692" text-anchor="middle" style="font-size:10px"><tspan x="328">П7</tspan></text></g>
-<g aria-label="П8"><circle cx="162.0" cy="424" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="162.0" cy="424" r="13"/><text x="162.0" y="428" text-anchor="middle" style="font-size:10px"><tspan x="162.0">П8</tspan></text></g>
-<g aria-label="К3"><circle cx="2.0" cy="182" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="2.0" cy="182" r="13"/><text x="2.0" y="186" text-anchor="middle" style="font-size:10px"><tspan x="2.0">К3</tspan></text></g>
-</svg><figcaption id="sd-amazon-scaled-caption">Поиск не участвует в подтверждении наличия. Координатор сохраняет прогресс в БД заказов, вызывает Inventory API и провайдера, затем запускает отгрузку. Пунктир — индексация, Outbox, обработка событий и фоновые команды складу. Каталог, Checkout API и координаторы масштабируются независимо.<br>
-<b>Каталог и поиск: К1</b>&nbsp;— открыть каталог, поиск или корзину; <b>К2</b>&nbsp;— прочитать каталог или сохранить корзину; <b>К3</b>&nbsp;— выполнить поиск по индексу;<br>
+<rect fill="var(--bg)" stroke="none" x="118" y="430" width="140" height="54" rx="8"/><rect class="concept-node warning" x="118" y="430" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="112" y="436" width="140" height="54" rx="8"/><rect class="concept-node warning" x="112" y="436" width="140" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="106" y="442" width="140" height="54" rx="8"/><rect class="concept-node warning" x="106" y="442" width="140" height="54" rx="8"/>
+<text x="176" y="464.5" text-anchor="middle">Saga Orchestrator</text>
+<text x="176" y="483.5" text-anchor="middle" class="concept-label">checkout saga</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="243" cy="445" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="243" cy="445" r="10"/><text x="243" y="449" text-anchor="middle">W</text></g>
+<rect fill="var(--bg)" stroke="none" x="20" y="538" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="20" y="538" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="544" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="14" y="544" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="550" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="8" y="550" width="96" height="54" rx="8"/>
+<text x="56" y="573" text-anchor="middle">Inventory</text><text x="56" y="592" text-anchor="middle" class="concept-label">резервы</text>
+<rect fill="var(--bg)" stroke="none" x="136" y="538" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="136" y="538" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="130" y="544" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="130" y="544" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="124" y="550" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="124" y="550" width="96" height="54" rx="8"/>
+<text x="172" y="573" text-anchor="middle">Payment</text><text x="172" y="592" text-anchor="middle" class="concept-label">операции</text>
+<rect fill="var(--bg)" stroke="none" x="252" y="538" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="252" y="538" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="246" y="544" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="246" y="544" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="240" y="550" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="240" y="550" width="96" height="54" rx="8"/>
+<text x="288" y="573" text-anchor="middle">Delivery</text><text x="288" y="592" text-anchor="middle" class="concept-label">отправления</text>
+<path fill="var(--bg)" stroke="none" d="M 8 668 A 52 8 0 0 1 112 668 V 718 A 52 8 0 0 1 8 718 Z"/><path class="concept-db" d="M 8 668 A 52 8 0 0 1 112 668 V 718 A 52 8 0 0 1 8 718 Z"/><ellipse class="concept-db" cx="60" cy="668" rx="52" ry="8"/>
+<text x="60" y="691" text-anchor="middle">Остатки</text><text x="60" y="710" text-anchor="middle" class="concept-label">stock / резервы</text>
+<rect fill="var(--bg)" stroke="none" x="124" y="660" width="104" height="58" rx="8"/>
+<rect class="concept-node plain" x="124" y="660" width="104" height="58" rx="8"/>
+<text x="176" y="684" text-anchor="middle">Платёжный</text><text x="176" y="703" text-anchor="middle" class="concept-label">провайдер</text>
+<rect fill="var(--bg)" stroke="none" x="240" y="660" width="104" height="58" rx="8"/>
+<rect class="concept-node plain" x="240" y="660" width="104" height="58" rx="8"/>
+<text x="292" y="684" text-anchor="middle">Склад</text><text x="292" y="703" text-anchor="middle" class="concept-label">исполнение</text>
+<g aria-label="К1"><circle cx="56" cy="69" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="56" cy="69" r="13"/><text x="56" y="73" text-anchor="middle" style="font-size:10px"><tspan x="56">К1</tspan></text></g>
+<g aria-label="П1"><circle cx="288" cy="69" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="69" r="13"/><text x="288" y="73" text-anchor="middle" style="font-size:10px"><tspan x="288">П1</tspan></text></g>
+<g aria-label="К2"><circle cx="56" cy="182" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="56" cy="182" r="13"/><text x="56" y="186" text-anchor="middle" style="font-size:10px"><tspan x="56">К2</tspan></text></g>
+<g aria-label="П2"><circle cx="288" cy="182" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="182" r="13"/><text x="288" y="186" text-anchor="middle" style="font-size:10px"><tspan x="288">П2</tspan></text></g>
+<g aria-label="И1"><circle cx="118" cy="308" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="118" cy="308" r="13"/><text x="118" y="312" text-anchor="middle" style="font-size:10px"><tspan x="118">И1</tspan></text></g>
+<g aria-label="П3"><circle cx="292" cy="308" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="292" cy="308" r="13"/><text x="292" y="312" text-anchor="middle" style="font-size:10px"><tspan x="292">П3</tspan></text></g>
+<g aria-label="П4"><circle cx="176" cy="404" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="176" cy="404" r="13"/><text x="176" y="408" text-anchor="middle" style="font-size:10px"><tspan x="176">П4</tspan></text></g>
+<g aria-label="П5"><circle cx="98" cy="522" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="98" cy="522" r="13"/><text x="98" y="526" text-anchor="middle" style="font-size:10px"><tspan x="98">П5</tspan></text></g>
+<g aria-label="П6"><circle cx="176" cy="517" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="176" cy="517" r="13"/><text x="176" y="521" text-anchor="middle" style="font-size:10px"><tspan x="176">П6</tspan></text></g>
+<g aria-label="П7"><circle cx="250" cy="522" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="250" cy="522" r="13"/><text x="250" y="526" text-anchor="middle" style="font-size:10px"><tspan x="250">П7</tspan></text></g>
+<g aria-label="П8"><circle cx="324" cy="390" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="324" cy="390" r="13"/><text x="324" y="394" text-anchor="middle" style="font-size:10px"><tspan x="324">П8</tspan></text></g>
+<g aria-label="С2"><circle cx="172" cy="182" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="172" cy="182" r="13"/><text x="172" y="186" text-anchor="middle" style="font-size:10px"><tspan x="172">С2</tspan></text></g>
+<g aria-label="С1"><circle cx="172" cy="69" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="172" cy="69" r="13"/><text x="172" y="73" text-anchor="middle" style="font-size:10px"><tspan x="172">С1</tspan></text></g>
+<g aria-label="Р1"><circle cx="56" cy="632" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="56" cy="632" r="13"/><text x="56" y="636" text-anchor="middle" style="font-size:10px"><tspan x="56">Р1</tspan></text></g>
+<g aria-label="О1"><circle cx="172" cy="632" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="172" cy="632" r="13"/><text x="172" y="636" text-anchor="middle" style="font-size:10px"><tspan x="172">О1</tspan></text></g>
+<g aria-label="Д1"><circle cx="288" cy="632" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="632" r="13"/><text x="288" y="636" text-anchor="middle" style="font-size:10px"><tspan x="288">Д1</tspan></text></g>
+</svg><figcaption id="sd-amazon-scaled-caption">Поиск не участвует в подтверждении наличия. Оркестратор сохраняет прогресс в БД заказов и вызывает Inventory, Payment и Delivery. Каждый сервис выполняет свой шаг и обрабатывает его повторы. Пунктир — индексация, Outbox, обработка событий и фоновые команды складу. Catalog, Search, Order, оркестраторы, Inventory, Payment и Delivery масштабируются независимо.<br>
+<b>Каталог и корзина: К1</b>&nbsp;— обратиться к Catalog; <b>К2</b>&nbsp;— прочитать каталог или сохранить корзину;<br>
+<b>Поиск: С1</b>&nbsp;— обратиться к Search; <b>С2</b>&nbsp;— выполнить поиск по индексу;<br>
 <b>Индексация: И1</b>&nbsp;— обновить поисковый индекс;<br>
-<b>Оформление заказа: П1</b>&nbsp;— начать оформление заказа; <b>П2</b>&nbsp;— сохранить заказ и Outbox; <b>П3</b>&nbsp;— опубликовать событие заказа; <b>П4</b>&nbsp;— получить событие координатором; <b>П5</b>&nbsp;— зарезервировать остатки через Inventory API; <b>П6</b>&nbsp;— выполнить платёж; <b>П7</b>&nbsp;— передать оплаченный заказ в доставку; <b>П8</b>&nbsp;— зафиксировать результат checkout saga.</figcaption></figure>
+<b>Оформление заказа: П1</b>&nbsp;— начать оформление заказа; <b>П2</b>&nbsp;— сохранить заказ и Outbox; <b>П3</b>&nbsp;— опубликовать событие заказа; <b>П4</b>&nbsp;— получить событие оркестратором; <b>П5</b>&nbsp;— запросить резерв у Inventory; <b>П6</b>&nbsp;— запросить оплату у Payment; <b>П7</b>&nbsp;— передать оплаченный заказ в Delivery; <b>П8</b>&nbsp;— зафиксировать результат checkout saga;<br>
+<b>Остатки: Р1</b>&nbsp;— Inventory атомарно меняет остаток и резерв в своей БД;<br>
+<b>Оплата: О1</b>&nbsp;— Payment вызывает провайдера со стабильным ключом операции;<br>
+<b>Исполнение: Д1</b>&nbsp;— Delivery передаёт складу идемпотентное задание и отслеживает доставку.</figcaption></figure>
 
     </div></div></article>
 <article id="q287" class="responsive-code" hidden><div class="crumbs">System Design — разбор задач</div><h2 tabindex="-1">287. Спроектируйте банковское приложение <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
