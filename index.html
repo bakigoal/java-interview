@@ -11995,82 +11995,104 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 </div></div></article>
 <article id="q285" class="responsive-code" hidden><div class="crumbs">System Design — разбор задач</div><h2 tabindex="-1">285. Спроектируйте Uber <span class="tag">senior</span></h2><div class="answer" hidden><div class="short">
 <p><b>Сервис соединяет пассажира со свободным водителем поблизости, ведёт поездку и принимает оплату.</b> Геопозиции поступают через Location Gateway в геоиндекс; Matcher находит кандидатов и сравнивает время подачи. Поездка и состояние занятости водителя меняются атомарно в PostgreSQL.</p>
-<p><b>Главное ограничение — один водитель не должен получить две активные поездки.</b> Геоиндекс допускает устаревание, резерв и принятие предложения проверяются транзакцией. API поездок, поток координат и подбор масштабируются независимо; Outbox обеспечивает повторяемые уведомления и платежи.</p>
-<figure class="concept" aria-labelledby="sd-uber-summary-caption"><svg id="sd-uber-summary" viewBox="-18 0 380 680" role="img" aria-labelledby="sd-uber-summary-title sd-uber-summary-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-uber-summary-title">Uber: архитектура после масштабирования</title><desc id="sd-uber-summary-desc">API поездок сохраняет состояние в шарде PostgreSQL выбранного города. Location Gateway обновляет геоиндекс Redis. Matcher читает кандидатов из геоиндекса, уточняет время подачи у сервиса маршрутов и резервирует водителя в БД. Обработчики Outbox доставляют события через Realtime Gateway и вызывают платёжного провайдера.</desc><defs><marker id="sd-uber-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M 78 50 V 102" marker-end="url(#sd-uber-summary-arrow)"/>
-<path class="concept-edge" d="M 258 50 V 102" marker-end="url(#sd-uber-summary-arrow)"/>
-<path class="concept-edge" d="M 212 50 V 86 H 106 V 102" marker-end="url(#sd-uber-summary-arrow)"/>
-<path class="concept-edge" d="M 52 168 V 226" marker-end="url(#sd-uber-summary-arrow)"/>
-<path class="concept-edge" d="M 112 168 V 226" marker-end="url(#sd-uber-summary-arrow)"/>
-<path class="concept-edge" d="M 258 168 V 226" marker-end="url(#sd-uber-summary-arrow)"/>
-<path class="concept-edge" d="M 78 354 V 292" marker-end="url(#sd-uber-summary-arrow)"/>
-<path class="concept-edge" d="M 128 372 H 170 V 260 H 188" marker-end="url(#sd-uber-summary-arrow)"/>
-<path class="concept-edge" d="M 128 394 H 188" marker-end="url(#sd-uber-summary-arrow)"/>
-<path class="concept-edge" d="M 8 498 H 2 V 260 H 8" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M 128 502 H 188" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M 78 532 V 616" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M 328 502 H 338 V 29 H 328" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="8" width="140" height="42" rx="8"/><rect x="8" y="8" width="140" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="26" cy="22" r="4"/><path d="M 19 39 V 35 Q 19 29 26 29 Q 33 29 33 35 V 39"/></g>
-<text style="font-size:12px" x="88" y="34.0" text-anchor="middle">Пассажир</text>
-<rect fill="var(--bg)" stroke="none" x="188" y="8" width="140" height="42" rx="8"/><rect x="188" y="8" width="140" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="206" cy="22" r="4"/><path d="M 199 39 V 35 Q 199 29 206 29 Q 213 29 213 35 V 39"/></g>
-<text style="font-size:12px" x="268" y="34.0" text-anchor="middle">Водитель</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="102" width="140" height="54" rx="8"/><rect class="concept-node accent" x="20" y="102" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="108" width="140" height="54" rx="8"/><rect class="concept-node accent" x="14" y="108" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="114" width="140" height="54" rx="8"/><rect class="concept-node accent" x="8" y="114" width="140" height="54" rx="8"/>
-<text x="78.0" y="136.5" text-anchor="middle">Trip API</text>
-<text x="78.0" y="155.5" text-anchor="middle" class="concept-label">поездки</text>
-<rect fill="var(--bg)" stroke="none" x="200" y="102" width="140" height="54" rx="8"/><rect class="concept-node accent" x="200" y="102" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="194" y="108" width="140" height="54" rx="8"/><rect class="concept-node accent" x="194" y="108" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="188" y="114" width="140" height="54" rx="8"/><rect class="concept-node accent" x="188" y="114" width="140" height="54" rx="8"/>
-<text x="258.0" y="136.5" text-anchor="middle">Location</text>
-<text x="258.0" y="155.5" text-anchor="middle" class="concept-label">Gateway</text>
-<path fill="var(--bg)" stroke="none" d="M 8 234 A 70 8 0 0 1 148 234 V 284 A 70 8 0 0 1 8 284 Z"/><path class="concept-db" d="M 8 234 A 70 8 0 0 1 148 234 V 284 A 70 8 0 0 1 8 284 Z"/><ellipse class="concept-db" cx="78.0" cy="234" rx="70.0" ry="8"/>
-<text x="78.0" y="257" text-anchor="middle">PostgreSQL</text>
-<text x="78.0" y="276" text-anchor="middle" class="concept-label">шард города</text>
-<path fill="var(--bg)" stroke="none" d="M 196 226 H 320 L 328 234 V 280 L 320 288 H 196 L 188 280 V 234 Z"/><path class="concept-cache" d="M 196 226 H 320 L 328 234 V 280 L 320 288 H 196 L 188 280 V 234 Z"/>
-<text x="258" y="253" text-anchor="middle">Redis</text>
-<text x="258" y="273" text-anchor="middle" class="concept-label">геоиндекс</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="342" width="120" height="54" rx="8"/><rect class="concept-node warning" x="20" y="342" width="120" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="348" width="120" height="54" rx="8"/><rect class="concept-node warning" x="14" y="348" width="120" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="354" width="120" height="54" rx="8"/><rect class="concept-node warning" x="8" y="354" width="120" height="54" rx="8"/>
-<text x="68" y="376.5" text-anchor="middle">Matcher</text>
-<text x="68" y="395.5" text-anchor="middle" class="concept-label">поиск / резерв</text>
-<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="125" cy="357" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="125" cy="357" r="10"/><text x="125" y="361" text-anchor="middle">W</text></g>
-<rect fill="var(--bg)" stroke="none" x="188" y="354" width="140" height="54" rx="8"/><rect class="concept-node plain" x="188" y="354" width="140" height="54" rx="8"/>
-<text x="258.0" y="376.5" text-anchor="middle">Маршруты</text>
-<text x="258.0" y="395.5" text-anchor="middle" class="concept-label">ETA подачи</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="464" width="120" height="56" rx="8"/><rect class="concept-node warning" x="20" y="464" width="120" height="56" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="470" width="120" height="56" rx="8"/><rect class="concept-node warning" x="14" y="470" width="120" height="56" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="476" width="120" height="56" rx="8"/><rect class="concept-node warning" x="8" y="476" width="120" height="56" rx="8"/>
-<text x="68" y="499.5" text-anchor="middle">Outbox</text>
-<text x="68" y="518.5" text-anchor="middle" class="concept-label">обработчики</text>
-<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="125" cy="479" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="125" cy="479" r="10"/><text x="125" y="483" text-anchor="middle">W</text></g>
-<rect fill="var(--bg)" stroke="none" x="200" y="464" width="140" height="56" rx="8"/><rect class="concept-node accent" x="200" y="464" width="140" height="56" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="194" y="470" width="140" height="56" rx="8"/><rect class="concept-node accent" x="194" y="470" width="140" height="56" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="188" y="476" width="140" height="56" rx="8"/><rect class="concept-node accent" x="188" y="476" width="140" height="56" rx="8"/>
-<text x="258.0" y="499.5" text-anchor="middle">Realtime</text>
-<text x="258.0" y="518.5" text-anchor="middle" class="concept-label">Gateway</text>
-<rect fill="var(--bg)" stroke="none" x="8" y="616" width="140" height="48" rx="8"/><rect class="concept-node plain" x="8" y="616" width="140" height="48" rx="8"/>
-<text x="78.0" y="635.5" text-anchor="middle">Платёжный</text>
-<text x="78.0" y="654.5" text-anchor="middle" class="concept-label">провайдер</text>
-<g aria-label="С1"><circle cx="78" cy="78" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="78" cy="78" r="13"/><text x="78" y="82" text-anchor="middle" style="font-size:10px"><tspan x="78">С1</tspan></text></g>
-<g aria-label="К1"><circle cx="258" cy="78" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="258" cy="78" r="13"/><text x="258" y="82" text-anchor="middle" style="font-size:10px"><tspan x="258">К1</tspan></text></g>
-<g aria-label="П1"><circle cx="176" cy="86" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="176" cy="86" r="13"/><text x="176" y="90" text-anchor="middle" style="font-size:10px"><tspan x="176">П1</tspan></text></g>
-<g aria-label="С2"><circle cx="52" cy="196" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="52" cy="196" r="13"/><text x="52" y="200" text-anchor="middle" style="font-size:10px"><tspan x="52">С2</tspan></text></g>
-<g aria-label="П2"><circle cx="112" cy="196" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="112" cy="196" r="13"/><text x="112" y="200" text-anchor="middle" style="font-size:10px"><tspan x="112">П2</tspan></text></g>
-<g aria-label="К2"><circle cx="258" cy="196" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="258" cy="196" r="13"/><text x="258" y="200" text-anchor="middle" style="font-size:10px"><tspan x="258">К2</tspan></text></g>
-<g aria-label="М3"><circle cx="78" cy="318" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="78" cy="318" r="13"/><text x="78" y="322" text-anchor="middle" style="font-size:10px"><tspan x="78">М3</tspan></text></g>
-<g aria-label="М1"><circle cx="170" cy="314" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="170" cy="314" r="13"/><text x="170" y="318" text-anchor="middle" style="font-size:10px"><tspan x="170">М1</tspan></text></g>
-<g aria-label="М2"><circle cx="158" cy="394" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="158" cy="394" r="13"/><text x="158" y="398" text-anchor="middle" style="font-size:10px"><tspan x="158">М2</tspan></text></g>
-<g aria-label="Д2"><circle cx="158" cy="502" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="158" cy="502" r="13"/><text x="158" y="506" text-anchor="middle" style="font-size:10px"><tspan x="158">Д2</tspan></text></g>
-<g aria-label="Д3"><circle cx="78" cy="574" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="78" cy="574" r="13"/><text x="78" y="578" text-anchor="middle" style="font-size:10px"><tspan x="78">Д3</tspan></text></g>
-<g aria-label="Д1"><circle cx="2.0" cy="438" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="2.0" cy="438" r="13"/><text x="2.0" y="442" text-anchor="middle" style="font-size:10px"><tspan x="2.0">Д1</tspan></text></g>
-<g aria-label="Д4"><circle cx="338" cy="320" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="338" cy="320" r="13"/><text x="338" y="324" text-anchor="middle" style="font-size:10px"><tspan x="338">Д4</tspan></text></g>
-</svg><figcaption id="sd-uber-summary-caption">Геопозиции и подбор масштабируются отдельно от поездок. Redis даёт кандидатов, только БД подтверждает резерв и назначение. Пунктир — фоновые чтения заданий, платежи и доставка событий; Realtime Gateway обслуживает обоих участников.<br>
+<p><b>Главное ограничение — один водитель не должен получить две активные поездки.</b> Геоиндекс допускает устаревание, резерв и принятие предложения проверяются транзакцией. API поездок, поток координат и подбор масштабируются независимо. Поездка и Outbox сохраняются вместе; Kafka доставляет задания Matcher и события Realtime Gateway. Задания подбора и доставки сохраняются в БД, платежи повторяются со стабильным ключом операции.</p>
+<figure class="concept" aria-labelledby="sd-uber-summary-caption"><svg id="sd-uber-summary" viewBox="-18 0 400 648" role="img" aria-labelledby="sd-uber-summary-title sd-uber-summary-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-uber-summary-title">Uber: архитектура после масштабирования</title><desc id="sd-uber-summary-desc">API поездок сохраняет состояние в шарде PostgreSQL выбранного города. Location Gateway обновляет геоиндекс Redis. Matcher читает кандидатов из геоиндекса, уточняет время подачи у сервиса маршрутов и резервирует водителя в БД. Обработчики Outbox публикуют задания и события в Kafka. Matcher сохраняет задания в БД и подбирает водителей, Realtime Gateway сохраняет задания доставки и уведомляет клиентов. Оплата вызывается из Outbox со стабильным ключом.</desc><defs><marker id="sd-uber-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M 60 50 V 102" marker-end="url(#sd-uber-summary-arrow)"/>
+<path class="concept-edge" d="M 288 50 V 102" marker-end="url(#sd-uber-summary-arrow)"/>
+<path class="concept-edge" d="M 208 29 L 100 102" marker-end="url(#sd-uber-summary-arrow)"/>
+<path class="concept-edge" d="M 40 168 V 235" marker-end="url(#sd-uber-summary-arrow)"/>
+<path class="concept-edge" d="M 100 168 V 235" marker-end="url(#sd-uber-summary-arrow)"/>
+<path class="concept-edge" d="M 288 168 V 234" marker-end="url(#sd-uber-summary-arrow)"/>
+<path class="concept-edge" d="M 48 354 V 299.5" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 174 478 V 168" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 288 354 V 300" marker-end="url(#sd-uber-summary-arrow)"/>
+<path class="concept-edge" d="M 264 354 L 112 297.4" marker-end="url(#sd-uber-summary-arrow)"/>
+<path class="concept-edge" d="M 78 420 V 582" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 288 420 V 582" marker-end="url(#sd-uber-summary-arrow)"/>
+<path class="concept-edge" d="M 200 102 L 240 50" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 104 420 L 134 478" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 230 502 L 264 420" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="8" width="140" height="42" rx="20"/><rect x="8" y="8" width="140" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="26" cy="22" r="4"/><path d="M 19 39 V 35 Q 19 29 26 29 Q 33 29 33 35 V 39"/></g>
+<text x="88" y="34" text-anchor="middle">Пассажир</text>
+<rect fill="var(--bg)" stroke="none" x="208" y="8" width="140" height="42" rx="20"/><rect x="208" y="8" width="140" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="226" cy="22" r="4"/><path d="M 219 39 V 35 Q 219 29 226 29 Q 233 29 233 35 V 39"/></g>
+<text x="288" y="34" text-anchor="middle">Водитель</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="102" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="20" y="102" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="108" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="14" y="108" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="114" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="8" y="114" width="96" height="54" rx="8"/>
+<text x="56.0" y="137" text-anchor="middle">Trip API</text>
+<text x="56.0" y="156" text-anchor="middle" class="concept-label">поездки</text>
+<rect fill="var(--bg)" stroke="none" x="136" y="102" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="136" y="102" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="130" y="108" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="130" y="108" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="124" y="114" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="124" y="114" width="96" height="54" rx="8"/>
+<text x="172.0" y="137" text-anchor="middle">Realtime</text>
+<text x="172.0" y="156" text-anchor="middle" class="concept-label">Gateway</text>
+<rect fill="var(--bg)" stroke="none" x="252" y="102" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="252" y="102" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="246" y="108" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="246" y="108" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="240" y="114" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="240" y="114" width="96" height="54" rx="8"/>
+<text x="288.0" y="137" text-anchor="middle">Location</text>
+<text x="288.0" y="156" text-anchor="middle" class="concept-label">Gateway</text>
+<path fill="var(--bg)" stroke="none" d="M 8 242 A 60 8 0 0 1 128 242 V 292 A 60 8 0 0 1 8 292 Z"/><path class="concept-db" d="M 8 242 A 60 8 0 0 1 128 242 V 292 A 60 8 0 0 1 8 292 Z"/><ellipse class="concept-db" cx="68" cy="242" rx="60" ry="8"/>
+<text x="68" y="265" text-anchor="middle">PostgreSQL</text>
+<text x="68" y="284" text-anchor="middle" class="concept-label">шард города</text>
+<path fill="var(--bg)" stroke="none" d="M 236 234 H 340 L 348 242 V 292 L 340 300 H 236 L 228 292 V 242 Z"/><path class="concept-cache" d="M 236 234 H 340 L 348 242 V 292 L 340 300 H 236 L 228 292 V 242 Z"/>
+<text x="288" y="261" text-anchor="middle">Redis</text>
+<text x="288" y="281" text-anchor="middle" class="concept-label">геоиндекс</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="354" width="96" height="54" rx="8"/>
+<rect class="concept-node warning" x="20" y="354" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="360" width="96" height="54" rx="8"/>
+<rect class="concept-node warning" x="14" y="360" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="366" width="96" height="54" rx="8"/>
+<rect class="concept-node warning" x="8" y="366" width="96" height="54" rx="8"/>
+<text x="56" y="389" text-anchor="middle">Outbox</text><text x="56" y="408" text-anchor="middle" class="concept-label">обработчики</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="101" cy="369" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="101" cy="369" r="10"/><text x="101" y="373" text-anchor="middle">W</text></g>
+<rect fill="var(--bg)" stroke="none" x="252" y="354" width="96" height="54" rx="8"/>
+<rect class="concept-node warning" x="252" y="354" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="246" y="360" width="96" height="54" rx="8"/>
+<rect class="concept-node warning" x="246" y="360" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="240" y="366" width="96" height="54" rx="8"/>
+<rect class="concept-node warning" x="240" y="366" width="96" height="54" rx="8"/>
+<text x="288" y="389" text-anchor="middle">Matcher</text><text x="288" y="408" text-anchor="middle" class="concept-label">подбор</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="333" cy="369" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="333" cy="369" r="10"/><text x="333" y="373" text-anchor="middle">W</text></g>
+<path fill="var(--bg)" stroke="none" d="M 134 478 H 222 A 8 24 0 0 1 222 526 H 134 A 8 24 0 0 1 134 478 Z"/><path class="concept-broker" d="M 134 478 H 222 A 8 24 0 0 1 222 526 H 134 A 8 24 0 0 1 134 478 Z"/><ellipse fill="var(--bg)" cx="134" cy="502" rx="8" ry="24"/><ellipse class="concept-broker" cx="134" cy="502" rx="8" ry="24"/>
+<text x="186" y="497" text-anchor="middle">Kafka</text><text x="186" y="516" text-anchor="middle" class="concept-label">топики</text>
+<rect fill="var(--bg)" stroke="none" x="8" y="582" width="140" height="48" rx="8"/>
+<rect class="concept-node plain" x="8" y="582" width="140" height="48" rx="8"/>
+<text x="78" y="602" text-anchor="middle">Платёжный</text>
+<text x="78" y="621" text-anchor="middle" class="concept-label">провайдер</text>
+<rect fill="var(--bg)" stroke="none" x="208" y="582" width="140" height="48" rx="8"/>
+<rect class="concept-node plain" x="208" y="582" width="140" height="48" rx="8"/>
+<text x="278" y="602" text-anchor="middle">Маршруты</text>
+<text x="278" y="621" text-anchor="middle" class="concept-label">ETA подачи</text>
+<g aria-label="С1"><circle cx="60" cy="82" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="60" cy="82" r="13"/><text x="60" y="86" text-anchor="middle" style="font-size:10px"><tspan x="60">С1</tspan></text></g>
+<g aria-label="К1"><circle cx="288" cy="78" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="78" r="13"/><text x="288" y="82" text-anchor="middle" style="font-size:10px"><tspan x="288">К1</tspan></text></g>
+<g aria-label="П1"><circle cx="154" cy="65.5" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="154" cy="65.5" r="13"/><text x="154" y="69.5" text-anchor="middle" style="font-size:10px"><tspan x="154">П1</tspan></text></g>
+<g aria-label="С2"><circle cx="40" cy="200" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="40" cy="200" r="13"/><text x="40" y="204" text-anchor="middle" style="font-size:10px"><tspan x="40">С2</tspan></text></g>
+<g aria-label="П2"><circle cx="100" cy="200" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="100" cy="200" r="13"/><text x="100" y="204" text-anchor="middle" style="font-size:10px"><tspan x="100">П2</tspan></text></g>
+<g aria-label="К2"><circle cx="288" cy="200" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="200" r="13"/><text x="288" y="204" text-anchor="middle" style="font-size:10px"><tspan x="288">К2</tspan></text></g>
+<g aria-label="Д1"><circle cx="48" cy="328" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="48" cy="328" r="13"/><text x="48" y="332" text-anchor="middle" style="font-size:10px"><tspan x="48">Д1</tspan></text></g>
+<g aria-label="Д2"><circle cx="174" cy="270" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="174" cy="270" r="13"/><text x="174" y="274" text-anchor="middle" style="font-size:10px"><tspan x="174">Д2</tspan></text></g>
+<g aria-label="М3"><circle cx="288" cy="332" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="332" r="13"/><text x="288" y="336" text-anchor="middle" style="font-size:10px"><tspan x="288">М3</tspan></text></g>
+<g aria-label="М5"><circle cx="144" cy="309.3" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="144" cy="309.3" r="13"/><text x="144" y="313.3" text-anchor="middle" style="font-size:10px"><tspan x="144">М5</tspan></text></g>
+<g aria-label="Д3"><circle cx="78" cy="548" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="78" cy="548" r="13"/><text x="78" y="552" text-anchor="middle" style="font-size:10px"><tspan x="78">Д3</tspan></text></g>
+<g aria-label="М4"><circle cx="288" cy="548" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="548" r="13"/><text x="288" y="552" text-anchor="middle" style="font-size:10px"><tspan x="288">М4</tspan></text></g>
+<g aria-label="Д4"><circle cx="220" cy="76" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="220" cy="76" r="13"/><text x="220" y="80" text-anchor="middle" style="font-size:10px"><tspan x="220">Д4</tspan></text></g>
+<g aria-label="М1"><circle cx="119" cy="449" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="119" cy="449" r="13"/><text x="119" y="453" text-anchor="middle" style="font-size:10px"><tspan x="119">М1</tspan></text></g>
+<g aria-label="М2"><circle cx="247" cy="461" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="247" cy="461" r="13"/><text x="247" y="465" text-anchor="middle" style="font-size:10px"><tspan x="247">М2</tspan></text></g>
+</svg><figcaption id="sd-uber-summary-caption">Геопозиции и подбор масштабируются отдельно от поездок. Redis даёт кандидатов, только БД подтверждает резерв и назначение. Пунктир — фоновые обращения, Kafka и доставка событий. Matcher и Realtime читают свои топики независимыми consumer groups; Realtime Gateway обслуживает обоих участников.<br>
 <b>Геопозиции — непрерывный параллельный поток: К1</b>&nbsp;— водитель выходит на линию, включает готовность принимать заказы и непрерывно передаёт координаты через Location Gateway; <b>К2</b>&nbsp;— обновлять геоиндекс Redis. Этот поток идёт параллельно заказам: пассажир может создать заказ и при отсутствии машин;<br>
-<b>Создание поездки: С1</b>&nbsp;— пассажир создаёт заказ; <b>С2</b>&nbsp;— сразу сохранить поездку в PostgreSQL со статусом <code><span class="t">SEARCHING</span></code>;<br>
-<b>Подбор водителя: М1</b>&nbsp;— найти кандидатов в геоиндексе; <b>М2</b>&nbsp;— уточнить время подачи; <b>М3</b>&nbsp;— проверить и зарезервировать водителя в БД;<br>
-<b>Доставка предложения и событий: Д1</b>&nbsp;— прочитать сохранённый Outbox; <b>Д2</b>&nbsp;— передать событие в Realtime Gateway; <b>Д4</b>&nbsp;— доставить уведомление водителю;<br>
+<b>Создание поездки: С1</b>&nbsp;— пассажир создаёт заказ; <b>С2</b>&nbsp;— одной транзакцией сохранить поездку <code><span class="t">SEARCHING</span></code> и Outbox для запуска подбора;<br>
+<b>Подбор водителя: М1</b>&nbsp;— Outbox публикует задание в Kafka; <b>М2</b>&nbsp;— Matcher получает его и подтверждает сообщение после сохранения задания в БД; <b>М3</b>&nbsp;— найти кандидатов в геоиндексе; <b>М4</b>&nbsp;— уточнить время подачи; <b>М5</b>&nbsp;— обращения Matcher к БД: сохранять и забирать задания с lease, проверять поездку, резервировать водителя и записывать Outbox для предложения;<br>
+<b>Доставка предложения и событий: Д1</b>&nbsp;— прочитать сохранённый Outbox; <b>М1</b>&nbsp;— опубликовать событие в Kafka; <b>Д2</b>&nbsp;— Realtime Gateway получает событие, сохраняет задание доставки в БД, затем подтверждает сообщение Kafka; <b>Д4</b>&nbsp;— отправлять водителю до подтверждения приложения или истечения предложения;<br>
 <b>Принятие предложения позже: П1</b>&nbsp;— водитель принимает предложение; <b>П2</b>&nbsp;— в одной транзакции сохранить назначение: поездка <code><span class="t">ASSIGNED</span></code>, водитель <code><span class="t">BUSY</span></code>, предложение <code><span class="t">ACCEPTED</span></code> и Outbox;<br>
 <b>Оплата после завершения: Д3</b>&nbsp;— вызвать платёжного провайдера.</figcaption></figure>
     </div>
@@ -12122,7 +12144,7 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <g aria-label="М1"><circle cx="16" cy="130" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="16" cy="130" r="13"/><text x="16" y="134" text-anchor="middle" style="font-size:10px"><tspan x="16">М1</tspan></text></g>
 <g aria-label="Д1"><circle cx="328" cy="130" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="328" cy="130" r="13"/><text x="328" y="134" text-anchor="middle" style="font-size:10px"><tspan x="328">Д1</tspan></text></g>
 </svg><figcaption id="sd-uber-base-caption">Начало для одного города и небольшой нагрузки: приложение и PostgreSQL. Подбор и внешние вызовы выполняются фоновыми заданиями, состояние процесса сохраняется в БД.<br>
-<b>Создание поездки: С1</b>&nbsp;— пассажир создаёт заказ; <b>С2</b>&nbsp;— сразу сохранить поездку в PostgreSQL со статусом <code><span class="t">SEARCHING</span></code>;<br>
+<b>Создание поездки: С1</b>&nbsp;— пассажир создаёт заказ; <b>С2</b>&nbsp;— одной транзакцией сохранить поездку <code><span class="t">SEARCHING</span></code> и Outbox для запуска подбора;<br>
 <b>Подбор водителя: М1</b>&nbsp;— уточнить время подачи найденных кандидатов; затем приложение резервирует водителя в БД и доставляет предложение;<br>
 <b>Принятие предложения позже: П1</b>&nbsp;— водитель принимает предложение; <b>П2</b>&nbsp;— в одной транзакции сохранить назначение: поездка <code><span class="t">ASSIGNED</span></code>, водитель <code><span class="t">BUSY</span></code>, предложение <code><span class="t">ACCEPTED</span></code> и Outbox;<br>
 <b>Оплата после завершения: Д1</b>&nbsp;— вызвать платёжного провайдера.</figcaption></figure>
@@ -12216,21 +12238,54 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <tr class="db-field"><td><code>status</code></td><td>Состояние, включая неизвестный исход</td></tr>
 <tr class="db-field"><td><code>provider_ref</code></td><td>ID у платёжного провайдера</td></tr>
 </tbody>
+<tbody class="db-entity-body" data-table="matching_job">
+<tr class="db-entity"><th colspan="2" scope="rowgroup" id="sd-ride-db-table-matching-job"><div class="db-entity-label"><code>matching_job</code><span class="db-purpose">сохранённый процесс подбора</span></div></th></tr>
+<tr class="db-field"><td><code>trip_id</code> <span class="db-key">PK</span></td><td>Одна запись подбора на поездку</td></tr>
+<tr class="db-field"><td><code>event_id</code> <span class="db-key">UK</span></td><td>Дедупликация исходного задания из Kafka</td></tr>
+<tr class="db-field"><td><code>status</code></td><td>READY / RUNNING / WAITING_OFFER / DONE</td></tr>
+<tr class="db-field"><td><code>next_attempt_at</code></td><td>Время следующей попытки</td></tr>
+<tr class="db-field"><td><code>deadline_at</code></td><td>Предел времени поиска</td></tr>
+<tr class="db-field"><td><code>lease_until</code></td><td>Срок владения заданием</td></tr>
+<tr class="db-field"><td><code>lock_token</code></td><td>Версия захвата, защищающая запись результата от старого воркера</td></tr>
+</tbody>
+<tbody class="db-entity-body" data-table="notification_delivery">
+<tr class="db-entity"><th colspan="2" scope="rowgroup" id="sd-ride-db-table-notification-delivery"><div class="db-entity-label"><code>notification_delivery</code><span class="db-purpose">доставка события конкретному участнику</span></div></th></tr>
+<tr class="db-field"><td><code>event_id</code> <span class="db-key">PK</span></td><td>Стабильный ID события</td></tr>
+<tr class="db-field"><td><code>recipient_id</code> <span class="db-key">PK</span></td><td>Получатель, вместе с event_id задаёт ключ дедупликации</td></tr>
+<tr class="db-field"><td><code>trip_id</code></td><td>Поездка, актуальность которой проверяется перед отправкой</td></tr>
+<tr class="db-field"><td><code>status</code></td><td>PENDING / ACKED / EXPIRED</td></tr>
+<tr class="db-field"><td><code>next_attempt_at</code></td><td>Время повторной отправки</td></tr>
+<tr class="db-field"><td><code>expires_at</code></td><td>Предельный срок доставки предложения</td></tr>
+</tbody>
 <tbody class="db-entity-body" data-table="outbox">
 <tr class="db-entity"><th colspan="2" scope="rowgroup" id="sd-ride-db-table-outbox"><div class="db-entity-label"><code>outbox</code><span class="db-purpose">события для фоновой обработки</span></div></th></tr>
 <tr class="db-field"><td><code>event_id</code> <span class="db-key">PK</span></td><td>ID события</td></tr>
 <tr class="db-field"><td><code>trip_id</code></td><td>Объект, к которому относится событие</td></tr>
 <tr class="db-field"><td><code>payload</code></td><td>Тип события и данные</td></tr>
-<tr class="db-field"><td><code>published_at</code></td><td>Время отправки в брокер</td></tr>
+<tr class="db-field"><td><code>published_at</code></td><td>Время подтверждённой отправки в Kafka или платёжному провайдеру</td></tr>
 </tbody>
 </table></div>
 <p>Поездка, состояние водителя и предложение резервируются в одной БД города. Частые обновления координат и геопоиск обслуживаются отдельно.</p>
 </details>
 
+<h4 class="design-section">Надёжный запуск подбора и доставка событий.</h4>
+<p><b>Trip API сохраняет поездку и <code><span class="t">MatchRequested</span></code> в Outbox одной транзакцией.</b> Outbox worker публикует задание в топик <code>matching.requests</code> с ключом <code>trip_id</code>, а <code><span class="t">OfferCreated</span></code> и изменения поездки — в <code>trip.events</code>. События содержат стабильный <code>event_id</code> и город для обращения к нужному шарду.</p>
+<p>Отметка <code>published_at</code> ставится после подтверждения Kafka. Для устойчивости к отказу брокера — репликация по зонам, например replication factor 3, <code>acks=all</code> и <code>min.insync.replicas=<span class="n">2</span></code>. При недоступности Kafka события остаются в Outbox. После публикации и падения до отметки возможен дубль, поэтому получатели дедуплицируют события.</p>
+<ol>
+<li><b>Надёжно принять задание.</b> Consumer Matcher сохраняет <code>matching_job</code> в городском шарде. Только после коммита подтверждает offset Kafka, без пропуска ещё не сохранённых сообщений партиции. Повтор того же <code>event_id</code> не создаёт второе задание.</li>
+<li><b>Забрать работу с lease.</b> В короткой транзакции воркер захватывает готовое задание и увеличивает <code>lock_token</code>. Геопоиск и ETA выполняются вне транзакции. При долгой попытке lease продлевается, после падения истёкшее задание забирает другой экземпляр.</li>
+<li><b>Атомарно сохранить результат.</b> Перед резервом блокируются поездка, задание и водитель в едином порядке для всех обработчиков. Проверяются <code><span class="t">SEARCHING</span></code>, дедлайн, актуальный token и lease. Резерв, предложение, переход задания в <code><span class="t">WAITING_OFFER</span></code> и <code><span class="t">OfferCreated</span></code> в Outbox фиксируются одной транзакцией. Старый исполнитель с истёкшим lease записать результат не может.</li>
+<li><b>Сохранить продолжение.</b> Если машин нет или зависимость временно недоступна, в БД сохраняются <code><span class="t">READY</span></code> и <code>next_attempt_at</code> с задержкой. Поиск ограничен дедлайном, по его достижении поездка завершается как <code><span class="t">NO_DRIVER</span></code>. Отмена или назначение закрывают задание, позднее сообщение не возобновляет поездку.</li>
+</ol>
+<p><b>Kafka доставляет запуск, а БД хранит продолжение подбора.</b> После сохранения задания доступность Kafka уже не определяет выполнение его следующих попыток. Повторы технических ошибок ограничиваются задержкой и дедлайном, некорректные сообщения сохраняются в DLQ с сигналом оператору. Отслеживаются возраст Outbox, consumer lag и просроченные задания, retention топиков покрывает согласованный срок восстановления.</p>
+<h5 class="design-subsection">Realtime через Kafka.</h5>
+<p>Realtime Gateway читает <code>trip.events</code> своей consumer group, независимой от Matcher. Сначала сохраняет <code>notification_delivery</code> с ключом <code>(event_id, recipient_id)</code>, затем подтверждает offset Kafka. Событие для обоих участников создаёт две записи доставки. Повтор Kafka не создаёт новые записи.</p>
+<p>Шлюз, владеющий соединением получателя, отправляет сохранённые уведомления и повторяет их до подтверждения приложения или <code>expires_at</code>. Клиент дедуплицирует сообщения по <code>event_id</code>. Перед отправкой проверяется актуальность предложения: просроченное или уже отменённое предложение не доставляется как действующее. При переподключении клиент восстанавливает актуальную поездку и предложение через API.</p>
+<p><b>Подтверждение Kafka означает сохранение задания шлюзом, а не получение уведомления водителем.</b> После падения шлюза неподтверждённая доставка остаётся в БД. Платёжное задание Outbox worker выполняет со стабильным ключом операции, при неизвестном результате сверяется с провайдером.</p>
 <h4 class="design-section">Геопоиск.</h4>
 <p>Геоиндекс хранит последнее положение и время серверного приёма координат. Matcher ищет в ячейке подачи и соседних ячейках, постепенно расширяет радиус, отбрасывает устаревшие точки и неподходящий класс машины. Из предварительно ближайших кандидатов выбирает, например, 10–20 и запрашивает матрицу времени подачи у сервиса маршрутов.</p>
 <h4 class="design-section">Резервирование и принятие предложения.</h4>
-<p>Простейший алгоритм — одно активное предложение на поездку и водителя. Matcher в короткой транзакции блокирует поездку, затем строку водителя, проверяет <code><span class="t">SEARCHING</span></code> и <code><span class="t">FREE</span></code>, создаёт <code>offer</code> и переводит обе записи в <code><span class="t">OFFERED</span></code> с одинаковым <code>active_offer_id</code>.</p>
+<p>Простейший алгоритм — одно активное предложение на поездку и водителя. Matcher в короткой транзакции блокирует поездку, задание подбора, затем строку водителя, проверяет <code><span class="t">SEARCHING</span></code> и <code><span class="t">FREE</span></code>, создаёт <code>offer</code> и переводит поездку и водителя в <code><span class="t">OFFERED</span></code> с одинаковым <code>active_offer_id</code>. В той же транзакции задание переходит в <code><span class="t">WAITING_OFFER</span></code> и создаётся <code><span class="t">OfferCreated</span></code> в Outbox.</p>
 <p>Если водитель уже занят, выбирается другой кандидат. Геопоиск и запрос ETA выполняются до транзакции.</p>
 <pre>Поездка:
 <span class="t">SEARCHING</span> → <span class="t">OFFERED</span> → <span class="t">ASSIGNED</span>
@@ -12239,9 +12294,9 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 
 Водитель:
 <span class="t">FREE</span> → <span class="t">OFFERED</span> → <span class="t">BUSY</span> → <span class="t">FREE</span></pre>
-<p>При принятии повторно блокируются поездка и водитель в том же порядке, затем предложение. Проверяются его получатель, <code><span class="t">PENDING</span></code>, совпадение активного offer_id и срок по часам БД.</p>
-<p>Одна транзакция меняет предложение на <code><span class="t">ACCEPTED</span></code>, поездку на <code><span class="t">ASSIGNED</span></code>, водителя на <code><span class="t">BUSY</span></code> и пишет Outbox. Изменение только статуса предложения не защищает от назначения водителя другой поездке.</p>
-<p><b>Истечение, отказ и отмена используют тот же порядок блокировок.</b> Обработчик истечения перечитывает время после получения блокировок; только актуальный offer_id может освободить резерв. Поездка возвращается в SEARCHING, водитель — в FREE.</p>
+<p>При принятии повторно блокируются поездка, задание подбора и водитель в том же порядке, затем предложение. Проверяются его получатель, <code><span class="t">PENDING</span></code>, совпадение активного offer_id и срок по часам БД.</p>
+<p>Одна транзакция меняет предложение на <code><span class="t">ACCEPTED</span></code>, поездку на <code><span class="t">ASSIGNED</span></code>, водителя на <code><span class="t">BUSY</span></code>, задание подбора на <code><span class="t">DONE</span></code> и пишет Outbox. Изменение только статуса предложения не защищает от назначения водителя другой поездке.</p>
+<p><b>Истечение, отказ и отмена используют тот же порядок блокировок.</b> Обработчик истечения перечитывает время после получения блокировок; только актуальный offer_id может освободить резерв. После истечения или отказа поездка возвращается в SEARCHING, водитель — в FREE, а сохранённое задание подбора — в READY с новой попыткой до общего дедлайна. Отмена закрывает поездку и задание, освобождая только актуальный резерв.</p>
 <p>Позднее принятие старого предложения отвергается; повтор уже успешного принятия возвращает прежний результат. Если отмена и принятие пришли одновременно, решение определяется зафиксированным переходом, а правила отмены проверяются заново.</p>
 <h4 class="design-section">Координаты и расчёт стоимости</h4>
 <h5 class="design-subsection">Свежесть координат.</h5>
@@ -12261,86 +12316,108 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>Поездка и авторитетная занятость водителя находятся в одном городском шарде. Во время активной поездки владелец не меняется, даже если машина пересекла границу города.</p>
 <p>Перенос свободного водителя сначала запрещает новые предложения у старого владельца, завершает или отклоняет активный offer, затем передаёт владение с новой версией; новый шард принимает водителя только после подтверждённого отключения старого. При неизвестном результате перенос блокирует назначения до восстановления.</p>
 <h5 class="design-subsection">Независимое масштабирование.</h5>
-<p>Location Gateway и геоиндекс считаются по координатам/с, Matcher — по кандидатам и запросам ETA, realtime — по соединениям, Trip API — по транзакциям заказов. Поиск ограничен сроком и радиусом. Потеря heartbeat скрывает координаты из поиска, но не освобождает водителя активной поездки.</p>
+<p>Location Gateway и геоиндекс считаются по координатам/с, Matcher — по кандидатам и запросам ETA, realtime — по соединениям и доставкам, Trip API — по транзакциям заказов. Matcher и Realtime масштабируются независимо в своих consumer groups, параллелизм приёма ограничен числом партиций соответствующего топика. Поиск ограничен сроком и радиусом. Потеря heartbeat скрывает координаты из поиска, но не освобождает водителя активной поездки.</p>
 <h3 class="design-step"><span class="step-badge">Шаг 4</span> <span>Подвести итог.</span></h3>
 <p>
-Геоиндекс быстро находит кандидатов, а транзакция в городском шарде закрепляет за поездкой одного водителя. Устаревшая точка может привести к лишней попытке назначения.</p>
+Геоиндекс быстро находит кандидатов, а транзакция в городском шарде закрепляет за поездкой одного водителя. Outbox и Kafka доставляют запуск подбора и события, задания в БД позволяют продолжить работу после падения воркера или шлюза. Цена — эксплуатация Kafka, таблицы заданий и обработка повторов. Устаревшая точка может привести к лишней попытке назначения.</p>
 <p>При смене города новый шард может назначать водителя только после того, как старый прекратил назначения. Пока передача не подтверждена, водитель временно недоступен для заказов.</p>
-<figure class="concept" aria-labelledby="sd-uber-scaled-caption"><svg id="sd-uber-scaled" viewBox="-18 0 380 680" role="img" aria-labelledby="sd-uber-scaled-title sd-uber-scaled-desc" xmlns="http://www.w3.org/2000/svg"><title id="sd-uber-scaled-title">Uber: архитектура после масштабирования</title><desc id="sd-uber-scaled-desc">API поездок сохраняет состояние в шарде PostgreSQL выбранного города. Location Gateway обновляет геоиндекс Redis. Matcher читает кандидатов из геоиндекса, уточняет время подачи у сервиса маршрутов и резервирует водителя в БД. Обработчики Outbox доставляют события через Realtime Gateway и вызывают платёжного провайдера.</desc><defs><marker id="sd-uber-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M 78 50 V 102" marker-end="url(#sd-uber-scaled-arrow)"/>
-<path class="concept-edge" d="M 258 50 V 102" marker-end="url(#sd-uber-scaled-arrow)"/>
-<path class="concept-edge" d="M 212 50 V 86 H 106 V 102" marker-end="url(#sd-uber-scaled-arrow)"/>
-<path class="concept-edge" d="M 52 168 V 226" marker-end="url(#sd-uber-scaled-arrow)"/>
-<path class="concept-edge" d="M 112 168 V 226" marker-end="url(#sd-uber-scaled-arrow)"/>
-<path class="concept-edge" d="M 258 168 V 226" marker-end="url(#sd-uber-scaled-arrow)"/>
-<path class="concept-edge" d="M 78 354 V 292" marker-end="url(#sd-uber-scaled-arrow)"/>
-<path class="concept-edge" d="M 128 372 H 170 V 260 H 188" marker-end="url(#sd-uber-scaled-arrow)"/>
-<path class="concept-edge" d="M 128 394 H 188" marker-end="url(#sd-uber-scaled-arrow)"/>
-<path class="concept-edge" d="M 8 498 H 2 V 260 H 8" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M 128 502 H 188" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M 78 532 V 616" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M 328 502 H 338 V 29 H 328" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="8" width="140" height="42" rx="8"/><rect x="8" y="8" width="140" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="26" cy="22" r="4"/><path d="M 19 39 V 35 Q 19 29 26 29 Q 33 29 33 35 V 39"/></g>
-<text style="font-size:12px" x="88" y="34.0" text-anchor="middle">Пассажир</text>
-<rect fill="var(--bg)" stroke="none" x="188" y="8" width="140" height="42" rx="8"/><rect x="188" y="8" width="140" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="206" cy="22" r="4"/><path d="M 199 39 V 35 Q 199 29 206 29 Q 213 29 213 35 V 39"/></g>
-<text style="font-size:12px" x="268" y="34.0" text-anchor="middle">Водитель</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="102" width="140" height="54" rx="8"/><rect class="concept-node accent" x="20" y="102" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="108" width="140" height="54" rx="8"/><rect class="concept-node accent" x="14" y="108" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="114" width="140" height="54" rx="8"/><rect class="concept-node accent" x="8" y="114" width="140" height="54" rx="8"/>
-<text x="78.0" y="136.5" text-anchor="middle">Trip API</text>
-<text x="78.0" y="155.5" text-anchor="middle" class="concept-label">поездки</text>
-<rect fill="var(--bg)" stroke="none" x="200" y="102" width="140" height="54" rx="8"/><rect class="concept-node accent" x="200" y="102" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="194" y="108" width="140" height="54" rx="8"/><rect class="concept-node accent" x="194" y="108" width="140" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="188" y="114" width="140" height="54" rx="8"/><rect class="concept-node accent" x="188" y="114" width="140" height="54" rx="8"/>
-<text x="258.0" y="136.5" text-anchor="middle">Location</text>
-<text x="258.0" y="155.5" text-anchor="middle" class="concept-label">Gateway</text>
-<path fill="var(--bg)" stroke="none" d="M 8 234 A 70 8 0 0 1 148 234 V 284 A 70 8 0 0 1 8 284 Z"/><path class="concept-db" d="M 8 234 A 70 8 0 0 1 148 234 V 284 A 70 8 0 0 1 8 284 Z"/><ellipse class="concept-db" cx="78.0" cy="234" rx="70.0" ry="8"/>
-<text x="78.0" y="257" text-anchor="middle">PostgreSQL</text>
-<text x="78.0" y="276" text-anchor="middle" class="concept-label">шард города</text>
-<path fill="var(--bg)" stroke="none" d="M 196 226 H 320 L 328 234 V 280 L 320 288 H 196 L 188 280 V 234 Z"/><path class="concept-cache" d="M 196 226 H 320 L 328 234 V 280 L 320 288 H 196 L 188 280 V 234 Z"/>
-<text x="258" y="253" text-anchor="middle">Redis</text>
-<text x="258" y="273" text-anchor="middle" class="concept-label">геоиндекс</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="342" width="120" height="54" rx="8"/><rect class="concept-node warning" x="20" y="342" width="120" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="348" width="120" height="54" rx="8"/><rect class="concept-node warning" x="14" y="348" width="120" height="54" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="354" width="120" height="54" rx="8"/><rect class="concept-node warning" x="8" y="354" width="120" height="54" rx="8"/>
-<text x="68" y="376.5" text-anchor="middle">Matcher</text>
-<text x="68" y="395.5" text-anchor="middle" class="concept-label">поиск / резерв</text>
-<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="125" cy="357" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="125" cy="357" r="10"/><text x="125" y="361" text-anchor="middle">W</text></g>
-<rect fill="var(--bg)" stroke="none" x="188" y="354" width="140" height="54" rx="8"/><rect class="concept-node plain" x="188" y="354" width="140" height="54" rx="8"/>
-<text x="258.0" y="376.5" text-anchor="middle">Маршруты</text>
-<text x="258.0" y="395.5" text-anchor="middle" class="concept-label">ETA подачи</text>
-<rect fill="var(--bg)" stroke="none" x="20" y="464" width="120" height="56" rx="8"/><rect class="concept-node warning" x="20" y="464" width="120" height="56" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="14" y="470" width="120" height="56" rx="8"/><rect class="concept-node warning" x="14" y="470" width="120" height="56" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="8" y="476" width="120" height="56" rx="8"/><rect class="concept-node warning" x="8" y="476" width="120" height="56" rx="8"/>
-<text x="68" y="499.5" text-anchor="middle">Outbox</text>
-<text x="68" y="518.5" text-anchor="middle" class="concept-label">обработчики</text>
-<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="125" cy="479" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="125" cy="479" r="10"/><text x="125" y="483" text-anchor="middle">W</text></g>
-<rect fill="var(--bg)" stroke="none" x="200" y="464" width="140" height="56" rx="8"/><rect class="concept-node accent" x="200" y="464" width="140" height="56" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="194" y="470" width="140" height="56" rx="8"/><rect class="concept-node accent" x="194" y="470" width="140" height="56" rx="8"/>
-<rect fill="var(--bg)" stroke="none" x="188" y="476" width="140" height="56" rx="8"/><rect class="concept-node accent" x="188" y="476" width="140" height="56" rx="8"/>
-<text x="258.0" y="499.5" text-anchor="middle">Realtime</text>
-<text x="258.0" y="518.5" text-anchor="middle" class="concept-label">Gateway</text>
-<rect fill="var(--bg)" stroke="none" x="8" y="616" width="140" height="48" rx="8"/><rect class="concept-node plain" x="8" y="616" width="140" height="48" rx="8"/>
-<text x="78.0" y="635.5" text-anchor="middle">Платёжный</text>
-<text x="78.0" y="654.5" text-anchor="middle" class="concept-label">провайдер</text>
-<g aria-label="С1"><circle cx="78" cy="78" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="78" cy="78" r="13"/><text x="78" y="82" text-anchor="middle" style="font-size:10px"><tspan x="78">С1</tspan></text></g>
-<g aria-label="К1"><circle cx="258" cy="78" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="258" cy="78" r="13"/><text x="258" y="82" text-anchor="middle" style="font-size:10px"><tspan x="258">К1</tspan></text></g>
-<g aria-label="П1"><circle cx="176" cy="86" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="176" cy="86" r="13"/><text x="176" y="90" text-anchor="middle" style="font-size:10px"><tspan x="176">П1</tspan></text></g>
-<g aria-label="С2"><circle cx="52" cy="196" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="52" cy="196" r="13"/><text x="52" y="200" text-anchor="middle" style="font-size:10px"><tspan x="52">С2</tspan></text></g>
-<g aria-label="П2"><circle cx="112" cy="196" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="112" cy="196" r="13"/><text x="112" y="200" text-anchor="middle" style="font-size:10px"><tspan x="112">П2</tspan></text></g>
-<g aria-label="К2"><circle cx="258" cy="196" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="258" cy="196" r="13"/><text x="258" y="200" text-anchor="middle" style="font-size:10px"><tspan x="258">К2</tspan></text></g>
-<g aria-label="М3"><circle cx="78" cy="318" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="78" cy="318" r="13"/><text x="78" y="322" text-anchor="middle" style="font-size:10px"><tspan x="78">М3</tspan></text></g>
-<g aria-label="М1"><circle cx="170" cy="314" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="170" cy="314" r="13"/><text x="170" y="318" text-anchor="middle" style="font-size:10px"><tspan x="170">М1</tspan></text></g>
-<g aria-label="М2"><circle cx="158" cy="394" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="158" cy="394" r="13"/><text x="158" y="398" text-anchor="middle" style="font-size:10px"><tspan x="158">М2</tspan></text></g>
-<g aria-label="Д2"><circle cx="158" cy="502" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="158" cy="502" r="13"/><text x="158" y="506" text-anchor="middle" style="font-size:10px"><tspan x="158">Д2</tspan></text></g>
-<g aria-label="Д3"><circle cx="78" cy="574" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="78" cy="574" r="13"/><text x="78" y="578" text-anchor="middle" style="font-size:10px"><tspan x="78">Д3</tspan></text></g>
-<g aria-label="Д1"><circle cx="2.0" cy="438" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="2.0" cy="438" r="13"/><text x="2.0" y="442" text-anchor="middle" style="font-size:10px"><tspan x="2.0">Д1</tspan></text></g>
-<g aria-label="Д4"><circle cx="338" cy="320" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="338" cy="320" r="13"/><text x="338" y="324" text-anchor="middle" style="font-size:10px"><tspan x="338">Д4</tspan></text></g>
-</svg><figcaption id="sd-uber-scaled-caption">Геопозиции и подбор масштабируются отдельно от поездок. Redis даёт кандидатов, только БД подтверждает резерв и назначение. Пунктир — фоновые чтения заданий, платежи и доставка событий; Realtime Gateway обслуживает обоих участников.<br>
+<figure class="concept" aria-labelledby="sd-uber-scaled-caption"><svg id="sd-uber-scaled" viewBox="-18 0 400 648" role="img" aria-labelledby="sd-uber-scaled-title sd-uber-scaled-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="sd-uber-scaled-title">Uber: архитектура после масштабирования</title><desc id="sd-uber-scaled-desc">API поездок сохраняет состояние в шарде PostgreSQL выбранного города. Location Gateway обновляет геоиндекс Redis. Matcher читает кандидатов из геоиндекса, уточняет время подачи у сервиса маршрутов и резервирует водителя в БД. Обработчики Outbox публикуют задания и события в Kafka. Matcher сохраняет задания в БД и подбирает водителей, Realtime Gateway сохраняет задания доставки и уведомляет клиентов. Оплата вызывается из Outbox со стабильным ключом.</desc><defs><marker id="sd-uber-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="currentColor"/></marker></defs>
+<path class="concept-edge" d="M 60 50 V 102" marker-end="url(#sd-uber-scaled-arrow)"/>
+<path class="concept-edge" d="M 288 50 V 102" marker-end="url(#sd-uber-scaled-arrow)"/>
+<path class="concept-edge" d="M 208 29 L 100 102" marker-end="url(#sd-uber-scaled-arrow)"/>
+<path class="concept-edge" d="M 40 168 V 235" marker-end="url(#sd-uber-scaled-arrow)"/>
+<path class="concept-edge" d="M 100 168 V 235" marker-end="url(#sd-uber-scaled-arrow)"/>
+<path class="concept-edge" d="M 288 168 V 234" marker-end="url(#sd-uber-scaled-arrow)"/>
+<path class="concept-edge" d="M 48 354 V 299.5" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 174 478 V 168" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 288 354 V 300" marker-end="url(#sd-uber-scaled-arrow)"/>
+<path class="concept-edge" d="M 264 354 L 112 297.4" marker-end="url(#sd-uber-scaled-arrow)"/>
+<path class="concept-edge" d="M 78 420 V 582" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 288 420 V 582" marker-end="url(#sd-uber-scaled-arrow)"/>
+<path class="concept-edge" d="M 200 102 L 240 50" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 104 420 L 134 478" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 230 502 L 264 420" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="8" width="140" height="42" rx="20"/><rect x="8" y="8" width="140" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="26" cy="22" r="4"/><path d="M 19 39 V 35 Q 19 29 26 29 Q 33 29 33 35 V 39"/></g>
+<text x="88" y="34" text-anchor="middle">Пассажир</text>
+<rect fill="var(--bg)" stroke="none" x="208" y="8" width="140" height="42" rx="20"/><rect x="208" y="8" width="140" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="226" cy="22" r="4"/><path d="M 219 39 V 35 Q 219 29 226 29 Q 233 29 233 35 V 39"/></g>
+<text x="288" y="34" text-anchor="middle">Водитель</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="102" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="20" y="102" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="108" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="14" y="108" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="114" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="8" y="114" width="96" height="54" rx="8"/>
+<text x="56.0" y="137" text-anchor="middle">Trip API</text>
+<text x="56.0" y="156" text-anchor="middle" class="concept-label">поездки</text>
+<rect fill="var(--bg)" stroke="none" x="136" y="102" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="136" y="102" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="130" y="108" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="130" y="108" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="124" y="114" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="124" y="114" width="96" height="54" rx="8"/>
+<text x="172.0" y="137" text-anchor="middle">Realtime</text>
+<text x="172.0" y="156" text-anchor="middle" class="concept-label">Gateway</text>
+<rect fill="var(--bg)" stroke="none" x="252" y="102" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="252" y="102" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="246" y="108" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="246" y="108" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="240" y="114" width="96" height="54" rx="8"/>
+<rect class="concept-node accent" x="240" y="114" width="96" height="54" rx="8"/>
+<text x="288.0" y="137" text-anchor="middle">Location</text>
+<text x="288.0" y="156" text-anchor="middle" class="concept-label">Gateway</text>
+<path fill="var(--bg)" stroke="none" d="M 8 242 A 60 8 0 0 1 128 242 V 292 A 60 8 0 0 1 8 292 Z"/><path class="concept-db" d="M 8 242 A 60 8 0 0 1 128 242 V 292 A 60 8 0 0 1 8 292 Z"/><ellipse class="concept-db" cx="68" cy="242" rx="60" ry="8"/>
+<text x="68" y="265" text-anchor="middle">PostgreSQL</text>
+<text x="68" y="284" text-anchor="middle" class="concept-label">шард города</text>
+<path fill="var(--bg)" stroke="none" d="M 236 234 H 340 L 348 242 V 292 L 340 300 H 236 L 228 292 V 242 Z"/><path class="concept-cache" d="M 236 234 H 340 L 348 242 V 292 L 340 300 H 236 L 228 292 V 242 Z"/>
+<text x="288" y="261" text-anchor="middle">Redis</text>
+<text x="288" y="281" text-anchor="middle" class="concept-label">геоиндекс</text>
+<rect fill="var(--bg)" stroke="none" x="20" y="354" width="96" height="54" rx="8"/>
+<rect class="concept-node warning" x="20" y="354" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="14" y="360" width="96" height="54" rx="8"/>
+<rect class="concept-node warning" x="14" y="360" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="8" y="366" width="96" height="54" rx="8"/>
+<rect class="concept-node warning" x="8" y="366" width="96" height="54" rx="8"/>
+<text x="56" y="389" text-anchor="middle">Outbox</text><text x="56" y="408" text-anchor="middle" class="concept-label">обработчики</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="101" cy="369" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="101" cy="369" r="10"/><text x="101" y="373" text-anchor="middle">W</text></g>
+<rect fill="var(--bg)" stroke="none" x="252" y="354" width="96" height="54" rx="8"/>
+<rect class="concept-node warning" x="252" y="354" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="246" y="360" width="96" height="54" rx="8"/>
+<rect class="concept-node warning" x="246" y="360" width="96" height="54" rx="8"/>
+<rect fill="var(--bg)" stroke="none" x="240" y="366" width="96" height="54" rx="8"/>
+<rect class="concept-node warning" x="240" y="366" width="96" height="54" rx="8"/>
+<text x="288" y="389" text-anchor="middle">Matcher</text><text x="288" y="408" text-anchor="middle" class="concept-label">подбор</text>
+<g role="img" aria-label="Фоновый обработчик — worker"><circle cx="333" cy="369" r="10" fill="var(--bg)"/><circle class="concept-node warning" cx="333" cy="369" r="10"/><text x="333" y="373" text-anchor="middle">W</text></g>
+<path fill="var(--bg)" stroke="none" d="M 134 478 H 222 A 8 24 0 0 1 222 526 H 134 A 8 24 0 0 1 134 478 Z"/><path class="concept-broker" d="M 134 478 H 222 A 8 24 0 0 1 222 526 H 134 A 8 24 0 0 1 134 478 Z"/><ellipse fill="var(--bg)" cx="134" cy="502" rx="8" ry="24"/><ellipse class="concept-broker" cx="134" cy="502" rx="8" ry="24"/>
+<text x="186" y="497" text-anchor="middle">Kafka</text><text x="186" y="516" text-anchor="middle" class="concept-label">топики</text>
+<rect fill="var(--bg)" stroke="none" x="8" y="582" width="140" height="48" rx="8"/>
+<rect class="concept-node plain" x="8" y="582" width="140" height="48" rx="8"/>
+<text x="78" y="602" text-anchor="middle">Платёжный</text>
+<text x="78" y="621" text-anchor="middle" class="concept-label">провайдер</text>
+<rect fill="var(--bg)" stroke="none" x="208" y="582" width="140" height="48" rx="8"/>
+<rect class="concept-node plain" x="208" y="582" width="140" height="48" rx="8"/>
+<text x="278" y="602" text-anchor="middle">Маршруты</text>
+<text x="278" y="621" text-anchor="middle" class="concept-label">ETA подачи</text>
+<g aria-label="С1"><circle cx="60" cy="82" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="60" cy="82" r="13"/><text x="60" y="86" text-anchor="middle" style="font-size:10px"><tspan x="60">С1</tspan></text></g>
+<g aria-label="К1"><circle cx="288" cy="78" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="78" r="13"/><text x="288" y="82" text-anchor="middle" style="font-size:10px"><tspan x="288">К1</tspan></text></g>
+<g aria-label="П1"><circle cx="154" cy="65.5" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="154" cy="65.5" r="13"/><text x="154" y="69.5" text-anchor="middle" style="font-size:10px"><tspan x="154">П1</tspan></text></g>
+<g aria-label="С2"><circle cx="40" cy="200" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="40" cy="200" r="13"/><text x="40" y="204" text-anchor="middle" style="font-size:10px"><tspan x="40">С2</tspan></text></g>
+<g aria-label="П2"><circle cx="100" cy="200" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="100" cy="200" r="13"/><text x="100" y="204" text-anchor="middle" style="font-size:10px"><tspan x="100">П2</tspan></text></g>
+<g aria-label="К2"><circle cx="288" cy="200" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="200" r="13"/><text x="288" y="204" text-anchor="middle" style="font-size:10px"><tspan x="288">К2</tspan></text></g>
+<g aria-label="Д1"><circle cx="48" cy="328" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="48" cy="328" r="13"/><text x="48" y="332" text-anchor="middle" style="font-size:10px"><tspan x="48">Д1</tspan></text></g>
+<g aria-label="Д2"><circle cx="174" cy="270" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="174" cy="270" r="13"/><text x="174" y="274" text-anchor="middle" style="font-size:10px"><tspan x="174">Д2</tspan></text></g>
+<g aria-label="М3"><circle cx="288" cy="332" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="332" r="13"/><text x="288" y="336" text-anchor="middle" style="font-size:10px"><tspan x="288">М3</tspan></text></g>
+<g aria-label="М5"><circle cx="144" cy="309.3" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="144" cy="309.3" r="13"/><text x="144" y="313.3" text-anchor="middle" style="font-size:10px"><tspan x="144">М5</tspan></text></g>
+<g aria-label="Д3"><circle cx="78" cy="548" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="78" cy="548" r="13"/><text x="78" y="552" text-anchor="middle" style="font-size:10px"><tspan x="78">Д3</tspan></text></g>
+<g aria-label="М4"><circle cx="288" cy="548" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="548" r="13"/><text x="288" y="552" text-anchor="middle" style="font-size:10px"><tspan x="288">М4</tspan></text></g>
+<g aria-label="Д4"><circle cx="220" cy="76" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="220" cy="76" r="13"/><text x="220" y="80" text-anchor="middle" style="font-size:10px"><tspan x="220">Д4</tspan></text></g>
+<g aria-label="М1"><circle cx="119" cy="449" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="119" cy="449" r="13"/><text x="119" y="453" text-anchor="middle" style="font-size:10px"><tspan x="119">М1</tspan></text></g>
+<g aria-label="М2"><circle cx="247" cy="461" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="247" cy="461" r="13"/><text x="247" y="465" text-anchor="middle" style="font-size:10px"><tspan x="247">М2</tspan></text></g>
+</svg><figcaption id="sd-uber-scaled-caption">Геопозиции и подбор масштабируются отдельно от поездок. Redis даёт кандидатов, только БД подтверждает резерв и назначение. Пунктир — фоновые обращения, Kafka и доставка событий. Matcher и Realtime читают свои топики независимыми consumer groups; Realtime Gateway обслуживает обоих участников.<br>
 <b>Геопозиции — непрерывный параллельный поток: К1</b>&nbsp;— водитель выходит на линию, включает готовность принимать заказы и непрерывно передаёт координаты через Location Gateway; <b>К2</b>&nbsp;— обновлять геоиндекс Redis. Этот поток идёт параллельно заказам: пассажир может создать заказ и при отсутствии машин;<br>
-<b>Создание поездки: С1</b>&nbsp;— пассажир создаёт заказ; <b>С2</b>&nbsp;— сразу сохранить поездку в PostgreSQL со статусом <code><span class="t">SEARCHING</span></code>;<br>
-<b>Подбор водителя: М1</b>&nbsp;— найти кандидатов в геоиндексе; <b>М2</b>&nbsp;— уточнить время подачи; <b>М3</b>&nbsp;— проверить и зарезервировать водителя в БД;<br>
-<b>Доставка предложения и событий: Д1</b>&nbsp;— прочитать сохранённый Outbox; <b>Д2</b>&nbsp;— передать событие в Realtime Gateway; <b>Д4</b>&nbsp;— доставить уведомление водителю;<br>
+<b>Создание поездки: С1</b>&nbsp;— пассажир создаёт заказ; <b>С2</b>&nbsp;— одной транзакцией сохранить поездку <code><span class="t">SEARCHING</span></code> и Outbox для запуска подбора;<br>
+<b>Подбор водителя: М1</b>&nbsp;— Outbox публикует задание в Kafka; <b>М2</b>&nbsp;— Matcher получает его и подтверждает сообщение после сохранения задания в БД; <b>М3</b>&nbsp;— найти кандидатов в геоиндексе; <b>М4</b>&nbsp;— уточнить время подачи; <b>М5</b>&nbsp;— обращения Matcher к БД: сохранять и забирать задания с lease, проверять поездку, резервировать водителя и записывать Outbox для предложения;<br>
+<b>Доставка предложения и событий: Д1</b>&nbsp;— прочитать сохранённый Outbox; <b>М1</b>&nbsp;— опубликовать событие в Kafka; <b>Д2</b>&nbsp;— Realtime Gateway получает событие, сохраняет задание доставки в БД, затем подтверждает сообщение Kafka; <b>Д4</b>&nbsp;— отправлять водителю до подтверждения приложения или истечения предложения;<br>
 <b>Принятие предложения позже: П1</b>&nbsp;— водитель принимает предложение; <b>П2</b>&nbsp;— в одной транзакции сохранить назначение: поездка <code><span class="t">ASSIGNED</span></code>, водитель <code><span class="t">BUSY</span></code>, предложение <code><span class="t">ACCEPTED</span></code> и Outbox;<br>
 <b>Оплата после завершения: Д3</b>&nbsp;— вызвать платёжного провайдера.</figcaption></figure>
 
