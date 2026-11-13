@@ -12930,12 +12930,13 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p><b>Банковское приложение даёт клиенту доступ к счетам, остаткам, истории и переводам; деньги учитывает отдельное логическое ядро — ledger.</b> Внутренний перевод атомарно создаёт сбалансированные проводки и меняет остатки. Проверка доступных средств, резерв и списание используют одну авторитетную БД.</p>
 <p><b>Главные гарантии — сохранение денег, отсутствие повторного списания и восстановление неизвестного исхода операции.</b> Идемпотентность защищает повторы, Outbox запускает внешние платежи и уведомления. Внешний перевод остаётся незавершённым до подтверждения или сверки; история и push не являются источником денежного состояния.</p>
 <figure class="concept" aria-labelledby="sd-banking-summary-caption"><svg xmlns="http://www.w3.org/2000/svg" id="sd-banking-summary" viewBox="-18 0 380 736" role="img" aria-labelledby="sd-banking-summary-title sd-banking-summary-desc"><title id="sd-banking-summary-title">Банковское приложение: архитектура после масштабирования</title><desc id="sd-banking-summary-desc">Клиент обращается к BFF, который проверяет сессию и маршрутизирует запросы. Accounts API читает авторитетный ledger и проекцию истории, Transfer API проводит деньги в одной транзакции ledger. События из Outbox публикуются в брокер. Фоновые адаптеры обмениваются сообщениями с внешней платёжной системой, проекции и уведомления обновляются отдельно.</desc><defs><marker id="sd-banking-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="currentColor" /></marker></defs>
-<path class="concept-edge" d="M 172 42 V 90" marker-end="url(#sd-banking-summary-arrow)" />
+<path class="concept-edge" d="M 140 42 V 90" marker-end="url(#sd-banking-summary-arrow)" />
+<path class="concept-edge" d="M 210 42 V 90" marker-end="url(#sd-banking-summary-arrow)" />
 <path class="concept-edge" d="M 172 156 V 178 H 78 V 200" marker-end="url(#sd-banking-summary-arrow)" />
 <path class="concept-edge" d="M 172 178 H 258 V 200" marker-end="url(#sd-banking-summary-arrow)" />
 <path class="concept-edge" d="M 78 266 V 322" marker-end="url(#sd-banking-summary-arrow)" />
-<path class="concept-edge" d="M 258 266 V 294 H 112 V 322" marker-end="url(#sd-banking-summary-arrow)" />
-<path class="concept-edge" d="M 148 238 H 170 V 288 Q 180 294 170 300 V 312 H 258 V 322" marker-end="url(#sd-banking-summary-arrow)" />
+<path class="concept-edge" d="M 224 266 V 294 H 112 V 322" marker-end="url(#sd-banking-summary-arrow)" />
+<path class="concept-edge" d="M 258 266 V 322" marker-end="url(#sd-banking-summary-arrow)" />
 <path class="concept-edge" d="M 78 398 V 426 H 172 V 462" marker-end="url(#sd-banking-summary-arrow)" stroke-dasharray="4 4" />
 <path class="concept-edge" d="M 142 506 V 538 H 78 V 560" marker-end="url(#sd-banking-summary-arrow)" stroke-dasharray="4 4" />
 <path class="concept-edge" d="M 202 506 V 538 H 258 V 560" marker-end="url(#sd-banking-summary-arrow)" stroke-dasharray="4 4" />
@@ -12952,13 +12953,13 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <rect fill="var(--bg)" stroke="none" x="20" y="200" width="140" height="54" rx="8" /><rect class="concept-node accent" x="20" y="200" width="140" height="54" rx="8" />
 <rect fill="var(--bg)" stroke="none" x="14" y="206" width="140" height="54" rx="8" /><rect class="concept-node accent" x="14" y="206" width="140" height="54" rx="8" />
 <rect fill="var(--bg)" stroke="none" x="8" y="212" width="140" height="54" rx="8" /><rect class="concept-node accent" x="8" y="212" width="140" height="54" rx="8" />
-<text x="78.0" y="234.5" text-anchor="middle">Accounts API</text>
-<text x="78.0" y="253.5" text-anchor="middle" class="concept-label">счета / история</text>
+<text x="78.0" y="234.5" text-anchor="middle">Transfer API</text>
+<text x="78.0" y="253.5" text-anchor="middle" class="concept-label">денежные команды</text>
 <rect fill="var(--bg)" stroke="none" x="200" y="200" width="140" height="54" rx="8" /><rect class="concept-node accent" x="200" y="200" width="140" height="54" rx="8" />
 <rect fill="var(--bg)" stroke="none" x="194" y="206" width="140" height="54" rx="8" /><rect class="concept-node accent" x="194" y="206" width="140" height="54" rx="8" />
 <rect fill="var(--bg)" stroke="none" x="188" y="212" width="140" height="54" rx="8" /><rect class="concept-node accent" x="188" y="212" width="140" height="54" rx="8" />
-<text x="258.0" y="234.5" text-anchor="middle">Transfer API</text>
-<text x="258.0" y="253.5" text-anchor="middle" class="concept-label">денежные команды</text>
+<text x="258.0" y="234.5" text-anchor="middle">Accounts API</text>
+<text x="258.0" y="253.5" text-anchor="middle" class="concept-label">счета / история</text>
 <path fill="var(--bg)" stroke="none" d="M 8 330 A 70 8 0 0 1 148 330 V 390 A 70 8 0 0 1 8 390 Z" /><path class="concept-db" d="M 8 330 A 70 8 0 0 1 148 330 V 390 A 70 8 0 0 1 8 390 Z" /><ellipse class="concept-db" cx="78.0" cy="330" rx="70.0" ry="8" />
 <text x="78.0" y="353" text-anchor="middle">Ledger БД</text>
 <text x="78.0" y="372" text-anchor="middle" class="concept-label">проводки + Outbox</text>
@@ -12982,21 +12983,22 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <g role="img" aria-label="Фоновый обработчик — worker"><circle cx="325" cy="575" r="10" fill="var(--bg)" /><circle class="concept-node warning" cx="325" cy="575" r="10" /><text x="325" y="579" text-anchor="middle">W</text></g>
 <rect fill="var(--bg)" stroke="none" x="8" y="684" width="140" height="44" rx="8" /><rect class="concept-node plain" x="8" y="684" width="140" height="44" rx="8" />
 <text x="78.0" y="711" text-anchor="middle">Внешняя сеть</text>
-<g aria-label="Ч1"><circle cx="126" cy="178" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="126" cy="178" r="13"/><text x="126" y="182" text-anchor="middle" style="font-size:10px"><tspan x="126">Ч1</tspan></text></g>
-<g aria-label="П2"><circle cx="226" cy="178" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="226" cy="178" r="13"/><text x="226" y="182" text-anchor="middle" style="font-size:10px"><tspan x="226">П2</tspan></text></g>
-<g aria-label="Ч2"><circle cx="78" cy="294" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="78" cy="294" r="13"/><text x="78" y="298" text-anchor="middle" style="font-size:10px"><tspan x="78">Ч2</tspan></text></g>
-<g aria-label="П3"><circle cx="210" cy="294" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="210" cy="294" r="13"/><text x="210" y="298" text-anchor="middle" style="font-size:10px"><tspan x="210">П3</tspan></text></g>
-<g aria-label="Ч3"><circle cx="170" cy="270" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="170" cy="270" r="13"/><text x="170" y="274" text-anchor="middle" style="font-size:10px"><tspan x="170">Ч3</tspan></text></g>
+<g aria-label="Ч2"><circle cx="226" cy="178" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="226" cy="178" r="13"/><text x="226" y="182" text-anchor="middle" style="font-size:10px"><tspan x="226">Ч2</tspan></text></g>
+<g aria-label="П2"><circle cx="126" cy="178" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="126" cy="178" r="13"/><text x="126" y="182" text-anchor="middle" style="font-size:10px"><tspan x="126">П2</tspan></text></g>
+<g aria-label="Ч3"><circle cx="170" cy="294" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="170" cy="294" r="13"/><text x="170" y="298" text-anchor="middle" style="font-size:10px"><tspan x="170">Ч3</tspan></text></g>
+<g aria-label="П3"><circle cx="78" cy="294" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="78" cy="294" r="13"/><text x="78" y="298" text-anchor="middle" style="font-size:10px"><tspan x="78">П3</tspan></text></g>
+<g aria-label="Ч4"><circle cx="258" cy="294" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="258" cy="294" r="13"/><text x="258" y="298" text-anchor="middle" style="font-size:10px"><tspan x="258">Ч4</tspan></text></g>
 <g aria-label="Д1"><circle cx="126" cy="426" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="126" cy="426" r="13"/><text x="126" y="430" text-anchor="middle" style="font-size:10px"><tspan x="126">Д1</tspan></text></g>
 <g aria-label="Д2"><circle cx="110" cy="538" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="110" cy="538" r="13"/><text x="110" y="542" text-anchor="middle" style="font-size:10px"><tspan x="110">Д2</tspan></text></g>
 <g aria-label="Д3"><circle cx="230" cy="538" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="230" cy="538" r="13"/><text x="230" y="542" text-anchor="middle" style="font-size:10px"><tspan x="230">Д3</tspan></text></g>
 <g aria-label="Д6"><circle cx="78" cy="656" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="78" cy="656" r="13"/><text x="78" y="660" text-anchor="middle" style="font-size:10px"><tspan x="78">Д6</tspan></text></g>
-<g aria-label="П1"><circle cx="172" cy="60" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="172" cy="60" r="13"/><text x="172" y="64" text-anchor="middle" style="font-size:10px"><tspan x="172">П1</tspan></text></g>
+<g aria-label="П1"><circle cx="140" cy="60" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="140" cy="60" r="13"/><text x="140" y="64" text-anchor="middle" style="font-size:10px"><tspan x="140">П1</tspan></text></g>
+<g aria-label="Ч1"><circle cx="210" cy="60" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="210" cy="60" r="13"/><text x="210" y="64" text-anchor="middle" style="font-size:10px"><tspan x="210">Ч1</tspan></text></g>
 <g aria-label="Д4"><circle cx="40" cy="478" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="40" cy="478" r="13"/><text x="40" y="482" text-anchor="middle" style="font-size:10px"><tspan x="40">Д4</tspan></text></g>
 <g aria-label="Д5"><circle cx="300" cy="478" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="300" cy="478" r="13"/><text x="300" y="482" text-anchor="middle" style="font-size:10px"><tspan x="300">Д5</tspan></text></g>
 </svg><figcaption id="sd-banking-summary-caption">Деньги проводит одна авторитетная Ledger БД, история и уведомления обновляются асинхронно. Внешний адаптер сохраняет результаты через команды ядра, а не прямой SQL. Пунктир — публикация из Outbox, обработка событий и обновление проекций.<br>
 <b>Приём и перевод: П1</b>&nbsp;— принять запрос и проверить сессию; <b>П2</b>&nbsp;— передать денежную команду; <b>П3</b>&nbsp;— зафиксировать проводки и Outbox;<br>
-<b>Чтение счетов и истории: Ч1</b>&nbsp;— запросить счета или историю; <b>Ч2</b>&nbsp;— прочитать актуальное состояние ledger; <b>Ч3</b>&nbsp;— прочитать проекцию истории;<br>
+<b>Чтение счетов и истории: Ч1</b>&nbsp;— клиент запрашивает счета или историю через BFF; <b>Ч2</b>&nbsp;— передать запрос в Accounts API; <b>Ч3</b>&nbsp;— прочитать актуальное состояние ledger; <b>Ч4</b>&nbsp;— прочитать проекцию истории;<br>
 <b>Фоновая обработка: Д1</b>&nbsp;— опубликовать событие ledger; <b>Д2</b>&nbsp;— передать событие платёжному адаптеру; <b>Д3</b>&nbsp;— передать событие обработчикам проекций и уведомлений; <b>Д4</b>&nbsp;— зафиксировать результат внешнего платежа в ledger; <b>Д5</b>&nbsp;— обновить проекцию истории; <b>Д6</b>&nbsp;— вызвать внешнюю платёжную сеть.</figcaption></figure>
     </div>
     <div class="more">
@@ -13227,12 +13229,13 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>
 Внутренний перевод фиксирует обе проводки и изменения остатков одной транзакцией. Для внешнего платежа hold удерживает сумму до подтверждения или сверки. Такая схема защищает от повторной траты, но при потере авторитетной БД денежные команды придётся остановить. Проверка на рост — время ожидания блокировки одного горячего счёта.</p>
 <figure class="concept" aria-labelledby="sd-banking-scaled-caption"><svg xmlns="http://www.w3.org/2000/svg" id="sd-banking-scaled" viewBox="-18 0 380 736" role="img" aria-labelledby="sd-banking-scaled-title sd-banking-scaled-desc"><title id="sd-banking-scaled-title">Банковское приложение: архитектура после масштабирования</title><desc id="sd-banking-scaled-desc">Клиент обращается к BFF, который проверяет сессию и маршрутизирует запросы. Accounts API читает авторитетный ledger и проекцию истории, Transfer API проводит деньги в одной транзакции ledger. События из Outbox публикуются в брокер. Фоновые адаптеры обмениваются сообщениями с внешней платёжной системой, проекции и уведомления обновляются отдельно.</desc><defs><marker id="sd-banking-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="currentColor" /></marker></defs>
-<path class="concept-edge" d="M 172 42 V 90" marker-end="url(#sd-banking-scaled-arrow)" />
+<path class="concept-edge" d="M 140 42 V 90" marker-end="url(#sd-banking-scaled-arrow)" />
+<path class="concept-edge" d="M 210 42 V 90" marker-end="url(#sd-banking-scaled-arrow)" />
 <path class="concept-edge" d="M 172 156 V 178 H 78 V 200" marker-end="url(#sd-banking-scaled-arrow)" />
 <path class="concept-edge" d="M 172 178 H 258 V 200" marker-end="url(#sd-banking-scaled-arrow)" />
 <path class="concept-edge" d="M 78 266 V 322" marker-end="url(#sd-banking-scaled-arrow)" />
-<path class="concept-edge" d="M 258 266 V 294 H 112 V 322" marker-end="url(#sd-banking-scaled-arrow)" />
-<path class="concept-edge" d="M 148 238 H 170 V 288 Q 180 294 170 300 V 312 H 258 V 322" marker-end="url(#sd-banking-scaled-arrow)" />
+<path class="concept-edge" d="M 224 266 V 294 H 112 V 322" marker-end="url(#sd-banking-scaled-arrow)" />
+<path class="concept-edge" d="M 258 266 V 322" marker-end="url(#sd-banking-scaled-arrow)" />
 <path class="concept-edge" d="M 78 398 V 426 H 172 V 462" marker-end="url(#sd-banking-scaled-arrow)" stroke-dasharray="4 4" />
 <path class="concept-edge" d="M 142 506 V 538 H 78 V 560" marker-end="url(#sd-banking-scaled-arrow)" stroke-dasharray="4 4" />
 <path class="concept-edge" d="M 202 506 V 538 H 258 V 560" marker-end="url(#sd-banking-scaled-arrow)" stroke-dasharray="4 4" />
@@ -13249,13 +13252,13 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <rect fill="var(--bg)" stroke="none" x="20" y="200" width="140" height="54" rx="8" /><rect class="concept-node accent" x="20" y="200" width="140" height="54" rx="8" />
 <rect fill="var(--bg)" stroke="none" x="14" y="206" width="140" height="54" rx="8" /><rect class="concept-node accent" x="14" y="206" width="140" height="54" rx="8" />
 <rect fill="var(--bg)" stroke="none" x="8" y="212" width="140" height="54" rx="8" /><rect class="concept-node accent" x="8" y="212" width="140" height="54" rx="8" />
-<text x="78.0" y="234.5" text-anchor="middle">Accounts API</text>
-<text x="78.0" y="253.5" text-anchor="middle" class="concept-label">счета / история</text>
+<text x="78.0" y="234.5" text-anchor="middle">Transfer API</text>
+<text x="78.0" y="253.5" text-anchor="middle" class="concept-label">денежные команды</text>
 <rect fill="var(--bg)" stroke="none" x="200" y="200" width="140" height="54" rx="8" /><rect class="concept-node accent" x="200" y="200" width="140" height="54" rx="8" />
 <rect fill="var(--bg)" stroke="none" x="194" y="206" width="140" height="54" rx="8" /><rect class="concept-node accent" x="194" y="206" width="140" height="54" rx="8" />
 <rect fill="var(--bg)" stroke="none" x="188" y="212" width="140" height="54" rx="8" /><rect class="concept-node accent" x="188" y="212" width="140" height="54" rx="8" />
-<text x="258.0" y="234.5" text-anchor="middle">Transfer API</text>
-<text x="258.0" y="253.5" text-anchor="middle" class="concept-label">денежные команды</text>
+<text x="258.0" y="234.5" text-anchor="middle">Accounts API</text>
+<text x="258.0" y="253.5" text-anchor="middle" class="concept-label">счета / история</text>
 <path fill="var(--bg)" stroke="none" d="M 8 330 A 70 8 0 0 1 148 330 V 390 A 70 8 0 0 1 8 390 Z" /><path class="concept-db" d="M 8 330 A 70 8 0 0 1 148 330 V 390 A 70 8 0 0 1 8 390 Z" /><ellipse class="concept-db" cx="78.0" cy="330" rx="70.0" ry="8" />
 <text x="78.0" y="353" text-anchor="middle">Ledger БД</text>
 <text x="78.0" y="372" text-anchor="middle" class="concept-label">проводки + Outbox</text>
@@ -13279,21 +13282,22 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <g role="img" aria-label="Фоновый обработчик — worker"><circle cx="325" cy="575" r="10" fill="var(--bg)" /><circle class="concept-node warning" cx="325" cy="575" r="10" /><text x="325" y="579" text-anchor="middle">W</text></g>
 <rect fill="var(--bg)" stroke="none" x="8" y="684" width="140" height="44" rx="8" /><rect class="concept-node plain" x="8" y="684" width="140" height="44" rx="8" />
 <text x="78.0" y="711" text-anchor="middle">Внешняя сеть</text>
-<g aria-label="Ч1"><circle cx="126" cy="178" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="126" cy="178" r="13"/><text x="126" y="182" text-anchor="middle" style="font-size:10px"><tspan x="126">Ч1</tspan></text></g>
-<g aria-label="П2"><circle cx="226" cy="178" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="226" cy="178" r="13"/><text x="226" y="182" text-anchor="middle" style="font-size:10px"><tspan x="226">П2</tspan></text></g>
-<g aria-label="Ч2"><circle cx="78" cy="294" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="78" cy="294" r="13"/><text x="78" y="298" text-anchor="middle" style="font-size:10px"><tspan x="78">Ч2</tspan></text></g>
-<g aria-label="П3"><circle cx="210" cy="294" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="210" cy="294" r="13"/><text x="210" y="298" text-anchor="middle" style="font-size:10px"><tspan x="210">П3</tspan></text></g>
-<g aria-label="Ч3"><circle cx="170" cy="270" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="170" cy="270" r="13"/><text x="170" y="274" text-anchor="middle" style="font-size:10px"><tspan x="170">Ч3</tspan></text></g>
+<g aria-label="Ч2"><circle cx="226" cy="178" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="226" cy="178" r="13"/><text x="226" y="182" text-anchor="middle" style="font-size:10px"><tspan x="226">Ч2</tspan></text></g>
+<g aria-label="П2"><circle cx="126" cy="178" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="126" cy="178" r="13"/><text x="126" y="182" text-anchor="middle" style="font-size:10px"><tspan x="126">П2</tspan></text></g>
+<g aria-label="Ч3"><circle cx="170" cy="294" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="170" cy="294" r="13"/><text x="170" y="298" text-anchor="middle" style="font-size:10px"><tspan x="170">Ч3</tspan></text></g>
+<g aria-label="П3"><circle cx="78" cy="294" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="78" cy="294" r="13"/><text x="78" y="298" text-anchor="middle" style="font-size:10px"><tspan x="78">П3</tspan></text></g>
+<g aria-label="Ч4"><circle cx="258" cy="294" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="258" cy="294" r="13"/><text x="258" y="298" text-anchor="middle" style="font-size:10px"><tspan x="258">Ч4</tspan></text></g>
 <g aria-label="Д1"><circle cx="126" cy="426" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="126" cy="426" r="13"/><text x="126" y="430" text-anchor="middle" style="font-size:10px"><tspan x="126">Д1</tspan></text></g>
 <g aria-label="Д2"><circle cx="110" cy="538" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="110" cy="538" r="13"/><text x="110" y="542" text-anchor="middle" style="font-size:10px"><tspan x="110">Д2</tspan></text></g>
 <g aria-label="Д3"><circle cx="230" cy="538" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="230" cy="538" r="13"/><text x="230" y="542" text-anchor="middle" style="font-size:10px"><tspan x="230">Д3</tspan></text></g>
 <g aria-label="Д6"><circle cx="78" cy="656" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="78" cy="656" r="13"/><text x="78" y="660" text-anchor="middle" style="font-size:10px"><tspan x="78">Д6</tspan></text></g>
-<g aria-label="П1"><circle cx="172" cy="60" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="172" cy="60" r="13"/><text x="172" y="64" text-anchor="middle" style="font-size:10px"><tspan x="172">П1</tspan></text></g>
+<g aria-label="П1"><circle cx="140" cy="60" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="140" cy="60" r="13"/><text x="140" y="64" text-anchor="middle" style="font-size:10px"><tspan x="140">П1</tspan></text></g>
+<g aria-label="Ч1"><circle cx="210" cy="60" r="13" fill="var(--bg)"/><circle class="concept-node plain" cx="210" cy="60" r="13"/><text x="210" y="64" text-anchor="middle" style="font-size:10px"><tspan x="210">Ч1</tspan></text></g>
 <g aria-label="Д4"><circle cx="40" cy="478" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="40" cy="478" r="13"/><text x="40" y="482" text-anchor="middle" style="font-size:10px"><tspan x="40">Д4</tspan></text></g>
 <g aria-label="Д5"><circle cx="300" cy="478" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="300" cy="478" r="13"/><text x="300" y="482" text-anchor="middle" style="font-size:10px"><tspan x="300">Д5</tspan></text></g>
 </svg><figcaption id="sd-banking-scaled-caption">Деньги проводит одна авторитетная Ledger БД, история и уведомления обновляются асинхронно. Внешний адаптер сохраняет результаты через команды ядра, а не прямой SQL. Пунктир — публикация из Outbox, обработка событий и обновление проекций.<br>
 <b>Приём и перевод: П1</b>&nbsp;— принять запрос и проверить сессию; <b>П2</b>&nbsp;— передать денежную команду; <b>П3</b>&nbsp;— зафиксировать проводки и Outbox;<br>
-<b>Чтение счетов и истории: Ч1</b>&nbsp;— запросить счета или историю; <b>Ч2</b>&nbsp;— прочитать актуальное состояние ledger; <b>Ч3</b>&nbsp;— прочитать проекцию истории;<br>
+<b>Чтение счетов и истории: Ч1</b>&nbsp;— клиент запрашивает счета или историю через BFF; <b>Ч2</b>&nbsp;— передать запрос в Accounts API; <b>Ч3</b>&nbsp;— прочитать актуальное состояние ledger; <b>Ч4</b>&nbsp;— прочитать проекцию истории;<br>
 <b>Фоновая обработка: Д1</b>&nbsp;— опубликовать событие ledger; <b>Д2</b>&nbsp;— передать событие платёжному адаптеру; <b>Д3</b>&nbsp;— передать событие обработчикам проекций и уведомлений; <b>Д4</b>&nbsp;— зафиксировать результат внешнего платежа в ledger; <b>Д5</b>&nbsp;— обновить проекцию истории; <b>Д6</b>&nbsp;— вызвать внешнюю платёжную сеть.</figcaption></figure>
 
     </div></div></article>
