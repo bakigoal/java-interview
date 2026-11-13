@@ -11998,21 +11998,21 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p><b>Главное ограничение — один водитель не должен получить две активные поездки.</b> Геоиндекс допускает устаревание, резерв и принятие предложения проверяются транзакцией. API поездок, поток координат и подбор масштабируются независимо. Поездка и Outbox сохраняются вместе; Kafka доставляет задания Matcher и события Realtime Gateway. Задания подбора и доставки сохраняются в БД, платежи повторяются со стабильным ключом операции.</p>
 <figure class="concept" aria-labelledby="sd-uber-summary-caption"><svg id="sd-uber-summary" viewBox="-18 0 400 648" role="img" aria-labelledby="sd-uber-summary-title sd-uber-summary-desc" xmlns="http://www.w3.org/2000/svg">
 <title id="sd-uber-summary-title">Uber: архитектура после масштабирования</title><desc id="sd-uber-summary-desc">API поездок сохраняет состояние в шарде PostgreSQL выбранного города. Location Gateway обновляет геоиндекс Redis. Matcher читает кандидатов из геоиндекса, уточняет время подачи у сервиса маршрутов и резервирует водителя в БД. Обработчики Outbox публикуют задания и события в Kafka. Matcher сохраняет задания в БД и подбирает водителей, Realtime Gateway сохраняет задания доставки и уведомляет клиентов. Оплата вызывается из Outbox со стабильным ключом.</desc><defs><marker id="sd-uber-summary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M 60 50 V 102" marker-end="url(#sd-uber-summary-arrow)"/>
+<path class="concept-edge" d="M 68 50 V 102" marker-end="url(#sd-uber-summary-arrow)"/>
 <path class="concept-edge" d="M 288 50 V 102" marker-end="url(#sd-uber-summary-arrow)"/>
 <path class="concept-edge" d="M 208 29 L 100 102" marker-end="url(#sd-uber-summary-arrow)"/>
 <path class="concept-edge" d="M 40 168 V 235" marker-end="url(#sd-uber-summary-arrow)"/>
-<path class="concept-edge" d="M 100 168 V 235" marker-end="url(#sd-uber-summary-arrow)"/>
+<path class="concept-edge" d="M 96 168 V 235" marker-end="url(#sd-uber-summary-arrow)"/>
 <path class="concept-edge" d="M 288 168 V 234" marker-end="url(#sd-uber-summary-arrow)"/>
-<path class="concept-edge" d="M 48 354 V 299.5" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M 174 478 V 168" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 68 354 V 300" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 172 478 V 168" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
 <path class="concept-edge" d="M 288 354 V 300" marker-end="url(#sd-uber-summary-arrow)"/>
 <path class="concept-edge" d="M 264 354 L 112 297.4" marker-end="url(#sd-uber-summary-arrow)"/>
-<path class="concept-edge" d="M 78 420 V 582" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 68 420 V 582" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
 <path class="concept-edge" d="M 288 420 V 582" marker-end="url(#sd-uber-summary-arrow)"/>
 <path class="concept-edge" d="M 200 102 L 240 50" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M 104 420 L 134 478" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M 230 502 L 264 420" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 116 394 H 134 V 478" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 230 502 H 264 V 420" marker-end="url(#sd-uber-summary-arrow)" stroke-dasharray="4 4"/>
 <rect fill="var(--bg)" stroke="none" x="8" y="8" width="140" height="42" rx="20"/><rect x="8" y="8" width="140" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="26" cy="22" r="4"/><path d="M 19 39 V 35 Q 19 29 26 29 Q 33 29 33 35 V 39"/></g>
 <text x="88" y="34" text-anchor="middle">Пассажир</text>
 <rect fill="var(--bg)" stroke="none" x="208" y="8" width="140" height="42" rx="20"/><rect x="208" y="8" width="140" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="226" cy="22" r="4"/><path d="M 219 39 V 35 Q 219 29 226 29 Q 233 29 233 35 V 39"/></g>
@@ -12073,21 +12073,21 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <rect class="concept-node plain" x="208" y="582" width="140" height="48" rx="8"/>
 <text x="278" y="602" text-anchor="middle">Маршруты</text>
 <text x="278" y="621" text-anchor="middle" class="concept-label">ETA подачи</text>
-<g aria-label="С1"><circle cx="60" cy="82" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="60" cy="82" r="13"/><text x="60" y="86" text-anchor="middle" style="font-size:10px"><tspan x="60">С1</tspan></text></g>
-<g aria-label="К1"><circle cx="288" cy="78" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="78" r="13"/><text x="288" y="82" text-anchor="middle" style="font-size:10px"><tspan x="288">К1</tspan></text></g>
+<g aria-label="С1"><circle cx="68" cy="76" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="68" cy="76" r="13"/><text x="68" y="80" text-anchor="middle" style="font-size:10px"><tspan x="68">С1</tspan></text></g>
+<g aria-label="К1"><circle cx="288" cy="76" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="76" r="13"/><text x="288" y="80" text-anchor="middle" style="font-size:10px"><tspan x="288">К1</tspan></text></g>
 <g aria-label="П1"><circle cx="154" cy="65.5" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="154" cy="65.5" r="13"/><text x="154" y="69.5" text-anchor="middle" style="font-size:10px"><tspan x="154">П1</tspan></text></g>
-<g aria-label="С2"><circle cx="40" cy="200" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="40" cy="200" r="13"/><text x="40" y="204" text-anchor="middle" style="font-size:10px"><tspan x="40">С2</tspan></text></g>
-<g aria-label="П2"><circle cx="100" cy="200" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="100" cy="200" r="13"/><text x="100" y="204" text-anchor="middle" style="font-size:10px"><tspan x="100">П2</tspan></text></g>
+<g aria-label="С2"><circle cx="40" cy="201.5" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="40" cy="201.5" r="13"/><text x="40" y="205.5" text-anchor="middle" style="font-size:10px"><tspan x="40">С2</tspan></text></g>
+<g aria-label="П2"><circle cx="96" cy="201.5" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="96" cy="201.5" r="13"/><text x="96" y="205.5" text-anchor="middle" style="font-size:10px"><tspan x="96">П2</tspan></text></g>
 <g aria-label="К2"><circle cx="288" cy="200" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="200" r="13"/><text x="288" y="204" text-anchor="middle" style="font-size:10px"><tspan x="288">К2</tspan></text></g>
-<g aria-label="Д1"><circle cx="48" cy="328" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="48" cy="328" r="13"/><text x="48" y="332" text-anchor="middle" style="font-size:10px"><tspan x="48">Д1</tspan></text></g>
-<g aria-label="Д2"><circle cx="174" cy="270" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="174" cy="270" r="13"/><text x="174" y="274" text-anchor="middle" style="font-size:10px"><tspan x="174">Д2</tspan></text></g>
+<g aria-label="Д1"><circle cx="68" cy="327" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="68" cy="327" r="13"/><text x="68" y="331" text-anchor="middle" style="font-size:10px"><tspan x="68">Д1</tspan></text></g>
+<g aria-label="Д2"><circle cx="172" cy="270" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="172" cy="270" r="13"/><text x="172" y="274" text-anchor="middle" style="font-size:10px"><tspan x="172">Д2</tspan></text></g>
 <g aria-label="М3"><circle cx="288" cy="332" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="332" r="13"/><text x="288" y="336" text-anchor="middle" style="font-size:10px"><tspan x="288">М3</tspan></text></g>
 <g aria-label="М5"><circle cx="144" cy="309.3" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="144" cy="309.3" r="13"/><text x="144" y="313.3" text-anchor="middle" style="font-size:10px"><tspan x="144">М5</tspan></text></g>
-<g aria-label="Д3"><circle cx="78" cy="548" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="78" cy="548" r="13"/><text x="78" y="552" text-anchor="middle" style="font-size:10px"><tspan x="78">Д3</tspan></text></g>
+<g aria-label="Д3"><circle cx="68" cy="548" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="68" cy="548" r="13"/><text x="68" y="552" text-anchor="middle" style="font-size:10px"><tspan x="68">Д3</tspan></text></g>
 <g aria-label="М4"><circle cx="288" cy="548" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="548" r="13"/><text x="288" y="552" text-anchor="middle" style="font-size:10px"><tspan x="288">М4</tspan></text></g>
 <g aria-label="Д4"><circle cx="220" cy="76" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="220" cy="76" r="13"/><text x="220" y="80" text-anchor="middle" style="font-size:10px"><tspan x="220">Д4</tspan></text></g>
-<g aria-label="М1"><circle cx="119" cy="449" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="119" cy="449" r="13"/><text x="119" y="453" text-anchor="middle" style="font-size:10px"><tspan x="119">М1</tspan></text></g>
-<g aria-label="М2"><circle cx="247" cy="461" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="247" cy="461" r="13"/><text x="247" y="465" text-anchor="middle" style="font-size:10px"><tspan x="247">М2</tspan></text></g>
+<g aria-label="М1"><circle cx="134" cy="449" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="134" cy="449" r="13"/><text x="134" y="453" text-anchor="middle" style="font-size:10px"><tspan x="134">М1</tspan></text></g>
+<g aria-label="М2"><circle cx="264" cy="461" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="264" cy="461" r="13"/><text x="264" y="465" text-anchor="middle" style="font-size:10px"><tspan x="264">М2</tspan></text></g>
 </svg><figcaption id="sd-uber-summary-caption">Геопозиции и подбор масштабируются отдельно от поездок. Redis даёт кандидатов, только БД подтверждает резерв и назначение. Пунктир — фоновые обращения, Kafka и доставка событий. Matcher и Realtime читают свои топики независимыми consumer groups; Realtime Gateway обслуживает обоих участников.<br>
 <b>Геопозиции — непрерывный параллельный поток: К1</b>&nbsp;— водитель выходит на линию, включает готовность принимать заказы и непрерывно передаёт координаты через Location Gateway; <b>К2</b>&nbsp;— обновлять геоиндекс Redis. Этот поток идёт параллельно заказам: пассажир может создать заказ и при отсутствии машин;<br>
 <b>Создание поездки: С1</b>&nbsp;— пассажир создаёт заказ; <b>С2</b>&nbsp;— одной транзакцией сохранить поездку <code><span class="t">SEARCHING</span></code> и Outbox для запуска подбора;<br>
@@ -12323,21 +12323,21 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <p>При смене города новый шард может назначать водителя только после того, как старый прекратил назначения. Пока передача не подтверждена, водитель временно недоступен для заказов.</p>
 <figure class="concept" aria-labelledby="sd-uber-scaled-caption"><svg id="sd-uber-scaled" viewBox="-18 0 400 648" role="img" aria-labelledby="sd-uber-scaled-title sd-uber-scaled-desc" xmlns="http://www.w3.org/2000/svg">
 <title id="sd-uber-scaled-title">Uber: архитектура после масштабирования</title><desc id="sd-uber-scaled-desc">API поездок сохраняет состояние в шарде PostgreSQL выбранного города. Location Gateway обновляет геоиндекс Redis. Matcher читает кандидатов из геоиндекса, уточняет время подачи у сервиса маршрутов и резервирует водителя в БД. Обработчики Outbox публикуют задания и события в Kafka. Matcher сохраняет задания в БД и подбирает водителей, Realtime Gateway сохраняет задания доставки и уведомляет клиентов. Оплата вызывается из Outbox со стабильным ключом.</desc><defs><marker id="sd-uber-scaled-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 Z" fill="currentColor"/></marker></defs>
-<path class="concept-edge" d="M 60 50 V 102" marker-end="url(#sd-uber-scaled-arrow)"/>
+<path class="concept-edge" d="M 68 50 V 102" marker-end="url(#sd-uber-scaled-arrow)"/>
 <path class="concept-edge" d="M 288 50 V 102" marker-end="url(#sd-uber-scaled-arrow)"/>
 <path class="concept-edge" d="M 208 29 L 100 102" marker-end="url(#sd-uber-scaled-arrow)"/>
 <path class="concept-edge" d="M 40 168 V 235" marker-end="url(#sd-uber-scaled-arrow)"/>
-<path class="concept-edge" d="M 100 168 V 235" marker-end="url(#sd-uber-scaled-arrow)"/>
+<path class="concept-edge" d="M 96 168 V 235" marker-end="url(#sd-uber-scaled-arrow)"/>
 <path class="concept-edge" d="M 288 168 V 234" marker-end="url(#sd-uber-scaled-arrow)"/>
-<path class="concept-edge" d="M 48 354 V 299.5" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M 174 478 V 168" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 68 354 V 300" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 172 478 V 168" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
 <path class="concept-edge" d="M 288 354 V 300" marker-end="url(#sd-uber-scaled-arrow)"/>
 <path class="concept-edge" d="M 264 354 L 112 297.4" marker-end="url(#sd-uber-scaled-arrow)"/>
-<path class="concept-edge" d="M 78 420 V 582" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 68 420 V 582" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
 <path class="concept-edge" d="M 288 420 V 582" marker-end="url(#sd-uber-scaled-arrow)"/>
 <path class="concept-edge" d="M 200 102 L 240 50" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M 104 420 L 134 478" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
-<path class="concept-edge" d="M 230 502 L 264 420" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 116 394 H 134 V 478" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
+<path class="concept-edge" d="M 230 502 H 264 V 420" marker-end="url(#sd-uber-scaled-arrow)" stroke-dasharray="4 4"/>
 <rect fill="var(--bg)" stroke="none" x="8" y="8" width="140" height="42" rx="20"/><rect x="8" y="8" width="140" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="26" cy="22" r="4"/><path d="M 19 39 V 35 Q 19 29 26 29 Q 33 29 33 35 V 39"/></g>
 <text x="88" y="34" text-anchor="middle">Пассажир</text>
 <rect fill="var(--bg)" stroke="none" x="208" y="8" width="140" height="42" rx="20"/><rect x="208" y="8" width="140" height="42" rx="20" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/><g aria-hidden="true" fill="none" stroke="var(--fg)" stroke-width="1.5" stroke-linecap="round"><circle cx="226" cy="22" r="4"/><path d="M 219 39 V 35 Q 219 29 226 29 Q 233 29 233 35 V 39"/></g>
@@ -12398,21 +12398,21 @@ ceil(<span class="n">2</span> <span class="n">800</span> / <span class="n">240</
 <rect class="concept-node plain" x="208" y="582" width="140" height="48" rx="8"/>
 <text x="278" y="602" text-anchor="middle">Маршруты</text>
 <text x="278" y="621" text-anchor="middle" class="concept-label">ETA подачи</text>
-<g aria-label="С1"><circle cx="60" cy="82" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="60" cy="82" r="13"/><text x="60" y="86" text-anchor="middle" style="font-size:10px"><tspan x="60">С1</tspan></text></g>
-<g aria-label="К1"><circle cx="288" cy="78" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="78" r="13"/><text x="288" y="82" text-anchor="middle" style="font-size:10px"><tspan x="288">К1</tspan></text></g>
+<g aria-label="С1"><circle cx="68" cy="76" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="68" cy="76" r="13"/><text x="68" y="80" text-anchor="middle" style="font-size:10px"><tspan x="68">С1</tspan></text></g>
+<g aria-label="К1"><circle cx="288" cy="76" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="76" r="13"/><text x="288" y="80" text-anchor="middle" style="font-size:10px"><tspan x="288">К1</tspan></text></g>
 <g aria-label="П1"><circle cx="154" cy="65.5" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="154" cy="65.5" r="13"/><text x="154" y="69.5" text-anchor="middle" style="font-size:10px"><tspan x="154">П1</tspan></text></g>
-<g aria-label="С2"><circle cx="40" cy="200" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="40" cy="200" r="13"/><text x="40" y="204" text-anchor="middle" style="font-size:10px"><tspan x="40">С2</tspan></text></g>
-<g aria-label="П2"><circle cx="100" cy="200" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="100" cy="200" r="13"/><text x="100" y="204" text-anchor="middle" style="font-size:10px"><tspan x="100">П2</tspan></text></g>
+<g aria-label="С2"><circle cx="40" cy="201.5" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="40" cy="201.5" r="13"/><text x="40" y="205.5" text-anchor="middle" style="font-size:10px"><tspan x="40">С2</tspan></text></g>
+<g aria-label="П2"><circle cx="96" cy="201.5" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="96" cy="201.5" r="13"/><text x="96" y="205.5" text-anchor="middle" style="font-size:10px"><tspan x="96">П2</tspan></text></g>
 <g aria-label="К2"><circle cx="288" cy="200" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="200" r="13"/><text x="288" y="204" text-anchor="middle" style="font-size:10px"><tspan x="288">К2</tspan></text></g>
-<g aria-label="Д1"><circle cx="48" cy="328" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="48" cy="328" r="13"/><text x="48" y="332" text-anchor="middle" style="font-size:10px"><tspan x="48">Д1</tspan></text></g>
-<g aria-label="Д2"><circle cx="174" cy="270" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="174" cy="270" r="13"/><text x="174" y="274" text-anchor="middle" style="font-size:10px"><tspan x="174">Д2</tspan></text></g>
+<g aria-label="Д1"><circle cx="68" cy="327" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="68" cy="327" r="13"/><text x="68" y="331" text-anchor="middle" style="font-size:10px"><tspan x="68">Д1</tspan></text></g>
+<g aria-label="Д2"><circle cx="172" cy="270" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="172" cy="270" r="13"/><text x="172" y="274" text-anchor="middle" style="font-size:10px"><tspan x="172">Д2</tspan></text></g>
 <g aria-label="М3"><circle cx="288" cy="332" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="332" r="13"/><text x="288" y="336" text-anchor="middle" style="font-size:10px"><tspan x="288">М3</tspan></text></g>
 <g aria-label="М5"><circle cx="144" cy="309.3" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="144" cy="309.3" r="13"/><text x="144" y="313.3" text-anchor="middle" style="font-size:10px"><tspan x="144">М5</tspan></text></g>
-<g aria-label="Д3"><circle cx="78" cy="548" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="78" cy="548" r="13"/><text x="78" y="552" text-anchor="middle" style="font-size:10px"><tspan x="78">Д3</tspan></text></g>
+<g aria-label="Д3"><circle cx="68" cy="548" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="68" cy="548" r="13"/><text x="68" y="552" text-anchor="middle" style="font-size:10px"><tspan x="68">Д3</tspan></text></g>
 <g aria-label="М4"><circle cx="288" cy="548" r="13" fill="var(--bg)"/><circle class="concept-node accent" cx="288" cy="548" r="13"/><text x="288" y="552" text-anchor="middle" style="font-size:10px"><tspan x="288">М4</tspan></text></g>
 <g aria-label="Д4"><circle cx="220" cy="76" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="220" cy="76" r="13"/><text x="220" y="80" text-anchor="middle" style="font-size:10px"><tspan x="220">Д4</tspan></text></g>
-<g aria-label="М1"><circle cx="119" cy="449" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="119" cy="449" r="13"/><text x="119" y="453" text-anchor="middle" style="font-size:10px"><tspan x="119">М1</tspan></text></g>
-<g aria-label="М2"><circle cx="247" cy="461" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="247" cy="461" r="13"/><text x="247" y="465" text-anchor="middle" style="font-size:10px"><tspan x="247">М2</tspan></text></g>
+<g aria-label="М1"><circle cx="134" cy="449" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="134" cy="449" r="13"/><text x="134" y="453" text-anchor="middle" style="font-size:10px"><tspan x="134">М1</tspan></text></g>
+<g aria-label="М2"><circle cx="264" cy="461" r="13" fill="var(--bg)"/><circle class="concept-node warning" cx="264" cy="461" r="13"/><text x="264" y="465" text-anchor="middle" style="font-size:10px"><tspan x="264">М2</tspan></text></g>
 </svg><figcaption id="sd-uber-scaled-caption">Геопозиции и подбор масштабируются отдельно от поездок. Redis даёт кандидатов, только БД подтверждает резерв и назначение. Пунктир — фоновые обращения, Kafka и доставка событий. Matcher и Realtime читают свои топики независимыми consumer groups; Realtime Gateway обслуживает обоих участников.<br>
 <b>Геопозиции — непрерывный параллельный поток: К1</b>&nbsp;— водитель выходит на линию, включает готовность принимать заказы и непрерывно передаёт координаты через Location Gateway; <b>К2</b>&nbsp;— обновлять геоиндекс Redis. Этот поток идёт параллельно заказам: пассажир может создать заказ и при отсутствии машин;<br>
 <b>Создание поездки: С1</b>&nbsp;— пассажир создаёт заказ; <b>С2</b>&nbsp;— одной транзакцией сохранить поездку <code><span class="t">SEARCHING</span></code> и Outbox для запуска подбора;<br>
